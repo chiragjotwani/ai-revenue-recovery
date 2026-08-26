@@ -78,6 +78,7 @@ Lint / types / build:
 
 ```bash
 npm run lint
+npx next typegen   # generates route types tsc depends on (e.g. LayoutProps)
 npx tsc --noEmit
 npm run build
 ```
