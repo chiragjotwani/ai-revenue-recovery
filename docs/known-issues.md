@@ -1,0 +1,46 @@
+# Known Issues
+
+This file tracks unresolved issues and any explicitly authorized bypasses.
+Per project policy, nothing here may be silently bypassed — every entry
+must record what, why, and impact.
+
+## Open
+
+### KI-002: Self-hosted model infrastructure undecided (relevant from Phase 4)
+
+- **What**: The engineering prompt specifies self-hosted open-weight models
+  (Qwen3-30B-A3B-Instruct-2507, Nemotron 3 Nano 30B-A3B) as reasoning
+  providers. These are ~30B-parameter models requiring substantial VRAM
+  (realistically 20GB+ quantized, 40GB+ for comfortable throughput). No
+  decision has been made yet on where these will run (local GPU, rented
+  GPU instance, or another hosting arrangement).
+- **Impact**: Phase 4 can and will be built and fully tested against the
+  `MockProvider` in the `ReasoningModel` abstraction. Real `QwenProvider`
+  and `NemotronProvider` implementations and the model benchmark (Section
+  52 of the engineering prompt) cannot be completed until infrastructure is
+  decided.
+- **Resolution plan**: Revisit explicitly when Phase 4 begins.
+- **Status**: Not bypassed — flagged in advance, no phase is blocked yet.
+
+## Resolved
+
+### KI-001: Docker daemon verification pending (Phase 0) — RESOLVED
+
+- **What**: `docker-compose.yml` (postgres, redis, backend, frontend) was
+  built and run end-to-end via `docker compose up --build`.
+- **Found during verification**: the frontend's backend health check used
+  `NEXT_PUBLIC_API_BASE_URL`, which Next.js inlines at Docker **build**
+  time. Inside the frontend container this resolved to
+  `http://localhost:8000`, which points at the frontend container itself,
+  not the backend service — so the health check always failed across
+  containers despite working in local `npm run dev`.
+- **Fix**: switched to a server-only `API_BASE_URL` env var (no
+  `NEXT_PUBLIC_` prefix), read at container runtime since the fetch always
+  happens in a Server Component. `docker-compose.yml` now sets
+  `API_BASE_URL=http://backend:8000` for the frontend service explicitly.
+- **Verified**: `docker compose up --build` succeeded; `curl
+  localhost:8000/health` returned
+  `{"status":"ok","environment":"development"}`; `curl localhost:3000`
+  rendered "Backend status: ok (development)" confirming cross-container
+  connectivity; stack torn down cleanly with `docker compose down`.
+- **Status**: Resolved.
