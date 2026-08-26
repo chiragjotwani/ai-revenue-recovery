@@ -45,7 +45,17 @@ python -m venv .venv
 ./.venv/Scripts/activate   # Windows
 pip install -e ".[dev]"
 cp .env.example .env
-uvicorn app.main:app --reload
+python scripts/run_dev.py
+```
+
+On Windows, `python scripts/run_dev.py` must be used instead of plain
+`uvicorn app.main:app --reload` — psycopg3's async driver cannot run under
+Windows' default ProactorEventLoop, and the script sets the required
+SelectorEventLoop policy before uvicorn starts (see
+`app/core/windows_compat.py`). This does not affect Docker or Linux, where
+the plain uvicorn command in `backend/Dockerfile` is used as-is.
+
+```bash
 ```
 
 Tests / lint / types:
@@ -81,6 +91,34 @@ npm run lint
 npx next typegen   # generates route types tsc depends on (e.g. LayoutProps)
 npx tsc --noEmit
 npm run build
+```
+
+## API
+
+- `GET /health` — liveness check.
+- `POST /events` — ingest a payment lifecycle event. See
+  `docs/api/ingestion.md`.
+
+## Database Migrations
+
+```bash
+cd backend
+alembic upgrade head       # apply migrations
+alembic revision --autogenerate -m "description"   # create a new one
+```
+
+The Docker image runs `alembic upgrade head` automatically on container
+startup before starting the server.
+
+## Seeding Synthetic Data
+
+With the backend running (Docker or local), seed the canonical scenario
+(3 successful payments + 1 failed payment of 4999.00, insufficient
+funds) used as a running example through later phases:
+
+```bash
+cd backend
+python scripts/seed_synthetic_data.py
 ```
 
 ## Project Status

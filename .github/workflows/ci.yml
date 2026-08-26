@@ -12,6 +12,22 @@ jobs:
     defaults:
       run:
         working-directory: backend
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: arr_user
+          POSTGRES_PASSWORD: arr_password
+          POSTGRES_DB: arr_db
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U arr_user -d arr_db"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      DATABASE_URL: postgresql+psycopg://arr_user:arr_password@localhost:5432/arr_db
     steps:
       - uses: actions/checkout@v4
 
@@ -33,6 +49,9 @@ jobs:
 
       - name: Mypy
         run: mypy app
+
+      - name: Run migrations
+        run: alembic upgrade head
 
       - name: Pytest
         run: pytest -q

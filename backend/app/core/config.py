@@ -16,7 +16,7 @@ class Settings(BaseSettings):
     environment: str = "development"
     log_level: str = "INFO"
 
-    database_url: str = "postgresql+psycopg://arr_user:arr_password@localhost:5432/arr_db"
+    database_url: str = "postgresql+psycopg://arr_user:arr_password@localhost:5433/arr_db"
     redis_url: str = "redis://localhost:6379/0"
 
     backend_port: int = 8000

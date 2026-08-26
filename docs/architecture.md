@@ -42,6 +42,16 @@ Database -> Context Builder -> LLM -> Structured Output -> Schema Validation
 
 See [ADR-003](decisions/ADR-003-llm-cannot-directly-execute-actions.md).
 
+## Data Foundation (Phase 1)
+
+See `docs/database/schema.md` for the schema. Summary: `customers`,
+`payments` (one row per payment attempt, unique `external_reference`),
+and an append-only `ingestion_events` log keyed by a caller-supplied
+`idempotency_key`. `POST /events` is the single ingestion entry point;
+redelivering the same idempotency key is a no-op, and reusing an
+`external_reference` under a different key is rejected (`409`) rather
+than silently overwritten.
+
 ## Phase Roadmap
 
 See `docs/project-state.md` for current phase/stage status. The full ordered

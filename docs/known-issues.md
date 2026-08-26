@@ -24,6 +24,38 @@ must record what, why, and impact.
 
 ## Resolved
 
+### KI-005: Postgres port collision with a native Windows Postgres service (Phase 1) — RESOLVED
+
+- **What**: Alembic migration generation and local test runs failed with
+  `password authentication failed for user "arr_user"`, even though the
+  dockerized Postgres had the correct credentials. Root cause: a native
+  Windows Postgres service (`postgres.exe`) was already bound to port
+  5432 on the host, so host-side connections were reaching that instance
+  instead of the Docker container.
+- **Fix**: remapped the dockerized Postgres's published host port to 5433
+  (`POSTGRES_PORT=5433` in `.env.example` / `docker-compose.yml`). This
+  only changes the host-published port; containers still reach Postgres
+  internally at `postgres:5432`, and GitHub Actions CI (which has no such
+  native service) still uses 5432 directly.
+- **Status**: Resolved. Deliberately did not touch the pre-existing native
+  Postgres service, which may belong to unrelated work on this machine.
+
+### KI-004: psycopg3 async mode incompatible with Windows' default event loop (Phase 1) — RESOLVED
+
+- **What**: Running the backend or its test suite on Windows raised
+  `psycopg.InterfaceError: Psycopg cannot use the 'ProactorEventLoop' to
+  run in async mode`, because psycopg3's asyncio driver requires
+  `SelectorEventLoop`, not Windows' default `ProactorEventLoop`.
+- **Fix**: added `app/core/windows_compat.py::apply_windows_event_loop_policy()`
+  (a no-op on non-Windows platforms), invoked at the top of
+  `tests/conftest.py`. For running the live server outside Docker, plain
+  `uvicorn app.main:app` creates its event loop *before* importing the app
+  module, so the fix must be applied even earlier; `scripts/run_dev.py`
+  does this and must be used instead of a raw `uvicorn` invocation when
+  developing directly on Windows. Neither of these affects the Linux
+  Docker containers, which use the Dockerfile's plain `uvicorn` command.
+- **Status**: Resolved.
+
 ### KI-003: Frontend type check failed in GitHub Actions CI (Phase 0) — RESOLVED
 
 - **What**: The first CI run on `main` failed the frontend `Type check`
