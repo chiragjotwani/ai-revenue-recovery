@@ -2,17 +2,20 @@
 
 ## Current Phase
 
-Phase 2 — Revenue Risk Detection: COMPLETE
+Phases 0–2: FROZEN (verified 2026-08-27 — see `docs/phase-0-2-freeze.md`).
+Phase 3 not started — blocked pending an owner decision on the Phase 3
+definition (task brief conflicts with the frozen contract; see the freeze
+record's "Phase 3 — NOT STARTED" section).
 
 ## Current Stage
 
-N/A (Phase 2 closed; Phase 3 not yet started)
+N/A (Phase 0–2 freeze gate passed; Phase 3 not started)
 
 ## Completed Phases
 
-- Phase 0 — Engineering Foundation
-- Phase 1 — Data Foundation
-- Phase 2 — Revenue Risk Detection
+- Phase 0 — Engineering Foundation (frozen)
+- Phase 1 — Data Foundation (frozen)
+- Phase 2 — Revenue Risk Detection (frozen)
 
 ## Completed Stages (Phase 2)
 
@@ -63,16 +66,21 @@ See `docs/known-issues.md`.
 
 ## Last Successful Verification
 
-Backend: pytest (22/22), ruff check, ruff format --check, mypy — all
-clean. Frontend: tsc, eslint, next build — all clean. Full docker-compose
-stack rebuilt from a clean volume and verified end-to-end: migrations
-auto-applied, canonical scenario ingested, risk score/level verified by
-hand calculation, dashboard rendered live data across the container
-network.
+2026-08-27 Phase 0–2 freeze gate (full detail in
+`docs/phase-0-2-freeze.md`). Backend: pytest 22/22 (local venv + against a
+from-clean `docker compose down -v && up --build`), ruff check, ruff
+format --check, mypy strict, `alembic upgrade head` from clean,
+`alembic check` (no drift) — all clean. Frontend: eslint, `next typegen`,
+`tsc --noEmit`, `next build` — all clean. Dockerized stack verified
+end-to-end: migrations auto-applied on container start, cross-container
+`backend:8000` reachable from the frontend container, canonical scenario
+seeded (and idempotent on re-run), risk score 0.3033/"low" verified by
+hand calculation, `/risk` dashboard rendered live data via SSR, failure
+paths (409 / 422 / 404) confirmed. CI green on `main`.
 
 ## Last Git Commit
 
-(updated after commit — see git log)
+`freeze: phases 0-2 verified` — see `git log`.
 
 ## Process Note
 
