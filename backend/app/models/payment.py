@@ -1,6 +1,7 @@
 import enum
 import uuid
 from datetime import datetime
+from decimal import Decimal
 from typing import TYPE_CHECKING
 
 from sqlalchemy import DateTime, ForeignKey, Numeric, String, func
@@ -38,7 +39,7 @@ class Payment(Base):
     external_reference: Mapped[str] = mapped_column(
         String(255), unique=True, nullable=False, index=True
     )
-    amount: Mapped[str] = mapped_column(Numeric(12, 2), nullable=False)
+    amount: Mapped[Decimal] = mapped_column(Numeric(12, 2), nullable=False)
     currency: Mapped[str] = mapped_column(String(3), nullable=False)
     status: Mapped[PaymentStatus] = mapped_column(
         SAEnum(PaymentStatus, name="payment_status"), nullable=False

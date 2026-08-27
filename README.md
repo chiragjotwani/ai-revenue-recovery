@@ -98,6 +98,8 @@ npm run build
 - `GET /health` — liveness check.
 - `POST /events` — ingest a payment lifecycle event. See
   `docs/api/ingestion.md`.
+- `GET /risk/payments`, `GET /risk/summary` — revenue risk detection. See
+  `docs/api/risk.md`. Dashboard at frontend route `/risk`.
 
 ## Database Migrations
 

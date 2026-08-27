@@ -2,6 +2,7 @@ from fastapi import FastAPI
 
 from app.api.health import router as health_router
 from app.api.ingestion import router as ingestion_router
+from app.api.risk import router as risk_router
 from app.core.config import get_settings
 from app.core.windows_compat import apply_windows_event_loop_policy
 
@@ -17,6 +18,7 @@ def create_app() -> FastAPI:
     )
     app.include_router(health_router)
     app.include_router(ingestion_router)
+    app.include_router(risk_router)
     return app
 
 

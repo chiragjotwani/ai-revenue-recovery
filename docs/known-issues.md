@@ -24,6 +24,27 @@ must record what, why, and impact.
 
 ## Resolved
 
+### KI-006: `revenue_at_risk` naively sums across currencies (Phase 2) — ACKNOWLEDGED, NOT A BUG
+
+- **What**: `GET /risk/summary`'s `revenue_at_risk` field is a plain sum of
+  amounts across all at-risk payments regardless of currency. There is no
+  FX conversion source in this phase, so mixing e.g. INR and USD in that
+  one number would be misleading.
+- **Impact**: currently none in practice (single-currency canonical
+  scenario), but this will misrepresent totals the moment multiple
+  currencies are actually at risk simultaneously.
+- **Mitigation shipped now**: `currency_breakdown` (per-currency totals)
+  is always accurate and is what `docs/api/ingestion.md`-style consumers
+  should use; `revenue_at_risk` is documented in
+  `backend/app/risk/service.py::get_risk_summary` as only meaningful for
+  a single currency.
+- **Resolution plan**: revisit if/when multi-currency volume becomes real
+  (introduce an FX rate source and convert to a reporting currency).
+  Deliberately not solved now -- no exchange-rate source exists yet and
+  guessing one would be premature (Section 44/45 discipline).
+- **Status**: Documented limitation, not silently hidden. Not a bypass of
+  a requirement -- Phase 2 has no multi-currency requirement.
+
 ### KI-005: Postgres port collision with a native Windows Postgres service (Phase 1) — RESOLVED
 
 - **What**: Alembic migration generation and local test runs failed with

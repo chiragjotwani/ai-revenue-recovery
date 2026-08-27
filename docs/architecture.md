@@ -52,6 +52,19 @@ redelivering the same idempotency key is a no-op, and reusing an
 `external_reference` under a different key is rejected (`409`) rather
 than silently overwritten.
 
+## Revenue Risk Detection (Phase 2)
+
+Rule-based (no ML/LLM yet -- that is Phase 9+): a failed payment is "at
+risk" if the customer has no later successful payment. Risk features
+(consecutive failures since last success, historical success rate,
+failure-reason severity) combine into a deterministic score in `[0, 1]`
+bucketed into low/medium/high. See `backend/app/risk/` for the
+implementation and `docs/known-issues.md` KI-006 for a documented
+limitation (no FX conversion across currencies yet).
+
+Exposed via `GET /risk/payments` and `GET /risk/summary`, and a minimal
+dashboard at frontend route `/risk`.
+
 ## Phase Roadmap
 
 See `docs/project-state.md` for current phase/stage status. The full ordered

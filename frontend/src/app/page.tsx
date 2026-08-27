@@ -25,9 +25,7 @@ export default async function Home() {
         <h1 className="text-3xl font-semibold tracking-tight text-black dark:text-zinc-50">
           AI Revenue Recovery Platform
         </h1>
-        <p className="text-zinc-600 dark:text-zinc-400">
-          Phase 0 &mdash; Engineering Foundation
-        </p>
+        <p className="text-zinc-600 dark:text-zinc-400">Phase 2 &mdash; Revenue Risk Detection</p>
         <div
           className={`rounded-lg border px-6 py-4 text-sm ${
             health
@@ -43,6 +41,12 @@ export default async function Home() {
             <>Backend unreachable. Is the API running?</>
           )}
         </div>
+        <a
+          href="/risk"
+          className="text-sm font-medium text-zinc-700 underline underline-offset-4 dark:text-zinc-300"
+        >
+          View Revenue Risk Dashboard &rarr;
+        </a>
       </main>
     </div>
   );
