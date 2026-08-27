@@ -23,3 +23,45 @@ class PaymentReferenceConflictError(DomainError):
             f"Payment external_reference {external_reference!r} already exists "
             "under a different idempotency key."
         )
+
+
+class PaymentNotFoundError(DomainError):
+    """Raised when an operation references a payment id that does not exist."""
+
+    def __init__(self, payment_id: object) -> None:
+        self.payment_id = payment_id
+        super().__init__(f"Payment {payment_id!r} does not exist.")
+
+
+class PaymentNotRecoverableError(DomainError):
+    """Raised when a recovery case is requested for a payment that is not in
+    a state that can be recovered (only ``failed`` payments can).
+    """
+
+    def __init__(self, payment_id: object, status: str) -> None:
+        self.payment_id = payment_id
+        self.status = status
+        super().__init__(
+            f"Payment {payment_id!r} has status {status!r}; a recovery case can "
+            "only be opened for a failed payment."
+        )
+
+
+class RecoveryCaseNotFoundError(DomainError):
+    """Raised when an operation references a recovery case id that does not exist."""
+
+    def __init__(self, case_id: object) -> None:
+        self.case_id = case_id
+        super().__init__(f"Recovery case {case_id!r} does not exist.")
+
+
+class IllegalStateTransitionError(DomainError):
+    """Raised when a recovery case is asked to move between two states that
+    the state machine does not permit (Section 16: illegal transitions must
+    raise, never be silently applied).
+    """
+
+    def __init__(self, from_state: object, to_state: object) -> None:
+        self.from_state = from_state
+        self.to_state = to_state
+        super().__init__(f"Illegal recovery case transition: {from_state} -> {to_state}.")

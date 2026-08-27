@@ -29,6 +29,23 @@ extracted into its own service without a rewrite. See
 - **redis** — cache and background job coordination (workers introduced in
   later phases).
 
+## Recovery Case Management (Phase 3)
+
+A **recovery case** is the unit of work for one at-risk payment. It moves
+through an explicit state machine
+(`detected -> diagnosing -> diagnosed -> decision_pending ->
+action_scheduled -> action_executed -> observing -> recovered`, with
+`abandoned` / `failed` terminal). State is changed only by a transition
+service that validates every move against a single declared transition map
+and appends an immutable `recovery_case_transitions` row for each change;
+illegal transitions raise. One case per payment (`payment_id` unique).
+
+No AI and no actions at this phase -- Phase 3 is the workflow spine the
+later loop stages hang off. See
+`docs/decisions/ADR-004-explicit-recovery-state-machine.md`,
+`docs/api/recovery.md`, and `backend/app/recovery/`. Frontend: `/recovery`
+(case list) and `/recovery/[id]` (case detail with transition history).
+
 ## AI Safety Architecture (introduced Phase 4+)
 
 The LLM never executes financial actions directly. All AI output flows

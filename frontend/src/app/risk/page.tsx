@@ -1,3 +1,5 @@
+import Link from "next/link";
+
 type RiskAssessment = {
   payment_id: string;
   customer_id: string;
@@ -73,7 +75,13 @@ export default async function RiskDashboard() {
             Revenue Risk Dashboard
           </h1>
           <p className="text-sm text-zinc-600 dark:text-zinc-400">
-            Failed payments with no subsequent successful payment for the same customer.
+            Failed payments with no subsequent successful payment for the same customer.{" "}
+            <Link
+              href="/recovery"
+              className="underline underline-offset-4 hover:text-zinc-900 dark:hover:text-zinc-200"
+            >
+              Recovery cases
+            </Link>
           </p>
         </div>
 

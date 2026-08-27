@@ -100,6 +100,10 @@ npm run build
   `docs/api/ingestion.md`.
 - `GET /risk/payments`, `GET /risk/summary` — revenue risk detection. See
   `docs/api/risk.md`. Dashboard at frontend route `/risk`.
+- `POST /recovery/cases`, `GET /recovery/cases`, `GET /recovery/cases/{id}`,
+  `POST /recovery/cases/{id}/transitions` — recovery case state machine.
+  See `docs/api/recovery.md`. Case list/detail at frontend routes
+  `/recovery` and `/recovery/[id]`.
 
 ## Database Migrations
 

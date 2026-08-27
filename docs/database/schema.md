@@ -1,7 +1,8 @@
-# Database Schema (Phase 1)
+# Database Schema
 
 Managed by Alembic (`backend/migrations/`). Run `alembic upgrade head` to
-apply.
+apply. Phase 1 tables: `customers`, `payments`, `ingestion_events`.
+Phase 3 tables: `recovery_cases`, `recovery_case_transitions`.
 
 ## `customers`
 
@@ -42,6 +43,56 @@ Append-only, immutable event log (Section 15 of the engineering prompt).
 | received_at     | timestamptz   | server default now()                                 |
 | customer_id     | uuid, FK      | nullable; the customer this event resolved to        |
 | payment_id      | uuid, FK      | nullable; the payment this event resolved to         |
+
+## `recovery_cases` (Phase 3)
+
+One row per at-risk payment being worked (`payment_id` is unique). `state`
+is only ever changed through `app/recovery/service.py::transition_case`,
+which validates against the state machine
+(`app/recovery/state_machine.py`). See
+`docs/decisions/ADR-004-explicit-recovery-state-machine.md`.
+
+| column      | type          | notes                                                     |
+| ----------- | ------------- | --------------------------------------------------------- |
+| id          | uuid, PK      |                                                          |
+| payment_id  | uuid, FK      | -> payments.id; **unique**, indexed                       |
+| customer_id | uuid, FK      | -> customers.id; indexed                                  |
+| state       | enum          | `recovery_case_state`; indexed; see values below          |
+| opened_at   | timestamptz   | server default now()                                      |
+| closed_at   | timestamptz   | nullable; set when the case enters a terminal state       |
+| created_at  | timestamptz   | server default now()                                      |
+| updated_at  | timestamptz   | server default now(), ON UPDATE now()                     |
+
+`recovery_case_state` values (Section 16): `detected`, `diagnosing`,
+`diagnosed`, `decision_pending`, `action_scheduled`, `action_executed`,
+`observing`, `recovered`, `abandoned`, `failed`. Terminal: `recovered`,
+`abandoned`, `failed`.
+
+## `recovery_case_transitions` (Phase 3)
+
+Append-only history of every state change (Section 15/16). Never updated or
+deleted by application code.
+
+| column      | type          | notes                                                     |
+| ----------- | ------------- | --------------------------------------------------------- |
+| id          | uuid, PK      |                                                          |
+| case_id     | uuid, FK      | -> recovery_cases.id; indexed                             |
+| from_state  | enum          | `recovery_case_state`; NULL only for the initial `detected` row |
+| to_state    | enum          | `recovery_case_state`                                     |
+| reason      | varchar(255)  | nullable; free-text why                                   |
+| actor       | varchar(100)  | what caused it, e.g. `api`, `system:open`                 |
+| created_at  | timestamptz   | server default now()                                      |
+
+## Recovery Case Semantics
+
+- `POST /recovery/cases` opens a case for a `failed` payment in state
+  `detected`; a repeat call returns the existing case (`200`) instead of
+  creating a second.
+- State changes go only through the transition service. An illegal
+  transition raises and writes nothing (`409` at the API).
+- Entering a terminal state sets `closed_at`; no further transitions are
+  accepted.
+- See `docs/api/recovery.md` for the endpoints.
 
 ## Ingestion Semantics
 
