@@ -59,6 +59,34 @@ Database -> Context Builder -> LLM -> Structured Output -> Schema Validation
 
 See [ADR-003](decisions/ADR-003-llm-cannot-directly-execute-actions.md).
 
+## AI Context & Diagnosis (Phase 4)
+
+The reasoning model diagnoses *why* a payment failed — nothing more. A
+`RecoveryContextBuilder` assembles a bounded, curated context from Postgres
+(never raw rows); a pluggable `ReasoningModel` provider
+(`mock` by default, or an OpenAI-compatible `qwen` / `nemotron` HTTP
+endpoint) returns JSON; that JSON is schema-validated and passed through
+cheap hallucination safeguards (`sparse -> unknown`, `conflict -> cap
+confidence`) before a `Diagnosis` row is stored and the case advances
+`detected -> diagnosing -> diagnosed`. If the model is unreachable or its
+output is unusable, the case stays `diagnosing`, nothing is written, and
+the API returns `502`.
+
+The diagnosis has two layers: a specific `outcome` (the model's choice) and
+a `disposition` **derived by our code** that Phase 5 will branch on. It
+also carries an *advisory* recommended strategy — the policy engine (Phase
+5) remains the authority, and nothing here executes anything (ADR-003).
+
+Prompts and outputs are versioned (`diagnosis_prompt_v1`, `schema_version`
+`"1"`), and every diagnosis stores its model/prompt/schema metadata and
+latency for later comparison. A fixed evaluation set
+(`backend/evaluation/diagnosis_cases.json`) and a benchmark runner
+(`backend/scripts/benchmark_diagnosis.py`) compare providers.
+
+See [ADR-005](decisions/ADR-005-diagnosis-schema-and-versioning.md),
+`docs/ai/diagnosis.md`, `docs/ai/local-model-setup.md`, and
+`backend/app/ai/`. Frontend: a diagnosis panel on `/recovery/[id]`.
+
 ## Data Foundation (Phase 1)
 
 See `docs/database/schema.md` for the schema. Summary: `customers`,

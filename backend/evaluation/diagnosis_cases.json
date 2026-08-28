@@ -1,0 +1,5176 @@
+[
+  {
+    "context": {
+      "applicable_policies": [
+        "A payment may be retried at most 3 times."
+      ],
+      "case_id": "00000000-0000-0000-0000-000000000000",
+      "case_state": "diagnosing",
+      "customer": {
+        "external_id": "cust-insufficient_funds-v0",
+        "historical_success_rate": 0.75,
+        "successful_payments": 3,
+        "tenure_days": 21,
+        "total_payments": 4
+      },
+      "evidence_sufficiency": "sufficient",
+      "failure": {
+        "consecutive_failures": 1,
+        "days_since_last_success": 7,
+        "distinct_prior_failure_reasons": []
+      },
+      "payment": {
+        "amount": "4999.00",
+        "currency": "INR",
+        "external_reference": "insufficient_funds-v0",
+        "failure_reason": "insufficient_funds",
+        "occurred_at": "2026-01-01T00:00:00+00:00",
+        "status": "failed"
+      },
+      "previous_interventions": [],
+      "recent_history": [
+        {
+          "amount": "4999.00",
+          "currency": "INR",
+          "external_reference": "insufficient_funds-v0-h0",
+          "failure_reason": null,
+          "occurred_at": "2025-12-11T00:00:00+00:00",
+          "status": "succeeded"
+        },
+        {
+          "amount": "4999.00",
+          "currency": "INR",
+          "external_reference": "insufficient_funds-v0-h1",
+          "failure_reason": null,
+          "occurred_at": "2025-12-18T00:00:00+00:00",
+          "status": "succeeded"
+        },
+        {
+          "amount": "4999.00",
+          "currency": "INR",
+          "external_reference": "insufficient_funds-v0-h2",
+          "failure_reason": null,
+          "occurred_at": "2025-12-25T00:00:00+00:00",
+          "status": "succeeded"
+        }
+      ],
+      "signals_conflict": false
+    },
+    "expect_unknown": false,
+    "expected_outcome": "insufficient_funds",
+    "id": "insufficient_funds-v0",
+    "max_confidence": 1.0,
+    "min_confidence": 0.6,
+    "notes": "clear reason with supporting history"
+  },
+  {
+    "context": {
+      "applicable_policies": [
+        "A payment may be retried at most 3 times."
+      ],
+      "case_id": "00000000-0000-0000-0000-000000000000",
+      "case_state": "diagnosing",
+      "customer": {
+        "external_id": "cust-insufficient_funds-v1",
+        "historical_success_rate": 0.7143,
+        "successful_payments": 5,
+        "tenure_days": 35,
+        "total_payments": 7
+      },
+      "evidence_sufficiency": "sufficient",
+      "failure": {
+        "consecutive_failures": 2,
+        "days_since_last_success": 7,
+        "distinct_prior_failure_reasons": [
+          "insufficient_funds"
+        ]
+      },
+      "payment": {
+        "amount": "4999.00",
+        "currency": "INR",
+        "external_reference": "insufficient_funds-v1",
+        "failure_reason": "insufficient_funds",
+        "occurred_at": "2026-01-01T00:00:00+00:00",
+        "status": "failed"
+      },
+      "previous_interventions": [],
+      "recent_history": [
+        {
+          "amount": "4999.00",
+          "currency": "INR",
+          "external_reference": "insufficient_funds-v1-h0",
+          "failure_reason": null,
+          "occurred_at": "2025-11-27T00:00:00+00:00",
+          "status": "succeeded"
+        },
+        {
+          "amount": "4999.00",
+          "currency": "INR",
+          "external_reference": "insufficient_funds-v1-h1",
+          "failure_reason": null,
+          "occurred_at": "2025-12-04T00:00:00+00:00",
+          "status": "succeeded"
+        },
+        {
+          "amount": "4999.00",
+          "currency": "INR",
+          "external_reference": "insufficient_funds-v1-h2",
+          "failure_reason": null,
+          "occurred_at": "2025-12-11T00:00:00+00:00",
+          "status": "succeeded"
+        },
+        {
+          "amount": "4999.00",
+          "currency": "INR",
+          "external_reference": "insufficient_funds-v1-h3",
+          "failure_reason": null,
+          "occurred_at": "2025-12-18T00:00:00+00:00",
+          "status": "succeeded"
+        },
+        {
+          "amount": "4999.00",
+          "currency": "INR",
+          "external_reference": "insufficient_funds-v1-h4",
+          "failure_reason": null,
+          "occurred_at": "2025-12-25T00:00:00+00:00",
+          "status": "succeeded"
+        }
+      ],
+      "signals_conflict": false
+    },
+    "expect_unknown": false,
+    "expected_outcome": "insufficient_funds",
+    "id": "insufficient_funds-v1",
+    "max_confidence": 1.0,
+    "min_confidence": 0.6,
+    "notes": "clear reason with supporting history"
+  },
+  {
+    "context": {
+      "applicable_policies": [
+        "A payment may be retried at most 3 times."
+      ],
+      "case_id": "00000000-0000-0000-0000-000000000000",
+      "case_state": "diagnosing",
+      "customer": {
+        "external_id": "cust-insufficient_funds-v2",
+        "historical_success_rate": 0.7273,
+        "successful_payments": 8,
+        "tenure_days": 56,
+        "total_payments": 11
+      },
+      "evidence_sufficiency": "sufficient",
+      "failure": {
+        "consecutive_failures": 3,
+        "days_since_last_success": 7,
+        "distinct_prior_failure_reasons": [
+          "insufficient_funds"
+        ]
+      },
+      "payment": {
+        "amount": "4999.00",
+        "currency": "INR",
+        "external_reference": "insufficient_funds-v2",
+        "failure_reason": "insufficient_funds",
+        "occurred_at": "2026-01-01T00:00:00+00:00",
+        "status": "failed"
+      },
+      "previous_interventions": [],
+      "recent_history": [
+        {
+          "amount": "4999.00",
+          "currency": "INR",
+          "external_reference": "insufficient_funds-v2-h0",
+          "failure_reason": null,
+          "occurred_at": "2025-11-06T00:00:00+00:00",
+          "status": "succeeded"
+        },
+        {
+          "amount": "4999.00",
+          "currency": "INR",
+          "external_reference": "insufficient_funds-v2-h1",
+          "failure_reason": null,
+          "occurred_at": "2025-11-13T00:00:00+00:00",
+          "status": "succeeded"
+        },
+        {
+          "amount": "4999.00",
+          "currency": "INR",
+          "external_reference": "insufficient_funds-v2-h2",
+          "failure_reason": null,
+          "occurred_at": "2025-11-20T00:00:00+00:00",
+          "status": "succeeded"
+        },
+        {
+          "amount": "4999.00",
+          "currency": "INR",
+          "external_reference": "insufficient_funds-v2-h3",
+          "failure_reason": null,
+          "occurred_at": "2025-11-27T00:00:00+00:00",
+          "status": "succeeded"
+        },
+        {
+          "amount": "4999.00",
+          "currency": "INR",
+          "external_reference": "insufficient_funds-v2-h4",
+          "failure_reason": null,
+          "occurred_at": "2025-12-04T00:00:00+00:00",
+          "status": "succeeded"
+        },
+        {
+          "amount": "4999.00",
+          "currency": "INR",
+          "external_reference": "insufficient_funds-v2-h5",
+          "failure_reason": null,
+          "occurred_at": "2025-12-11T00:00:00+00:00",
+          "status": "succeeded"
+        },
+        {
+          "amount": "4999.00",
+          "currency": "INR",
+          "external_reference": "insufficient_funds-v2-h6",
+          "failure_reason": null,
+          "occurred_at": "2025-12-18T00:00:00+00:00",
+          "status": "succeeded"
+        },
+        {
+          "amount": "4999.00",
+          "currency": "INR",
+          "external_reference": "insufficient_funds-v2-h7",
+          "failure_reason": null,
+          "occurred_at": "2025-12-25T00:00:00+00:00",
+          "status": "succeeded"
+        }
+      ],
+      "signals_conflict": false
+    },
+    "expect_unknown": false,
+    "expected_outcome": "insufficient_funds",
+    "id": "insufficient_funds-v2",
+    "max_confidence": 1.0,
+    "min_confidence": 0.6,
+    "notes": "clear reason with supporting history"
+  },
+  {
+    "context": {
+      "applicable_policies": [
+        "A payment may be retried at most 3 times."
+      ],
+      "case_id": "00000000-0000-0000-0000-000000000000",
+      "case_state": "diagnosing",
+      "customer": {
+        "external_id": "cust-insufficient_funds-v3",
+        "historical_success_rate": 0.6667,
+        "successful_payments": 2,
+        "tenure_days": 14,
+        "total_payments": 3
+      },
+      "evidence_sufficiency": "sufficient",
+      "failure": {
+        "consecutive_failures": 1,
+        "days_since_last_success": 7,
+        "distinct_prior_failure_reasons": []
+      },
+      "payment": {
+        "amount": "4999.00",
+        "currency": "INR",
+        "external_reference": "insufficient_funds-v3",
+        "failure_reason": "insufficient_funds",
+        "occurred_at": "2026-01-01T00:00:00+00:00",
+        "status": "failed"
+      },
+      "previous_interventions": [],
+      "recent_history": [
+        {
+          "amount": "4999.00",
+          "currency": "INR",
+          "external_reference": "insufficient_funds-v3-h0",
+          "failure_reason": null,
+          "occurred_at": "2025-12-18T00:00:00+00:00",
+          "status": "succeeded"
+        },
+        {
+          "amount": "4999.00",
+          "currency": "INR",
+          "external_reference": "insufficient_funds-v3-h1",
+          "failure_reason": null,
+          "occurred_at": "2025-12-25T00:00:00+00:00",
+          "status": "succeeded"
+        }
+      ],
+      "signals_conflict": false
+    },
+    "expect_unknown": false,
+    "expected_outcome": "insufficient_funds",
+    "id": "insufficient_funds-v3",
+    "max_confidence": 1.0,
+    "min_confidence": 0.6,
+    "notes": "clear reason with supporting history"
+  },
+  {
+    "context": {
+      "applicable_policies": [
+        "A payment may be retried at most 3 times."
+      ],
+      "case_id": "00000000-0000-0000-0000-000000000000",
+      "case_state": "diagnosing",
+      "customer": {
+        "external_id": "cust-insufficient_funds-v4",
+        "historical_success_rate": 0.6667,
+        "successful_payments": 4,
+        "tenure_days": 28,
+        "total_payments": 6
+      },
+      "evidence_sufficiency": "sufficient",
+      "failure": {
+        "consecutive_failures": 1,
+        "days_since_last_success": 7,
+        "distinct_prior_failure_reasons": [
+          "insufficient_funds"
+        ]
+      },
+      "payment": {
+        "amount": "4999.00",
+        "currency": "INR",
+        "external_reference": "insufficient_funds-v4",
+        "failure_reason": "insufficient_funds",
+        "occurred_at": "2026-01-01T00:00:00+00:00",
+        "status": "failed"
+      },
+      "previous_interventions": [],
+      "recent_history": [
+        {
+          "amount": "4999.00",
+          "currency": "INR",
+          "external_reference": "insufficient_funds-v4-h0",
+          "failure_reason": null,
+          "occurred_at": "2025-12-04T00:00:00+00:00",
+          "status": "succeeded"
+        },
+        {
+          "amount": "4999.00",
+          "currency": "INR",
+          "external_reference": "insufficient_funds-v4-h1",
+          "failure_reason": null,
+          "occurred_at": "2025-12-11T00:00:00+00:00",
+          "status": "succeeded"
+        },
+        {
+          "amount": "4999.00",
+          "currency": "INR",
+          "external_reference": "insufficient_funds-v4-h2",
+          "failure_reason": null,
+          "occurred_at": "2025-12-18T00:00:00+00:00",
+          "status": "succeeded"
+        },
+        {
+          "amount": "4999.00",
+          "currency": "INR",
+          "external_reference": "insufficient_funds-v4-h3",
+          "failure_reason": null,
+          "occurred_at": "2025-12-25T00:00:00+00:00",
+          "status": "succeeded"
+        }
+      ],
+      "signals_conflict": false
+    },
+    "expect_unknown": false,
+    "expected_outcome": "insufficient_funds",
+    "id": "insufficient_funds-v4",
+    "max_confidence": 1.0,
+    "min_confidence": 0.6,
+    "notes": "clear reason with supporting history"
+  },
+  {
+    "context": {
+      "applicable_policies": [
+        "A payment may be retried at most 3 times."
+      ],
+      "case_id": "00000000-0000-0000-0000-000000000000",
+      "case_state": "diagnosing",
+      "customer": {
+        "external_id": "cust-insufficient_funds-v5",
+        "historical_success_rate": 0.8571,
+        "successful_payments": 6,
+        "tenure_days": 42,
+        "total_payments": 7
+      },
+      "evidence_sufficiency": "sufficient",
+      "failure": {
+        "consecutive_failures": 1,
+        "days_since_last_success": 7,
+        "distinct_prior_failure_reasons": []
+      },
+      "payment": {
+        "amount": "4999.00",
+        "currency": "INR",
+        "external_reference": "insufficient_funds-v5",
+        "failure_reason": "insufficient_funds",
+        "occurred_at": "2026-01-01T00:00:00+00:00",
+        "status": "failed"
+      },
+      "previous_interventions": [],
+      "recent_history": [
+        {
+          "amount": "4999.00",
+          "currency": "INR",
+          "external_reference": "insufficient_funds-v5-h0",
+          "failure_reason": null,
+          "occurred_at": "2025-11-20T00:00:00+00:00",
+          "status": "succeeded"
+        },
+        {
+          "amount": "4999.00",
+          "currency": "INR",
+          "external_reference": "insufficient_funds-v5-h1",
+          "failure_reason": null,
+          "occurred_at": "2025-11-27T00:00:00+00:00",
+          "status": "succeeded"
+        },
+        {
+          "amount": "4999.00",
+          "currency": "INR",
+          "external_reference": "insufficient_funds-v5-h2",
+          "failure_reason": null,
+          "occurred_at": "2025-12-04T00:00:00+00:00",
+          "status": "succeeded"
+        },
+        {
+          "amount": "4999.00",
+          "currency": "INR",
+          "external_reference": "insufficient_funds-v5-h3",
+          "failure_reason": null,
+          "occurred_at": "2025-12-11T00:00:00+00:00",
+          "status": "succeeded"
+        },
+        {
+          "amount": "4999.00",
+          "currency": "INR",
+          "external_reference": "insufficient_funds-v5-h4",
+          "failure_reason": null,
+          "occurred_at": "2025-12-18T00:00:00+00:00",
+          "status": "succeeded"
+        },
+        {
+          "amount": "4999.00",
+          "currency": "INR",
+          "external_reference": "insufficient_funds-v5-h5",
+          "failure_reason": null,
+          "occurred_at": "2025-12-25T00:00:00+00:00",
+          "status": "succeeded"
+        }
+      ],
+      "signals_conflict": false
+    },
+    "expect_unknown": false,
+    "expected_outcome": "insufficient_funds",
+    "id": "insufficient_funds-v5",
+    "max_confidence": 1.0,
+    "min_confidence": 0.6,
+    "notes": "clear reason with supporting history"
+  },
+  {
+    "context": {
+      "applicable_policies": [
+        "A payment may be retried at most 3 times."
+      ],
+      "case_id": "00000000-0000-0000-0000-000000000000",
+      "case_state": "diagnosing",
+      "customer": {
+        "external_id": "cust-card_expired-v0",
+        "historical_success_rate": 0.75,
+        "successful_payments": 3,
+        "tenure_days": 21,
+        "total_payments": 4
+      },
+      "evidence_sufficiency": "sufficient",
+      "failure": {
+        "consecutive_failures": 1,
+        "days_since_last_success": 7,
+        "distinct_prior_failure_reasons": []
+      },
+      "payment": {
+        "amount": "4999.00",
+        "currency": "INR",
+        "external_reference": "card_expired-v0",
+        "failure_reason": "card_expired",
+        "occurred_at": "2026-01-01T00:00:00+00:00",
+        "status": "failed"
+      },
+      "previous_interventions": [],
+      "recent_history": [
+        {
+          "amount": "4999.00",
+          "currency": "INR",
+          "external_reference": "card_expired-v0-h0",
+          "failure_reason": null,
+          "occurred_at": "2025-12-11T00:00:00+00:00",
+          "status": "succeeded"
+        },
+        {
+          "amount": "4999.00",
+          "currency": "INR",
+          "external_reference": "card_expired-v0-h1",
+          "failure_reason": null,
+          "occurred_at": "2025-12-18T00:00:00+00:00",
+          "status": "succeeded"
+        },
+        {
+          "amount": "4999.00",
+          "currency": "INR",
+          "external_reference": "card_expired-v0-h2",
+          "failure_reason": null,
+          "occurred_at": "2025-12-25T00:00:00+00:00",
+          "status": "succeeded"
+        }
+      ],
+      "signals_conflict": false
+    },
+    "expect_unknown": false,
+    "expected_outcome": "card_expired",
+    "id": "card_expired-v0",
+    "max_confidence": 1.0,
+    "min_confidence": 0.6,
+    "notes": "clear reason with supporting history"
+  },
+  {
+    "context": {
+      "applicable_policies": [
+        "A payment may be retried at most 3 times."
+      ],
+      "case_id": "00000000-0000-0000-0000-000000000000",
+      "case_state": "diagnosing",
+      "customer": {
+        "external_id": "cust-card_expired-v1",
+        "historical_success_rate": 0.7143,
+        "successful_payments": 5,
+        "tenure_days": 35,
+        "total_payments": 7
+      },
+      "evidence_sufficiency": "sufficient",
+      "failure": {
+        "consecutive_failures": 2,
+        "days_since_last_success": 7,
+        "distinct_prior_failure_reasons": [
+          "card_expired"
+        ]
+      },
+      "payment": {
+        "amount": "4999.00",
+        "currency": "INR",
+        "external_reference": "card_expired-v1",
+        "failure_reason": "card_expired",
+        "occurred_at": "2026-01-01T00:00:00+00:00",
+        "status": "failed"
+      },
+      "previous_interventions": [],
+      "recent_history": [
+        {
+          "amount": "4999.00",
+          "currency": "INR",
+          "external_reference": "card_expired-v1-h0",
+          "failure_reason": null,
+          "occurred_at": "2025-11-27T00:00:00+00:00",
+          "status": "succeeded"
+        },
+        {
+          "amount": "4999.00",
+          "currency": "INR",
+          "external_reference": "card_expired-v1-h1",
+          "failure_reason": null,
+          "occurred_at": "2025-12-04T00:00:00+00:00",
+          "status": "succeeded"
+        },
+        {
+          "amount": "4999.00",
+          "currency": "INR",
+          "external_reference": "card_expired-v1-h2",
+          "failure_reason": null,
+          "occurred_at": "2025-12-11T00:00:00+00:00",
+          "status": "succeeded"
+        },
+        {
+          "amount": "4999.00",
+          "currency": "INR",
+          "external_reference": "card_expired-v1-h3",
+          "failure_reason": null,
+          "occurred_at": "2025-12-18T00:00:00+00:00",
+          "status": "succeeded"
+        },
+        {
+          "amount": "4999.00",
+          "currency": "INR",
+          "external_reference": "card_expired-v1-h4",
+          "failure_reason": null,
+          "occurred_at": "2025-12-25T00:00:00+00:00",
+          "status": "succeeded"
+        }
+      ],
+      "signals_conflict": false
+    },
+    "expect_unknown": false,
+    "expected_outcome": "card_expired",
+    "id": "card_expired-v1",
+    "max_confidence": 1.0,
+    "min_confidence": 0.6,
+    "notes": "clear reason with supporting history"
+  },
+  {
+    "context": {
+      "applicable_policies": [
+        "A payment may be retried at most 3 times."
+      ],
+      "case_id": "00000000-0000-0000-0000-000000000000",
+      "case_state": "diagnosing",
+      "customer": {
+        "external_id": "cust-card_expired-v2",
+        "historical_success_rate": 0.7273,
+        "successful_payments": 8,
+        "tenure_days": 56,
+        "total_payments": 11
+      },
+      "evidence_sufficiency": "sufficient",
+      "failure": {
+        "consecutive_failures": 3,
+        "days_since_last_success": 7,
+        "distinct_prior_failure_reasons": [
+          "card_expired"
+        ]
+      },
+      "payment": {
+        "amount": "4999.00",
+        "currency": "INR",
+        "external_reference": "card_expired-v2",
+        "failure_reason": "card_expired",
+        "occurred_at": "2026-01-01T00:00:00+00:00",
+        "status": "failed"
+      },
+      "previous_interventions": [],
+      "recent_history": [
+        {
+          "amount": "4999.00",
+          "currency": "INR",
+          "external_reference": "card_expired-v2-h0",
+          "failure_reason": null,
+          "occurred_at": "2025-11-06T00:00:00+00:00",
+          "status": "succeeded"
+        },
+        {
+          "amount": "4999.00",
+          "currency": "INR",
+          "external_reference": "card_expired-v2-h1",
+          "failure_reason": null,
+          "occurred_at": "2025-11-13T00:00:00+00:00",
+          "status": "succeeded"
+        },
+        {
+          "amount": "4999.00",
+          "currency": "INR",
+          "external_reference": "card_expired-v2-h2",
+          "failure_reason": null,
+          "occurred_at": "2025-11-20T00:00:00+00:00",
+          "status": "succeeded"
+        },
+        {
+          "amount": "4999.00",
+          "currency": "INR",
+          "external_reference": "card_expired-v2-h3",
+          "failure_reason": null,
+          "occurred_at": "2025-11-27T00:00:00+00:00",
+          "status": "succeeded"
+        },
+        {
+          "amount": "4999.00",
+          "currency": "INR",
+          "external_reference": "card_expired-v2-h4",
+          "failure_reason": null,
+          "occurred_at": "2025-12-04T00:00:00+00:00",
+          "status": "succeeded"
+        },
+        {
+          "amount": "4999.00",
+          "currency": "INR",
+          "external_reference": "card_expired-v2-h5",
+          "failure_reason": null,
+          "occurred_at": "2025-12-11T00:00:00+00:00",
+          "status": "succeeded"
+        },
+        {
+          "amount": "4999.00",
+          "currency": "INR",
+          "external_reference": "card_expired-v2-h6",
+          "failure_reason": null,
+          "occurred_at": "2025-12-18T00:00:00+00:00",
+          "status": "succeeded"
+        },
+        {
+          "amount": "4999.00",
+          "currency": "INR",
+          "external_reference": "card_expired-v2-h7",
+          "failure_reason": null,
+          "occurred_at": "2025-12-25T00:00:00+00:00",
+          "status": "succeeded"
+        }
+      ],
+      "signals_conflict": false
+    },
+    "expect_unknown": false,
+    "expected_outcome": "card_expired",
+    "id": "card_expired-v2",
+    "max_confidence": 1.0,
+    "min_confidence": 0.6,
+    "notes": "clear reason with supporting history"
+  },
+  {
+    "context": {
+      "applicable_policies": [
+        "A payment may be retried at most 3 times."
+      ],
+      "case_id": "00000000-0000-0000-0000-000000000000",
+      "case_state": "diagnosing",
+      "customer": {
+        "external_id": "cust-card_expired-v3",
+        "historical_success_rate": 0.6667,
+        "successful_payments": 2,
+        "tenure_days": 14,
+        "total_payments": 3
+      },
+      "evidence_sufficiency": "sufficient",
+      "failure": {
+        "consecutive_failures": 1,
+        "days_since_last_success": 7,
+        "distinct_prior_failure_reasons": []
+      },
+      "payment": {
+        "amount": "4999.00",
+        "currency": "INR",
+        "external_reference": "card_expired-v3",
+        "failure_reason": "card_expired",
+        "occurred_at": "2026-01-01T00:00:00+00:00",
+        "status": "failed"
+      },
+      "previous_interventions": [],
+      "recent_history": [
+        {
+          "amount": "4999.00",
+          "currency": "INR",
+          "external_reference": "card_expired-v3-h0",
+          "failure_reason": null,
+          "occurred_at": "2025-12-18T00:00:00+00:00",
+          "status": "succeeded"
+        },
+        {
+          "amount": "4999.00",
+          "currency": "INR",
+          "external_reference": "card_expired-v3-h1",
+          "failure_reason": null,
+          "occurred_at": "2025-12-25T00:00:00+00:00",
+          "status": "succeeded"
+        }
+      ],
+      "signals_conflict": false
+    },
+    "expect_unknown": false,
+    "expected_outcome": "card_expired",
+    "id": "card_expired-v3",
+    "max_confidence": 1.0,
+    "min_confidence": 0.6,
+    "notes": "clear reason with supporting history"
+  },
+  {
+    "context": {
+      "applicable_policies": [
+        "A payment may be retried at most 3 times."
+      ],
+      "case_id": "00000000-0000-0000-0000-000000000000",
+      "case_state": "diagnosing",
+      "customer": {
+        "external_id": "cust-card_expired-v4",
+        "historical_success_rate": 0.6667,
+        "successful_payments": 4,
+        "tenure_days": 28,
+        "total_payments": 6
+      },
+      "evidence_sufficiency": "sufficient",
+      "failure": {
+        "consecutive_failures": 1,
+        "days_since_last_success": 7,
+        "distinct_prior_failure_reasons": [
+          "card_expired"
+        ]
+      },
+      "payment": {
+        "amount": "4999.00",
+        "currency": "INR",
+        "external_reference": "card_expired-v4",
+        "failure_reason": "card_expired",
+        "occurred_at": "2026-01-01T00:00:00+00:00",
+        "status": "failed"
+      },
+      "previous_interventions": [],
+      "recent_history": [
+        {
+          "amount": "4999.00",
+          "currency": "INR",
+          "external_reference": "card_expired-v4-h0",
+          "failure_reason": null,
+          "occurred_at": "2025-12-04T00:00:00+00:00",
+          "status": "succeeded"
+        },
+        {
+          "amount": "4999.00",
+          "currency": "INR",
+          "external_reference": "card_expired-v4-h1",
+          "failure_reason": null,
+          "occurred_at": "2025-12-11T00:00:00+00:00",
+          "status": "succeeded"
+        },
+        {
+          "amount": "4999.00",
+          "currency": "INR",
+          "external_reference": "card_expired-v4-h2",
+          "failure_reason": null,
+          "occurred_at": "2025-12-18T00:00:00+00:00",
+          "status": "succeeded"
+        },
+        {
+          "amount": "4999.00",
+          "currency": "INR",
+          "external_reference": "card_expired-v4-h3",
+          "failure_reason": null,
+          "occurred_at": "2025-12-25T00:00:00+00:00",
+          "status": "succeeded"
+        }
+      ],
+      "signals_conflict": false
+    },
+    "expect_unknown": false,
+    "expected_outcome": "card_expired",
+    "id": "card_expired-v4",
+    "max_confidence": 1.0,
+    "min_confidence": 0.6,
+    "notes": "clear reason with supporting history"
+  },
+  {
+    "context": {
+      "applicable_policies": [
+        "A payment may be retried at most 3 times."
+      ],
+      "case_id": "00000000-0000-0000-0000-000000000000",
+      "case_state": "diagnosing",
+      "customer": {
+        "external_id": "cust-card_expired-v5",
+        "historical_success_rate": 0.8571,
+        "successful_payments": 6,
+        "tenure_days": 42,
+        "total_payments": 7
+      },
+      "evidence_sufficiency": "sufficient",
+      "failure": {
+        "consecutive_failures": 1,
+        "days_since_last_success": 7,
+        "distinct_prior_failure_reasons": []
+      },
+      "payment": {
+        "amount": "4999.00",
+        "currency": "INR",
+        "external_reference": "card_expired-v5",
+        "failure_reason": "card_expired",
+        "occurred_at": "2026-01-01T00:00:00+00:00",
+        "status": "failed"
+      },
+      "previous_interventions": [],
+      "recent_history": [
+        {
+          "amount": "4999.00",
+          "currency": "INR",
+          "external_reference": "card_expired-v5-h0",
+          "failure_reason": null,
+          "occurred_at": "2025-11-20T00:00:00+00:00",
+          "status": "succeeded"
+        },
+        {
+          "amount": "4999.00",
+          "currency": "INR",
+          "external_reference": "card_expired-v5-h1",
+          "failure_reason": null,
+          "occurred_at": "2025-11-27T00:00:00+00:00",
+          "status": "succeeded"
+        },
+        {
+          "amount": "4999.00",
+          "currency": "INR",
+          "external_reference": "card_expired-v5-h2",
+          "failure_reason": null,
+          "occurred_at": "2025-12-04T00:00:00+00:00",
+          "status": "succeeded"
+        },
+        {
+          "amount": "4999.00",
+          "currency": "INR",
+          "external_reference": "card_expired-v5-h3",
+          "failure_reason": null,
+          "occurred_at": "2025-12-11T00:00:00+00:00",
+          "status": "succeeded"
+        },
+        {
+          "amount": "4999.00",
+          "currency": "INR",
+          "external_reference": "card_expired-v5-h4",
+          "failure_reason": null,
+          "occurred_at": "2025-12-18T00:00:00+00:00",
+          "status": "succeeded"
+        },
+        {
+          "amount": "4999.00",
+          "currency": "INR",
+          "external_reference": "card_expired-v5-h5",
+          "failure_reason": null,
+          "occurred_at": "2025-12-25T00:00:00+00:00",
+          "status": "succeeded"
+        }
+      ],
+      "signals_conflict": false
+    },
+    "expect_unknown": false,
+    "expected_outcome": "card_expired",
+    "id": "card_expired-v5",
+    "max_confidence": 1.0,
+    "min_confidence": 0.6,
+    "notes": "clear reason with supporting history"
+  },
+  {
+    "context": {
+      "applicable_policies": [
+        "A payment may be retried at most 3 times."
+      ],
+      "case_id": "00000000-0000-0000-0000-000000000000",
+      "case_state": "diagnosing",
+      "customer": {
+        "external_id": "cust-do_not_honor-v0",
+        "historical_success_rate": 0.75,
+        "successful_payments": 3,
+        "tenure_days": 21,
+        "total_payments": 4
+      },
+      "evidence_sufficiency": "sufficient",
+      "failure": {
+        "consecutive_failures": 1,
+        "days_since_last_success": 7,
+        "distinct_prior_failure_reasons": []
+      },
+      "payment": {
+        "amount": "4999.00",
+        "currency": "INR",
+        "external_reference": "do_not_honor-v0",
+        "failure_reason": "do_not_honor",
+        "occurred_at": "2026-01-01T00:00:00+00:00",
+        "status": "failed"
+      },
+      "previous_interventions": [],
+      "recent_history": [
+        {
+          "amount": "4999.00",
+          "currency": "INR",
+          "external_reference": "do_not_honor-v0-h0",
+          "failure_reason": null,
+          "occurred_at": "2025-12-11T00:00:00+00:00",
+          "status": "succeeded"
+        },
+        {
+          "amount": "4999.00",
+          "currency": "INR",
+          "external_reference": "do_not_honor-v0-h1",
+          "failure_reason": null,
+          "occurred_at": "2025-12-18T00:00:00+00:00",
+          "status": "succeeded"
+        },
+        {
+          "amount": "4999.00",
+          "currency": "INR",
+          "external_reference": "do_not_honor-v0-h2",
+          "failure_reason": null,
+          "occurred_at": "2025-12-25T00:00:00+00:00",
+          "status": "succeeded"
+        }
+      ],
+      "signals_conflict": false
+    },
+    "expect_unknown": false,
+    "expected_outcome": "do_not_honor",
+    "id": "do_not_honor-v0",
+    "max_confidence": 1.0,
+    "min_confidence": 0.6,
+    "notes": "clear reason with supporting history"
+  },
+  {
+    "context": {
+      "applicable_policies": [
+        "A payment may be retried at most 3 times."
+      ],
+      "case_id": "00000000-0000-0000-0000-000000000000",
+      "case_state": "diagnosing",
+      "customer": {
+        "external_id": "cust-do_not_honor-v1",
+        "historical_success_rate": 0.7143,
+        "successful_payments": 5,
+        "tenure_days": 35,
+        "total_payments": 7
+      },
+      "evidence_sufficiency": "sufficient",
+      "failure": {
+        "consecutive_failures": 2,
+        "days_since_last_success": 7,
+        "distinct_prior_failure_reasons": [
+          "do_not_honor"
+        ]
+      },
+      "payment": {
+        "amount": "4999.00",
+        "currency": "INR",
+        "external_reference": "do_not_honor-v1",
+        "failure_reason": "do_not_honor",
+        "occurred_at": "2026-01-01T00:00:00+00:00",
+        "status": "failed"
+      },
+      "previous_interventions": [],
+      "recent_history": [
+        {
+          "amount": "4999.00",
+          "currency": "INR",
+          "external_reference": "do_not_honor-v1-h0",
+          "failure_reason": null,
+          "occurred_at": "2025-11-27T00:00:00+00:00",
+          "status": "succeeded"
+        },
+        {
+          "amount": "4999.00",
+          "currency": "INR",
+          "external_reference": "do_not_honor-v1-h1",
+          "failure_reason": null,
+          "occurred_at": "2025-12-04T00:00:00+00:00",
+          "status": "succeeded"
+        },
+        {
+          "amount": "4999.00",
+          "currency": "INR",
+          "external_reference": "do_not_honor-v1-h2",
+          "failure_reason": null,
+          "occurred_at": "2025-12-11T00:00:00+00:00",
+          "status": "succeeded"
+        },
+        {
+          "amount": "4999.00",
+          "currency": "INR",
+          "external_reference": "do_not_honor-v1-h3",
+          "failure_reason": null,
+          "occurred_at": "2025-12-18T00:00:00+00:00",
+          "status": "succeeded"
+        },
+        {
+          "amount": "4999.00",
+          "currency": "INR",
+          "external_reference": "do_not_honor-v1-h4",
+          "failure_reason": null,
+          "occurred_at": "2025-12-25T00:00:00+00:00",
+          "status": "succeeded"
+        }
+      ],
+      "signals_conflict": false
+    },
+    "expect_unknown": false,
+    "expected_outcome": "do_not_honor",
+    "id": "do_not_honor-v1",
+    "max_confidence": 1.0,
+    "min_confidence": 0.6,
+    "notes": "clear reason with supporting history"
+  },
+  {
+    "context": {
+      "applicable_policies": [
+        "A payment may be retried at most 3 times."
+      ],
+      "case_id": "00000000-0000-0000-0000-000000000000",
+      "case_state": "diagnosing",
+      "customer": {
+        "external_id": "cust-do_not_honor-v2",
+        "historical_success_rate": 0.7273,
+        "successful_payments": 8,
+        "tenure_days": 56,
+        "total_payments": 11
+      },
+      "evidence_sufficiency": "sufficient",
+      "failure": {
+        "consecutive_failures": 3,
+        "days_since_last_success": 7,
+        "distinct_prior_failure_reasons": [
+          "do_not_honor"
+        ]
+      },
+      "payment": {
+        "amount": "4999.00",
+        "currency": "INR",
+        "external_reference": "do_not_honor-v2",
+        "failure_reason": "do_not_honor",
+        "occurred_at": "2026-01-01T00:00:00+00:00",
+        "status": "failed"
+      },
+      "previous_interventions": [],
+      "recent_history": [
+        {
+          "amount": "4999.00",
+          "currency": "INR",
+          "external_reference": "do_not_honor-v2-h0",
+          "failure_reason": null,
+          "occurred_at": "2025-11-06T00:00:00+00:00",
+          "status": "succeeded"
+        },
+        {
+          "amount": "4999.00",
+          "currency": "INR",
+          "external_reference": "do_not_honor-v2-h1",
+          "failure_reason": null,
+          "occurred_at": "2025-11-13T00:00:00+00:00",
+          "status": "succeeded"
+        },
+        {
+          "amount": "4999.00",
+          "currency": "INR",
+          "external_reference": "do_not_honor-v2-h2",
+          "failure_reason": null,
+          "occurred_at": "2025-11-20T00:00:00+00:00",
+          "status": "succeeded"
+        },
+        {
+          "amount": "4999.00",
+          "currency": "INR",
+          "external_reference": "do_not_honor-v2-h3",
+          "failure_reason": null,
+          "occurred_at": "2025-11-27T00:00:00+00:00",
+          "status": "succeeded"
+        },
+        {
+          "amount": "4999.00",
+          "currency": "INR",
+          "external_reference": "do_not_honor-v2-h4",
+          "failure_reason": null,
+          "occurred_at": "2025-12-04T00:00:00+00:00",
+          "status": "succeeded"
+        },
+        {
+          "amount": "4999.00",
+          "currency": "INR",
+          "external_reference": "do_not_honor-v2-h5",
+          "failure_reason": null,
+          "occurred_at": "2025-12-11T00:00:00+00:00",
+          "status": "succeeded"
+        },
+        {
+          "amount": "4999.00",
+          "currency": "INR",
+          "external_reference": "do_not_honor-v2-h6",
+          "failure_reason": null,
+          "occurred_at": "2025-12-18T00:00:00+00:00",
+          "status": "succeeded"
+        },
+        {
+          "amount": "4999.00",
+          "currency": "INR",
+          "external_reference": "do_not_honor-v2-h7",
+          "failure_reason": null,
+          "occurred_at": "2025-12-25T00:00:00+00:00",
+          "status": "succeeded"
+        }
+      ],
+      "signals_conflict": false
+    },
+    "expect_unknown": false,
+    "expected_outcome": "do_not_honor",
+    "id": "do_not_honor-v2",
+    "max_confidence": 1.0,
+    "min_confidence": 0.6,
+    "notes": "clear reason with supporting history"
+  },
+  {
+    "context": {
+      "applicable_policies": [
+        "A payment may be retried at most 3 times."
+      ],
+      "case_id": "00000000-0000-0000-0000-000000000000",
+      "case_state": "diagnosing",
+      "customer": {
+        "external_id": "cust-do_not_honor-v3",
+        "historical_success_rate": 0.6667,
+        "successful_payments": 2,
+        "tenure_days": 14,
+        "total_payments": 3
+      },
+      "evidence_sufficiency": "sufficient",
+      "failure": {
+        "consecutive_failures": 1,
+        "days_since_last_success": 7,
+        "distinct_prior_failure_reasons": []
+      },
+      "payment": {
+        "amount": "4999.00",
+        "currency": "INR",
+        "external_reference": "do_not_honor-v3",
+        "failure_reason": "do_not_honor",
+        "occurred_at": "2026-01-01T00:00:00+00:00",
+        "status": "failed"
+      },
+      "previous_interventions": [],
+      "recent_history": [
+        {
+          "amount": "4999.00",
+          "currency": "INR",
+          "external_reference": "do_not_honor-v3-h0",
+          "failure_reason": null,
+          "occurred_at": "2025-12-18T00:00:00+00:00",
+          "status": "succeeded"
+        },
+        {
+          "amount": "4999.00",
+          "currency": "INR",
+          "external_reference": "do_not_honor-v3-h1",
+          "failure_reason": null,
+          "occurred_at": "2025-12-25T00:00:00+00:00",
+          "status": "succeeded"
+        }
+      ],
+      "signals_conflict": false
+    },
+    "expect_unknown": false,
+    "expected_outcome": "do_not_honor",
+    "id": "do_not_honor-v3",
+    "max_confidence": 1.0,
+    "min_confidence": 0.6,
+    "notes": "clear reason with supporting history"
+  },
+  {
+    "context": {
+      "applicable_policies": [
+        "A payment may be retried at most 3 times."
+      ],
+      "case_id": "00000000-0000-0000-0000-000000000000",
+      "case_state": "diagnosing",
+      "customer": {
+        "external_id": "cust-do_not_honor-v4",
+        "historical_success_rate": 0.6667,
+        "successful_payments": 4,
+        "tenure_days": 28,
+        "total_payments": 6
+      },
+      "evidence_sufficiency": "sufficient",
+      "failure": {
+        "consecutive_failures": 1,
+        "days_since_last_success": 7,
+        "distinct_prior_failure_reasons": [
+          "do_not_honor"
+        ]
+      },
+      "payment": {
+        "amount": "4999.00",
+        "currency": "INR",
+        "external_reference": "do_not_honor-v4",
+        "failure_reason": "do_not_honor",
+        "occurred_at": "2026-01-01T00:00:00+00:00",
+        "status": "failed"
+      },
+      "previous_interventions": [],
+      "recent_history": [
+        {
+          "amount": "4999.00",
+          "currency": "INR",
+          "external_reference": "do_not_honor-v4-h0",
+          "failure_reason": null,
+          "occurred_at": "2025-12-04T00:00:00+00:00",
+          "status": "succeeded"
+        },
+        {
+          "amount": "4999.00",
+          "currency": "INR",
+          "external_reference": "do_not_honor-v4-h1",
+          "failure_reason": null,
+          "occurred_at": "2025-12-11T00:00:00+00:00",
+          "status": "succeeded"
+        },
+        {
+          "amount": "4999.00",
+          "currency": "INR",
+          "external_reference": "do_not_honor-v4-h2",
+          "failure_reason": null,
+          "occurred_at": "2025-12-18T00:00:00+00:00",
+          "status": "succeeded"
+        },
+        {
+          "amount": "4999.00",
+          "currency": "INR",
+          "external_reference": "do_not_honor-v4-h3",
+          "failure_reason": null,
+          "occurred_at": "2025-12-25T00:00:00+00:00",
+          "status": "succeeded"
+        }
+      ],
+      "signals_conflict": false
+    },
+    "expect_unknown": false,
+    "expected_outcome": "do_not_honor",
+    "id": "do_not_honor-v4",
+    "max_confidence": 1.0,
+    "min_confidence": 0.6,
+    "notes": "clear reason with supporting history"
+  },
+  {
+    "context": {
+      "applicable_policies": [
+        "A payment may be retried at most 3 times."
+      ],
+      "case_id": "00000000-0000-0000-0000-000000000000",
+      "case_state": "diagnosing",
+      "customer": {
+        "external_id": "cust-do_not_honor-v5",
+        "historical_success_rate": 0.8571,
+        "successful_payments": 6,
+        "tenure_days": 42,
+        "total_payments": 7
+      },
+      "evidence_sufficiency": "sufficient",
+      "failure": {
+        "consecutive_failures": 1,
+        "days_since_last_success": 7,
+        "distinct_prior_failure_reasons": []
+      },
+      "payment": {
+        "amount": "4999.00",
+        "currency": "INR",
+        "external_reference": "do_not_honor-v5",
+        "failure_reason": "do_not_honor",
+        "occurred_at": "2026-01-01T00:00:00+00:00",
+        "status": "failed"
+      },
+      "previous_interventions": [],
+      "recent_history": [
+        {
+          "amount": "4999.00",
+          "currency": "INR",
+          "external_reference": "do_not_honor-v5-h0",
+          "failure_reason": null,
+          "occurred_at": "2025-11-20T00:00:00+00:00",
+          "status": "succeeded"
+        },
+        {
+          "amount": "4999.00",
+          "currency": "INR",
+          "external_reference": "do_not_honor-v5-h1",
+          "failure_reason": null,
+          "occurred_at": "2025-11-27T00:00:00+00:00",
+          "status": "succeeded"
+        },
+        {
+          "amount": "4999.00",
+          "currency": "INR",
+          "external_reference": "do_not_honor-v5-h2",
+          "failure_reason": null,
+          "occurred_at": "2025-12-04T00:00:00+00:00",
+          "status": "succeeded"
+        },
+        {
+          "amount": "4999.00",
+          "currency": "INR",
+          "external_reference": "do_not_honor-v5-h3",
+          "failure_reason": null,
+          "occurred_at": "2025-12-11T00:00:00+00:00",
+          "status": "succeeded"
+        },
+        {
+          "amount": "4999.00",
+          "currency": "INR",
+          "external_reference": "do_not_honor-v5-h4",
+          "failure_reason": null,
+          "occurred_at": "2025-12-18T00:00:00+00:00",
+          "status": "succeeded"
+        },
+        {
+          "amount": "4999.00",
+          "currency": "INR",
+          "external_reference": "do_not_honor-v5-h5",
+          "failure_reason": null,
+          "occurred_at": "2025-12-25T00:00:00+00:00",
+          "status": "succeeded"
+        }
+      ],
+      "signals_conflict": false
+    },
+    "expect_unknown": false,
+    "expected_outcome": "do_not_honor",
+    "id": "do_not_honor-v5",
+    "max_confidence": 1.0,
+    "min_confidence": 0.6,
+    "notes": "clear reason with supporting history"
+  },
+  {
+    "context": {
+      "applicable_policies": [
+        "A payment may be retried at most 3 times."
+      ],
+      "case_id": "00000000-0000-0000-0000-000000000000",
+      "case_state": "diagnosing",
+      "customer": {
+        "external_id": "cust-processing_error-v0",
+        "historical_success_rate": 0.75,
+        "successful_payments": 3,
+        "tenure_days": 21,
+        "total_payments": 4
+      },
+      "evidence_sufficiency": "sufficient",
+      "failure": {
+        "consecutive_failures": 1,
+        "days_since_last_success": 7,
+        "distinct_prior_failure_reasons": []
+      },
+      "payment": {
+        "amount": "4999.00",
+        "currency": "INR",
+        "external_reference": "processing_error-v0",
+        "failure_reason": "processing_error",
+        "occurred_at": "2026-01-01T00:00:00+00:00",
+        "status": "failed"
+      },
+      "previous_interventions": [],
+      "recent_history": [
+        {
+          "amount": "4999.00",
+          "currency": "INR",
+          "external_reference": "processing_error-v0-h0",
+          "failure_reason": null,
+          "occurred_at": "2025-12-11T00:00:00+00:00",
+          "status": "succeeded"
+        },
+        {
+          "amount": "4999.00",
+          "currency": "INR",
+          "external_reference": "processing_error-v0-h1",
+          "failure_reason": null,
+          "occurred_at": "2025-12-18T00:00:00+00:00",
+          "status": "succeeded"
+        },
+        {
+          "amount": "4999.00",
+          "currency": "INR",
+          "external_reference": "processing_error-v0-h2",
+          "failure_reason": null,
+          "occurred_at": "2025-12-25T00:00:00+00:00",
+          "status": "succeeded"
+        }
+      ],
+      "signals_conflict": false
+    },
+    "expect_unknown": false,
+    "expected_outcome": "processing_error",
+    "id": "processing_error-v0",
+    "max_confidence": 1.0,
+    "min_confidence": 0.6,
+    "notes": "clear reason with supporting history"
+  },
+  {
+    "context": {
+      "applicable_policies": [
+        "A payment may be retried at most 3 times."
+      ],
+      "case_id": "00000000-0000-0000-0000-000000000000",
+      "case_state": "diagnosing",
+      "customer": {
+        "external_id": "cust-processing_error-v1",
+        "historical_success_rate": 0.7143,
+        "successful_payments": 5,
+        "tenure_days": 35,
+        "total_payments": 7
+      },
+      "evidence_sufficiency": "sufficient",
+      "failure": {
+        "consecutive_failures": 2,
+        "days_since_last_success": 7,
+        "distinct_prior_failure_reasons": [
+          "processing_error"
+        ]
+      },
+      "payment": {
+        "amount": "4999.00",
+        "currency": "INR",
+        "external_reference": "processing_error-v1",
+        "failure_reason": "processing_error",
+        "occurred_at": "2026-01-01T00:00:00+00:00",
+        "status": "failed"
+      },
+      "previous_interventions": [],
+      "recent_history": [
+        {
+          "amount": "4999.00",
+          "currency": "INR",
+          "external_reference": "processing_error-v1-h0",
+          "failure_reason": null,
+          "occurred_at": "2025-11-27T00:00:00+00:00",
+          "status": "succeeded"
+        },
+        {
+          "amount": "4999.00",
+          "currency": "INR",
+          "external_reference": "processing_error-v1-h1",
+          "failure_reason": null,
+          "occurred_at": "2025-12-04T00:00:00+00:00",
+          "status": "succeeded"
+        },
+        {
+          "amount": "4999.00",
+          "currency": "INR",
+          "external_reference": "processing_error-v1-h2",
+          "failure_reason": null,
+          "occurred_at": "2025-12-11T00:00:00+00:00",
+          "status": "succeeded"
+        },
+        {
+          "amount": "4999.00",
+          "currency": "INR",
+          "external_reference": "processing_error-v1-h3",
+          "failure_reason": null,
+          "occurred_at": "2025-12-18T00:00:00+00:00",
+          "status": "succeeded"
+        },
+        {
+          "amount": "4999.00",
+          "currency": "INR",
+          "external_reference": "processing_error-v1-h4",
+          "failure_reason": null,
+          "occurred_at": "2025-12-25T00:00:00+00:00",
+          "status": "succeeded"
+        }
+      ],
+      "signals_conflict": false
+    },
+    "expect_unknown": false,
+    "expected_outcome": "processing_error",
+    "id": "processing_error-v1",
+    "max_confidence": 1.0,
+    "min_confidence": 0.6,
+    "notes": "clear reason with supporting history"
+  },
+  {
+    "context": {
+      "applicable_policies": [
+        "A payment may be retried at most 3 times."
+      ],
+      "case_id": "00000000-0000-0000-0000-000000000000",
+      "case_state": "diagnosing",
+      "customer": {
+        "external_id": "cust-processing_error-v2",
+        "historical_success_rate": 0.7273,
+        "successful_payments": 8,
+        "tenure_days": 56,
+        "total_payments": 11
+      },
+      "evidence_sufficiency": "sufficient",
+      "failure": {
+        "consecutive_failures": 3,
+        "days_since_last_success": 7,
+        "distinct_prior_failure_reasons": [
+          "processing_error"
+        ]
+      },
+      "payment": {
+        "amount": "4999.00",
+        "currency": "INR",
+        "external_reference": "processing_error-v2",
+        "failure_reason": "processing_error",
+        "occurred_at": "2026-01-01T00:00:00+00:00",
+        "status": "failed"
+      },
+      "previous_interventions": [],
+      "recent_history": [
+        {
+          "amount": "4999.00",
+          "currency": "INR",
+          "external_reference": "processing_error-v2-h0",
+          "failure_reason": null,
+          "occurred_at": "2025-11-06T00:00:00+00:00",
+          "status": "succeeded"
+        },
+        {
+          "amount": "4999.00",
+          "currency": "INR",
+          "external_reference": "processing_error-v2-h1",
+          "failure_reason": null,
+          "occurred_at": "2025-11-13T00:00:00+00:00",
+          "status": "succeeded"
+        },
+        {
+          "amount": "4999.00",
+          "currency": "INR",
+          "external_reference": "processing_error-v2-h2",
+          "failure_reason": null,
+          "occurred_at": "2025-11-20T00:00:00+00:00",
+          "status": "succeeded"
+        },
+        {
+          "amount": "4999.00",
+          "currency": "INR",
+          "external_reference": "processing_error-v2-h3",
+          "failure_reason": null,
+          "occurred_at": "2025-11-27T00:00:00+00:00",
+          "status": "succeeded"
+        },
+        {
+          "amount": "4999.00",
+          "currency": "INR",
+          "external_reference": "processing_error-v2-h4",
+          "failure_reason": null,
+          "occurred_at": "2025-12-04T00:00:00+00:00",
+          "status": "succeeded"
+        },
+        {
+          "amount": "4999.00",
+          "currency": "INR",
+          "external_reference": "processing_error-v2-h5",
+          "failure_reason": null,
+          "occurred_at": "2025-12-11T00:00:00+00:00",
+          "status": "succeeded"
+        },
+        {
+          "amount": "4999.00",
+          "currency": "INR",
+          "external_reference": "processing_error-v2-h6",
+          "failure_reason": null,
+          "occurred_at": "2025-12-18T00:00:00+00:00",
+          "status": "succeeded"
+        },
+        {
+          "amount": "4999.00",
+          "currency": "INR",
+          "external_reference": "processing_error-v2-h7",
+          "failure_reason": null,
+          "occurred_at": "2025-12-25T00:00:00+00:00",
+          "status": "succeeded"
+        }
+      ],
+      "signals_conflict": false
+    },
+    "expect_unknown": false,
+    "expected_outcome": "processing_error",
+    "id": "processing_error-v2",
+    "max_confidence": 1.0,
+    "min_confidence": 0.6,
+    "notes": "clear reason with supporting history"
+  },
+  {
+    "context": {
+      "applicable_policies": [
+        "A payment may be retried at most 3 times."
+      ],
+      "case_id": "00000000-0000-0000-0000-000000000000",
+      "case_state": "diagnosing",
+      "customer": {
+        "external_id": "cust-processing_error-v3",
+        "historical_success_rate": 0.6667,
+        "successful_payments": 2,
+        "tenure_days": 14,
+        "total_payments": 3
+      },
+      "evidence_sufficiency": "sufficient",
+      "failure": {
+        "consecutive_failures": 1,
+        "days_since_last_success": 7,
+        "distinct_prior_failure_reasons": []
+      },
+      "payment": {
+        "amount": "4999.00",
+        "currency": "INR",
+        "external_reference": "processing_error-v3",
+        "failure_reason": "processing_error",
+        "occurred_at": "2026-01-01T00:00:00+00:00",
+        "status": "failed"
+      },
+      "previous_interventions": [],
+      "recent_history": [
+        {
+          "amount": "4999.00",
+          "currency": "INR",
+          "external_reference": "processing_error-v3-h0",
+          "failure_reason": null,
+          "occurred_at": "2025-12-18T00:00:00+00:00",
+          "status": "succeeded"
+        },
+        {
+          "amount": "4999.00",
+          "currency": "INR",
+          "external_reference": "processing_error-v3-h1",
+          "failure_reason": null,
+          "occurred_at": "2025-12-25T00:00:00+00:00",
+          "status": "succeeded"
+        }
+      ],
+      "signals_conflict": false
+    },
+    "expect_unknown": false,
+    "expected_outcome": "processing_error",
+    "id": "processing_error-v3",
+    "max_confidence": 1.0,
+    "min_confidence": 0.6,
+    "notes": "clear reason with supporting history"
+  },
+  {
+    "context": {
+      "applicable_policies": [
+        "A payment may be retried at most 3 times."
+      ],
+      "case_id": "00000000-0000-0000-0000-000000000000",
+      "case_state": "diagnosing",
+      "customer": {
+        "external_id": "cust-processing_error-v4",
+        "historical_success_rate": 0.6667,
+        "successful_payments": 4,
+        "tenure_days": 28,
+        "total_payments": 6
+      },
+      "evidence_sufficiency": "sufficient",
+      "failure": {
+        "consecutive_failures": 1,
+        "days_since_last_success": 7,
+        "distinct_prior_failure_reasons": [
+          "processing_error"
+        ]
+      },
+      "payment": {
+        "amount": "4999.00",
+        "currency": "INR",
+        "external_reference": "processing_error-v4",
+        "failure_reason": "processing_error",
+        "occurred_at": "2026-01-01T00:00:00+00:00",
+        "status": "failed"
+      },
+      "previous_interventions": [],
+      "recent_history": [
+        {
+          "amount": "4999.00",
+          "currency": "INR",
+          "external_reference": "processing_error-v4-h0",
+          "failure_reason": null,
+          "occurred_at": "2025-12-04T00:00:00+00:00",
+          "status": "succeeded"
+        },
+        {
+          "amount": "4999.00",
+          "currency": "INR",
+          "external_reference": "processing_error-v4-h1",
+          "failure_reason": null,
+          "occurred_at": "2025-12-11T00:00:00+00:00",
+          "status": "succeeded"
+        },
+        {
+          "amount": "4999.00",
+          "currency": "INR",
+          "external_reference": "processing_error-v4-h2",
+          "failure_reason": null,
+          "occurred_at": "2025-12-18T00:00:00+00:00",
+          "status": "succeeded"
+        },
+        {
+          "amount": "4999.00",
+          "currency": "INR",
+          "external_reference": "processing_error-v4-h3",
+          "failure_reason": null,
+          "occurred_at": "2025-12-25T00:00:00+00:00",
+          "status": "succeeded"
+        }
+      ],
+      "signals_conflict": false
+    },
+    "expect_unknown": false,
+    "expected_outcome": "processing_error",
+    "id": "processing_error-v4",
+    "max_confidence": 1.0,
+    "min_confidence": 0.6,
+    "notes": "clear reason with supporting history"
+  },
+  {
+    "context": {
+      "applicable_policies": [
+        "A payment may be retried at most 3 times."
+      ],
+      "case_id": "00000000-0000-0000-0000-000000000000",
+      "case_state": "diagnosing",
+      "customer": {
+        "external_id": "cust-processing_error-v5",
+        "historical_success_rate": 0.8571,
+        "successful_payments": 6,
+        "tenure_days": 42,
+        "total_payments": 7
+      },
+      "evidence_sufficiency": "sufficient",
+      "failure": {
+        "consecutive_failures": 1,
+        "days_since_last_success": 7,
+        "distinct_prior_failure_reasons": []
+      },
+      "payment": {
+        "amount": "4999.00",
+        "currency": "INR",
+        "external_reference": "processing_error-v5",
+        "failure_reason": "processing_error",
+        "occurred_at": "2026-01-01T00:00:00+00:00",
+        "status": "failed"
+      },
+      "previous_interventions": [],
+      "recent_history": [
+        {
+          "amount": "4999.00",
+          "currency": "INR",
+          "external_reference": "processing_error-v5-h0",
+          "failure_reason": null,
+          "occurred_at": "2025-11-20T00:00:00+00:00",
+          "status": "succeeded"
+        },
+        {
+          "amount": "4999.00",
+          "currency": "INR",
+          "external_reference": "processing_error-v5-h1",
+          "failure_reason": null,
+          "occurred_at": "2025-11-27T00:00:00+00:00",
+          "status": "succeeded"
+        },
+        {
+          "amount": "4999.00",
+          "currency": "INR",
+          "external_reference": "processing_error-v5-h2",
+          "failure_reason": null,
+          "occurred_at": "2025-12-04T00:00:00+00:00",
+          "status": "succeeded"
+        },
+        {
+          "amount": "4999.00",
+          "currency": "INR",
+          "external_reference": "processing_error-v5-h3",
+          "failure_reason": null,
+          "occurred_at": "2025-12-11T00:00:00+00:00",
+          "status": "succeeded"
+        },
+        {
+          "amount": "4999.00",
+          "currency": "INR",
+          "external_reference": "processing_error-v5-h4",
+          "failure_reason": null,
+          "occurred_at": "2025-12-18T00:00:00+00:00",
+          "status": "succeeded"
+        },
+        {
+          "amount": "4999.00",
+          "currency": "INR",
+          "external_reference": "processing_error-v5-h5",
+          "failure_reason": null,
+          "occurred_at": "2025-12-25T00:00:00+00:00",
+          "status": "succeeded"
+        }
+      ],
+      "signals_conflict": false
+    },
+    "expect_unknown": false,
+    "expected_outcome": "processing_error",
+    "id": "processing_error-v5",
+    "max_confidence": 1.0,
+    "min_confidence": 0.6,
+    "notes": "clear reason with supporting history"
+  },
+  {
+    "context": {
+      "applicable_policies": [
+        "A payment may be retried at most 3 times."
+      ],
+      "case_id": "00000000-0000-0000-0000-000000000000",
+      "case_state": "diagnosing",
+      "customer": {
+        "external_id": "cust-stolen_card-v0",
+        "historical_success_rate": 0.75,
+        "successful_payments": 3,
+        "tenure_days": 21,
+        "total_payments": 4
+      },
+      "evidence_sufficiency": "sufficient",
+      "failure": {
+        "consecutive_failures": 1,
+        "days_since_last_success": 7,
+        "distinct_prior_failure_reasons": []
+      },
+      "payment": {
+        "amount": "4999.00",
+        "currency": "INR",
+        "external_reference": "stolen_card-v0",
+        "failure_reason": "stolen_card",
+        "occurred_at": "2026-01-01T00:00:00+00:00",
+        "status": "failed"
+      },
+      "previous_interventions": [],
+      "recent_history": [
+        {
+          "amount": "4999.00",
+          "currency": "INR",
+          "external_reference": "stolen_card-v0-h0",
+          "failure_reason": null,
+          "occurred_at": "2025-12-11T00:00:00+00:00",
+          "status": "succeeded"
+        },
+        {
+          "amount": "4999.00",
+          "currency": "INR",
+          "external_reference": "stolen_card-v0-h1",
+          "failure_reason": null,
+          "occurred_at": "2025-12-18T00:00:00+00:00",
+          "status": "succeeded"
+        },
+        {
+          "amount": "4999.00",
+          "currency": "INR",
+          "external_reference": "stolen_card-v0-h2",
+          "failure_reason": null,
+          "occurred_at": "2025-12-25T00:00:00+00:00",
+          "status": "succeeded"
+        }
+      ],
+      "signals_conflict": false
+    },
+    "expect_unknown": false,
+    "expected_outcome": "stolen_card",
+    "id": "stolen_card-v0",
+    "max_confidence": 1.0,
+    "min_confidence": 0.6,
+    "notes": "clear reason with supporting history"
+  },
+  {
+    "context": {
+      "applicable_policies": [
+        "A payment may be retried at most 3 times."
+      ],
+      "case_id": "00000000-0000-0000-0000-000000000000",
+      "case_state": "diagnosing",
+      "customer": {
+        "external_id": "cust-stolen_card-v1",
+        "historical_success_rate": 0.7143,
+        "successful_payments": 5,
+        "tenure_days": 35,
+        "total_payments": 7
+      },
+      "evidence_sufficiency": "sufficient",
+      "failure": {
+        "consecutive_failures": 2,
+        "days_since_last_success": 7,
+        "distinct_prior_failure_reasons": [
+          "stolen_card"
+        ]
+      },
+      "payment": {
+        "amount": "4999.00",
+        "currency": "INR",
+        "external_reference": "stolen_card-v1",
+        "failure_reason": "stolen_card",
+        "occurred_at": "2026-01-01T00:00:00+00:00",
+        "status": "failed"
+      },
+      "previous_interventions": [],
+      "recent_history": [
+        {
+          "amount": "4999.00",
+          "currency": "INR",
+          "external_reference": "stolen_card-v1-h0",
+          "failure_reason": null,
+          "occurred_at": "2025-11-27T00:00:00+00:00",
+          "status": "succeeded"
+        },
+        {
+          "amount": "4999.00",
+          "currency": "INR",
+          "external_reference": "stolen_card-v1-h1",
+          "failure_reason": null,
+          "occurred_at": "2025-12-04T00:00:00+00:00",
+          "status": "succeeded"
+        },
+        {
+          "amount": "4999.00",
+          "currency": "INR",
+          "external_reference": "stolen_card-v1-h2",
+          "failure_reason": null,
+          "occurred_at": "2025-12-11T00:00:00+00:00",
+          "status": "succeeded"
+        },
+        {
+          "amount": "4999.00",
+          "currency": "INR",
+          "external_reference": "stolen_card-v1-h3",
+          "failure_reason": null,
+          "occurred_at": "2025-12-18T00:00:00+00:00",
+          "status": "succeeded"
+        },
+        {
+          "amount": "4999.00",
+          "currency": "INR",
+          "external_reference": "stolen_card-v1-h4",
+          "failure_reason": null,
+          "occurred_at": "2025-12-25T00:00:00+00:00",
+          "status": "succeeded"
+        }
+      ],
+      "signals_conflict": false
+    },
+    "expect_unknown": false,
+    "expected_outcome": "stolen_card",
+    "id": "stolen_card-v1",
+    "max_confidence": 1.0,
+    "min_confidence": 0.6,
+    "notes": "clear reason with supporting history"
+  },
+  {
+    "context": {
+      "applicable_policies": [
+        "A payment may be retried at most 3 times."
+      ],
+      "case_id": "00000000-0000-0000-0000-000000000000",
+      "case_state": "diagnosing",
+      "customer": {
+        "external_id": "cust-stolen_card-v2",
+        "historical_success_rate": 0.7273,
+        "successful_payments": 8,
+        "tenure_days": 56,
+        "total_payments": 11
+      },
+      "evidence_sufficiency": "sufficient",
+      "failure": {
+        "consecutive_failures": 3,
+        "days_since_last_success": 7,
+        "distinct_prior_failure_reasons": [
+          "stolen_card"
+        ]
+      },
+      "payment": {
+        "amount": "4999.00",
+        "currency": "INR",
+        "external_reference": "stolen_card-v2",
+        "failure_reason": "stolen_card",
+        "occurred_at": "2026-01-01T00:00:00+00:00",
+        "status": "failed"
+      },
+      "previous_interventions": [],
+      "recent_history": [
+        {
+          "amount": "4999.00",
+          "currency": "INR",
+          "external_reference": "stolen_card-v2-h0",
+          "failure_reason": null,
+          "occurred_at": "2025-11-06T00:00:00+00:00",
+          "status": "succeeded"
+        },
+        {
+          "amount": "4999.00",
+          "currency": "INR",
+          "external_reference": "stolen_card-v2-h1",
+          "failure_reason": null,
+          "occurred_at": "2025-11-13T00:00:00+00:00",
+          "status": "succeeded"
+        },
+        {
+          "amount": "4999.00",
+          "currency": "INR",
+          "external_reference": "stolen_card-v2-h2",
+          "failure_reason": null,
+          "occurred_at": "2025-11-20T00:00:00+00:00",
+          "status": "succeeded"
+        },
+        {
+          "amount": "4999.00",
+          "currency": "INR",
+          "external_reference": "stolen_card-v2-h3",
+          "failure_reason": null,
+          "occurred_at": "2025-11-27T00:00:00+00:00",
+          "status": "succeeded"
+        },
+        {
+          "amount": "4999.00",
+          "currency": "INR",
+          "external_reference": "stolen_card-v2-h4",
+          "failure_reason": null,
+          "occurred_at": "2025-12-04T00:00:00+00:00",
+          "status": "succeeded"
+        },
+        {
+          "amount": "4999.00",
+          "currency": "INR",
+          "external_reference": "stolen_card-v2-h5",
+          "failure_reason": null,
+          "occurred_at": "2025-12-11T00:00:00+00:00",
+          "status": "succeeded"
+        },
+        {
+          "amount": "4999.00",
+          "currency": "INR",
+          "external_reference": "stolen_card-v2-h6",
+          "failure_reason": null,
+          "occurred_at": "2025-12-18T00:00:00+00:00",
+          "status": "succeeded"
+        },
+        {
+          "amount": "4999.00",
+          "currency": "INR",
+          "external_reference": "stolen_card-v2-h7",
+          "failure_reason": null,
+          "occurred_at": "2025-12-25T00:00:00+00:00",
+          "status": "succeeded"
+        }
+      ],
+      "signals_conflict": false
+    },
+    "expect_unknown": false,
+    "expected_outcome": "stolen_card",
+    "id": "stolen_card-v2",
+    "max_confidence": 1.0,
+    "min_confidence": 0.6,
+    "notes": "clear reason with supporting history"
+  },
+  {
+    "context": {
+      "applicable_policies": [
+        "A payment may be retried at most 3 times."
+      ],
+      "case_id": "00000000-0000-0000-0000-000000000000",
+      "case_state": "diagnosing",
+      "customer": {
+        "external_id": "cust-stolen_card-v3",
+        "historical_success_rate": 0.6667,
+        "successful_payments": 2,
+        "tenure_days": 14,
+        "total_payments": 3
+      },
+      "evidence_sufficiency": "sufficient",
+      "failure": {
+        "consecutive_failures": 1,
+        "days_since_last_success": 7,
+        "distinct_prior_failure_reasons": []
+      },
+      "payment": {
+        "amount": "4999.00",
+        "currency": "INR",
+        "external_reference": "stolen_card-v3",
+        "failure_reason": "stolen_card",
+        "occurred_at": "2026-01-01T00:00:00+00:00",
+        "status": "failed"
+      },
+      "previous_interventions": [],
+      "recent_history": [
+        {
+          "amount": "4999.00",
+          "currency": "INR",
+          "external_reference": "stolen_card-v3-h0",
+          "failure_reason": null,
+          "occurred_at": "2025-12-18T00:00:00+00:00",
+          "status": "succeeded"
+        },
+        {
+          "amount": "4999.00",
+          "currency": "INR",
+          "external_reference": "stolen_card-v3-h1",
+          "failure_reason": null,
+          "occurred_at": "2025-12-25T00:00:00+00:00",
+          "status": "succeeded"
+        }
+      ],
+      "signals_conflict": false
+    },
+    "expect_unknown": false,
+    "expected_outcome": "stolen_card",
+    "id": "stolen_card-v3",
+    "max_confidence": 1.0,
+    "min_confidence": 0.6,
+    "notes": "clear reason with supporting history"
+  },
+  {
+    "context": {
+      "applicable_policies": [
+        "A payment may be retried at most 3 times."
+      ],
+      "case_id": "00000000-0000-0000-0000-000000000000",
+      "case_state": "diagnosing",
+      "customer": {
+        "external_id": "cust-stolen_card-v4",
+        "historical_success_rate": 0.6667,
+        "successful_payments": 4,
+        "tenure_days": 28,
+        "total_payments": 6
+      },
+      "evidence_sufficiency": "sufficient",
+      "failure": {
+        "consecutive_failures": 1,
+        "days_since_last_success": 7,
+        "distinct_prior_failure_reasons": [
+          "stolen_card"
+        ]
+      },
+      "payment": {
+        "amount": "4999.00",
+        "currency": "INR",
+        "external_reference": "stolen_card-v4",
+        "failure_reason": "stolen_card",
+        "occurred_at": "2026-01-01T00:00:00+00:00",
+        "status": "failed"
+      },
+      "previous_interventions": [],
+      "recent_history": [
+        {
+          "amount": "4999.00",
+          "currency": "INR",
+          "external_reference": "stolen_card-v4-h0",
+          "failure_reason": null,
+          "occurred_at": "2025-12-04T00:00:00+00:00",
+          "status": "succeeded"
+        },
+        {
+          "amount": "4999.00",
+          "currency": "INR",
+          "external_reference": "stolen_card-v4-h1",
+          "failure_reason": null,
+          "occurred_at": "2025-12-11T00:00:00+00:00",
+          "status": "succeeded"
+        },
+        {
+          "amount": "4999.00",
+          "currency": "INR",
+          "external_reference": "stolen_card-v4-h2",
+          "failure_reason": null,
+          "occurred_at": "2025-12-18T00:00:00+00:00",
+          "status": "succeeded"
+        },
+        {
+          "amount": "4999.00",
+          "currency": "INR",
+          "external_reference": "stolen_card-v4-h3",
+          "failure_reason": null,
+          "occurred_at": "2025-12-25T00:00:00+00:00",
+          "status": "succeeded"
+        }
+      ],
+      "signals_conflict": false
+    },
+    "expect_unknown": false,
+    "expected_outcome": "stolen_card",
+    "id": "stolen_card-v4",
+    "max_confidence": 1.0,
+    "min_confidence": 0.6,
+    "notes": "clear reason with supporting history"
+  },
+  {
+    "context": {
+      "applicable_policies": [
+        "A payment may be retried at most 3 times."
+      ],
+      "case_id": "00000000-0000-0000-0000-000000000000",
+      "case_state": "diagnosing",
+      "customer": {
+        "external_id": "cust-stolen_card-v5",
+        "historical_success_rate": 0.8571,
+        "successful_payments": 6,
+        "tenure_days": 42,
+        "total_payments": 7
+      },
+      "evidence_sufficiency": "sufficient",
+      "failure": {
+        "consecutive_failures": 1,
+        "days_since_last_success": 7,
+        "distinct_prior_failure_reasons": []
+      },
+      "payment": {
+        "amount": "4999.00",
+        "currency": "INR",
+        "external_reference": "stolen_card-v5",
+        "failure_reason": "stolen_card",
+        "occurred_at": "2026-01-01T00:00:00+00:00",
+        "status": "failed"
+      },
+      "previous_interventions": [],
+      "recent_history": [
+        {
+          "amount": "4999.00",
+          "currency": "INR",
+          "external_reference": "stolen_card-v5-h0",
+          "failure_reason": null,
+          "occurred_at": "2025-11-20T00:00:00+00:00",
+          "status": "succeeded"
+        },
+        {
+          "amount": "4999.00",
+          "currency": "INR",
+          "external_reference": "stolen_card-v5-h1",
+          "failure_reason": null,
+          "occurred_at": "2025-11-27T00:00:00+00:00",
+          "status": "succeeded"
+        },
+        {
+          "amount": "4999.00",
+          "currency": "INR",
+          "external_reference": "stolen_card-v5-h2",
+          "failure_reason": null,
+          "occurred_at": "2025-12-04T00:00:00+00:00",
+          "status": "succeeded"
+        },
+        {
+          "amount": "4999.00",
+          "currency": "INR",
+          "external_reference": "stolen_card-v5-h3",
+          "failure_reason": null,
+          "occurred_at": "2025-12-11T00:00:00+00:00",
+          "status": "succeeded"
+        },
+        {
+          "amount": "4999.00",
+          "currency": "INR",
+          "external_reference": "stolen_card-v5-h4",
+          "failure_reason": null,
+          "occurred_at": "2025-12-18T00:00:00+00:00",
+          "status": "succeeded"
+        },
+        {
+          "amount": "4999.00",
+          "currency": "INR",
+          "external_reference": "stolen_card-v5-h5",
+          "failure_reason": null,
+          "occurred_at": "2025-12-25T00:00:00+00:00",
+          "status": "succeeded"
+        }
+      ],
+      "signals_conflict": true
+    },
+    "expect_unknown": false,
+    "expected_outcome": "stolen_card",
+    "id": "stolen_card-v5",
+    "max_confidence": 0.5,
+    "min_confidence": 0.0,
+    "notes": "fraud flag on an established clean customer -> expect low confidence"
+  },
+  {
+    "context": {
+      "applicable_policies": [
+        "A payment may be retried at most 3 times."
+      ],
+      "case_id": "00000000-0000-0000-0000-000000000000",
+      "case_state": "diagnosing",
+      "customer": {
+        "external_id": "cust-lost_card-v0",
+        "historical_success_rate": 0.75,
+        "successful_payments": 3,
+        "tenure_days": 21,
+        "total_payments": 4
+      },
+      "evidence_sufficiency": "sufficient",
+      "failure": {
+        "consecutive_failures": 1,
+        "days_since_last_success": 7,
+        "distinct_prior_failure_reasons": []
+      },
+      "payment": {
+        "amount": "4999.00",
+        "currency": "INR",
+        "external_reference": "lost_card-v0",
+        "failure_reason": "lost_card",
+        "occurred_at": "2026-01-01T00:00:00+00:00",
+        "status": "failed"
+      },
+      "previous_interventions": [],
+      "recent_history": [
+        {
+          "amount": "4999.00",
+          "currency": "INR",
+          "external_reference": "lost_card-v0-h0",
+          "failure_reason": null,
+          "occurred_at": "2025-12-11T00:00:00+00:00",
+          "status": "succeeded"
+        },
+        {
+          "amount": "4999.00",
+          "currency": "INR",
+          "external_reference": "lost_card-v0-h1",
+          "failure_reason": null,
+          "occurred_at": "2025-12-18T00:00:00+00:00",
+          "status": "succeeded"
+        },
+        {
+          "amount": "4999.00",
+          "currency": "INR",
+          "external_reference": "lost_card-v0-h2",
+          "failure_reason": null,
+          "occurred_at": "2025-12-25T00:00:00+00:00",
+          "status": "succeeded"
+        }
+      ],
+      "signals_conflict": false
+    },
+    "expect_unknown": false,
+    "expected_outcome": "lost_card",
+    "id": "lost_card-v0",
+    "max_confidence": 1.0,
+    "min_confidence": 0.6,
+    "notes": "clear reason with supporting history"
+  },
+  {
+    "context": {
+      "applicable_policies": [
+        "A payment may be retried at most 3 times."
+      ],
+      "case_id": "00000000-0000-0000-0000-000000000000",
+      "case_state": "diagnosing",
+      "customer": {
+        "external_id": "cust-lost_card-v1",
+        "historical_success_rate": 0.7143,
+        "successful_payments": 5,
+        "tenure_days": 35,
+        "total_payments": 7
+      },
+      "evidence_sufficiency": "sufficient",
+      "failure": {
+        "consecutive_failures": 2,
+        "days_since_last_success": 7,
+        "distinct_prior_failure_reasons": [
+          "lost_card"
+        ]
+      },
+      "payment": {
+        "amount": "4999.00",
+        "currency": "INR",
+        "external_reference": "lost_card-v1",
+        "failure_reason": "lost_card",
+        "occurred_at": "2026-01-01T00:00:00+00:00",
+        "status": "failed"
+      },
+      "previous_interventions": [],
+      "recent_history": [
+        {
+          "amount": "4999.00",
+          "currency": "INR",
+          "external_reference": "lost_card-v1-h0",
+          "failure_reason": null,
+          "occurred_at": "2025-11-27T00:00:00+00:00",
+          "status": "succeeded"
+        },
+        {
+          "amount": "4999.00",
+          "currency": "INR",
+          "external_reference": "lost_card-v1-h1",
+          "failure_reason": null,
+          "occurred_at": "2025-12-04T00:00:00+00:00",
+          "status": "succeeded"
+        },
+        {
+          "amount": "4999.00",
+          "currency": "INR",
+          "external_reference": "lost_card-v1-h2",
+          "failure_reason": null,
+          "occurred_at": "2025-12-11T00:00:00+00:00",
+          "status": "succeeded"
+        },
+        {
+          "amount": "4999.00",
+          "currency": "INR",
+          "external_reference": "lost_card-v1-h3",
+          "failure_reason": null,
+          "occurred_at": "2025-12-18T00:00:00+00:00",
+          "status": "succeeded"
+        },
+        {
+          "amount": "4999.00",
+          "currency": "INR",
+          "external_reference": "lost_card-v1-h4",
+          "failure_reason": null,
+          "occurred_at": "2025-12-25T00:00:00+00:00",
+          "status": "succeeded"
+        }
+      ],
+      "signals_conflict": false
+    },
+    "expect_unknown": false,
+    "expected_outcome": "lost_card",
+    "id": "lost_card-v1",
+    "max_confidence": 1.0,
+    "min_confidence": 0.6,
+    "notes": "clear reason with supporting history"
+  },
+  {
+    "context": {
+      "applicable_policies": [
+        "A payment may be retried at most 3 times."
+      ],
+      "case_id": "00000000-0000-0000-0000-000000000000",
+      "case_state": "diagnosing",
+      "customer": {
+        "external_id": "cust-lost_card-v2",
+        "historical_success_rate": 0.7273,
+        "successful_payments": 8,
+        "tenure_days": 56,
+        "total_payments": 11
+      },
+      "evidence_sufficiency": "sufficient",
+      "failure": {
+        "consecutive_failures": 3,
+        "days_since_last_success": 7,
+        "distinct_prior_failure_reasons": [
+          "lost_card"
+        ]
+      },
+      "payment": {
+        "amount": "4999.00",
+        "currency": "INR",
+        "external_reference": "lost_card-v2",
+        "failure_reason": "lost_card",
+        "occurred_at": "2026-01-01T00:00:00+00:00",
+        "status": "failed"
+      },
+      "previous_interventions": [],
+      "recent_history": [
+        {
+          "amount": "4999.00",
+          "currency": "INR",
+          "external_reference": "lost_card-v2-h0",
+          "failure_reason": null,
+          "occurred_at": "2025-11-06T00:00:00+00:00",
+          "status": "succeeded"
+        },
+        {
+          "amount": "4999.00",
+          "currency": "INR",
+          "external_reference": "lost_card-v2-h1",
+          "failure_reason": null,
+          "occurred_at": "2025-11-13T00:00:00+00:00",
+          "status": "succeeded"
+        },
+        {
+          "amount": "4999.00",
+          "currency": "INR",
+          "external_reference": "lost_card-v2-h2",
+          "failure_reason": null,
+          "occurred_at": "2025-11-20T00:00:00+00:00",
+          "status": "succeeded"
+        },
+        {
+          "amount": "4999.00",
+          "currency": "INR",
+          "external_reference": "lost_card-v2-h3",
+          "failure_reason": null,
+          "occurred_at": "2025-11-27T00:00:00+00:00",
+          "status": "succeeded"
+        },
+        {
+          "amount": "4999.00",
+          "currency": "INR",
+          "external_reference": "lost_card-v2-h4",
+          "failure_reason": null,
+          "occurred_at": "2025-12-04T00:00:00+00:00",
+          "status": "succeeded"
+        },
+        {
+          "amount": "4999.00",
+          "currency": "INR",
+          "external_reference": "lost_card-v2-h5",
+          "failure_reason": null,
+          "occurred_at": "2025-12-11T00:00:00+00:00",
+          "status": "succeeded"
+        },
+        {
+          "amount": "4999.00",
+          "currency": "INR",
+          "external_reference": "lost_card-v2-h6",
+          "failure_reason": null,
+          "occurred_at": "2025-12-18T00:00:00+00:00",
+          "status": "succeeded"
+        },
+        {
+          "amount": "4999.00",
+          "currency": "INR",
+          "external_reference": "lost_card-v2-h7",
+          "failure_reason": null,
+          "occurred_at": "2025-12-25T00:00:00+00:00",
+          "status": "succeeded"
+        }
+      ],
+      "signals_conflict": false
+    },
+    "expect_unknown": false,
+    "expected_outcome": "lost_card",
+    "id": "lost_card-v2",
+    "max_confidence": 1.0,
+    "min_confidence": 0.6,
+    "notes": "clear reason with supporting history"
+  },
+  {
+    "context": {
+      "applicable_policies": [
+        "A payment may be retried at most 3 times."
+      ],
+      "case_id": "00000000-0000-0000-0000-000000000000",
+      "case_state": "diagnosing",
+      "customer": {
+        "external_id": "cust-lost_card-v3",
+        "historical_success_rate": 0.6667,
+        "successful_payments": 2,
+        "tenure_days": 14,
+        "total_payments": 3
+      },
+      "evidence_sufficiency": "sufficient",
+      "failure": {
+        "consecutive_failures": 1,
+        "days_since_last_success": 7,
+        "distinct_prior_failure_reasons": []
+      },
+      "payment": {
+        "amount": "4999.00",
+        "currency": "INR",
+        "external_reference": "lost_card-v3",
+        "failure_reason": "lost_card",
+        "occurred_at": "2026-01-01T00:00:00+00:00",
+        "status": "failed"
+      },
+      "previous_interventions": [],
+      "recent_history": [
+        {
+          "amount": "4999.00",
+          "currency": "INR",
+          "external_reference": "lost_card-v3-h0",
+          "failure_reason": null,
+          "occurred_at": "2025-12-18T00:00:00+00:00",
+          "status": "succeeded"
+        },
+        {
+          "amount": "4999.00",
+          "currency": "INR",
+          "external_reference": "lost_card-v3-h1",
+          "failure_reason": null,
+          "occurred_at": "2025-12-25T00:00:00+00:00",
+          "status": "succeeded"
+        }
+      ],
+      "signals_conflict": false
+    },
+    "expect_unknown": false,
+    "expected_outcome": "lost_card",
+    "id": "lost_card-v3",
+    "max_confidence": 1.0,
+    "min_confidence": 0.6,
+    "notes": "clear reason with supporting history"
+  },
+  {
+    "context": {
+      "applicable_policies": [
+        "A payment may be retried at most 3 times."
+      ],
+      "case_id": "00000000-0000-0000-0000-000000000000",
+      "case_state": "diagnosing",
+      "customer": {
+        "external_id": "cust-lost_card-v4",
+        "historical_success_rate": 0.6667,
+        "successful_payments": 4,
+        "tenure_days": 28,
+        "total_payments": 6
+      },
+      "evidence_sufficiency": "sufficient",
+      "failure": {
+        "consecutive_failures": 1,
+        "days_since_last_success": 7,
+        "distinct_prior_failure_reasons": [
+          "lost_card"
+        ]
+      },
+      "payment": {
+        "amount": "4999.00",
+        "currency": "INR",
+        "external_reference": "lost_card-v4",
+        "failure_reason": "lost_card",
+        "occurred_at": "2026-01-01T00:00:00+00:00",
+        "status": "failed"
+      },
+      "previous_interventions": [],
+      "recent_history": [
+        {
+          "amount": "4999.00",
+          "currency": "INR",
+          "external_reference": "lost_card-v4-h0",
+          "failure_reason": null,
+          "occurred_at": "2025-12-04T00:00:00+00:00",
+          "status": "succeeded"
+        },
+        {
+          "amount": "4999.00",
+          "currency": "INR",
+          "external_reference": "lost_card-v4-h1",
+          "failure_reason": null,
+          "occurred_at": "2025-12-11T00:00:00+00:00",
+          "status": "succeeded"
+        },
+        {
+          "amount": "4999.00",
+          "currency": "INR",
+          "external_reference": "lost_card-v4-h2",
+          "failure_reason": null,
+          "occurred_at": "2025-12-18T00:00:00+00:00",
+          "status": "succeeded"
+        },
+        {
+          "amount": "4999.00",
+          "currency": "INR",
+          "external_reference": "lost_card-v4-h3",
+          "failure_reason": null,
+          "occurred_at": "2025-12-25T00:00:00+00:00",
+          "status": "succeeded"
+        }
+      ],
+      "signals_conflict": false
+    },
+    "expect_unknown": false,
+    "expected_outcome": "lost_card",
+    "id": "lost_card-v4",
+    "max_confidence": 1.0,
+    "min_confidence": 0.6,
+    "notes": "clear reason with supporting history"
+  },
+  {
+    "context": {
+      "applicable_policies": [
+        "A payment may be retried at most 3 times."
+      ],
+      "case_id": "00000000-0000-0000-0000-000000000000",
+      "case_state": "diagnosing",
+      "customer": {
+        "external_id": "cust-lost_card-v5",
+        "historical_success_rate": 0.8571,
+        "successful_payments": 6,
+        "tenure_days": 42,
+        "total_payments": 7
+      },
+      "evidence_sufficiency": "sufficient",
+      "failure": {
+        "consecutive_failures": 1,
+        "days_since_last_success": 7,
+        "distinct_prior_failure_reasons": []
+      },
+      "payment": {
+        "amount": "4999.00",
+        "currency": "INR",
+        "external_reference": "lost_card-v5",
+        "failure_reason": "lost_card",
+        "occurred_at": "2026-01-01T00:00:00+00:00",
+        "status": "failed"
+      },
+      "previous_interventions": [],
+      "recent_history": [
+        {
+          "amount": "4999.00",
+          "currency": "INR",
+          "external_reference": "lost_card-v5-h0",
+          "failure_reason": null,
+          "occurred_at": "2025-11-20T00:00:00+00:00",
+          "status": "succeeded"
+        },
+        {
+          "amount": "4999.00",
+          "currency": "INR",
+          "external_reference": "lost_card-v5-h1",
+          "failure_reason": null,
+          "occurred_at": "2025-11-27T00:00:00+00:00",
+          "status": "succeeded"
+        },
+        {
+          "amount": "4999.00",
+          "currency": "INR",
+          "external_reference": "lost_card-v5-h2",
+          "failure_reason": null,
+          "occurred_at": "2025-12-04T00:00:00+00:00",
+          "status": "succeeded"
+        },
+        {
+          "amount": "4999.00",
+          "currency": "INR",
+          "external_reference": "lost_card-v5-h3",
+          "failure_reason": null,
+          "occurred_at": "2025-12-11T00:00:00+00:00",
+          "status": "succeeded"
+        },
+        {
+          "amount": "4999.00",
+          "currency": "INR",
+          "external_reference": "lost_card-v5-h4",
+          "failure_reason": null,
+          "occurred_at": "2025-12-18T00:00:00+00:00",
+          "status": "succeeded"
+        },
+        {
+          "amount": "4999.00",
+          "currency": "INR",
+          "external_reference": "lost_card-v5-h5",
+          "failure_reason": null,
+          "occurred_at": "2025-12-25T00:00:00+00:00",
+          "status": "succeeded"
+        }
+      ],
+      "signals_conflict": true
+    },
+    "expect_unknown": false,
+    "expected_outcome": "lost_card",
+    "id": "lost_card-v5",
+    "max_confidence": 0.5,
+    "min_confidence": 0.0,
+    "notes": "fraud flag on an established clean customer -> expect low confidence"
+  },
+  {
+    "context": {
+      "applicable_policies": [
+        "A payment may be retried at most 3 times."
+      ],
+      "case_id": "00000000-0000-0000-0000-000000000000",
+      "case_state": "diagnosing",
+      "customer": {
+        "external_id": "cust-fraud_suspected-v0",
+        "historical_success_rate": 0.75,
+        "successful_payments": 3,
+        "tenure_days": 21,
+        "total_payments": 4
+      },
+      "evidence_sufficiency": "sufficient",
+      "failure": {
+        "consecutive_failures": 1,
+        "days_since_last_success": 7,
+        "distinct_prior_failure_reasons": []
+      },
+      "payment": {
+        "amount": "4999.00",
+        "currency": "INR",
+        "external_reference": "fraud_suspected-v0",
+        "failure_reason": "fraud_suspected",
+        "occurred_at": "2026-01-01T00:00:00+00:00",
+        "status": "failed"
+      },
+      "previous_interventions": [],
+      "recent_history": [
+        {
+          "amount": "4999.00",
+          "currency": "INR",
+          "external_reference": "fraud_suspected-v0-h0",
+          "failure_reason": null,
+          "occurred_at": "2025-12-11T00:00:00+00:00",
+          "status": "succeeded"
+        },
+        {
+          "amount": "4999.00",
+          "currency": "INR",
+          "external_reference": "fraud_suspected-v0-h1",
+          "failure_reason": null,
+          "occurred_at": "2025-12-18T00:00:00+00:00",
+          "status": "succeeded"
+        },
+        {
+          "amount": "4999.00",
+          "currency": "INR",
+          "external_reference": "fraud_suspected-v0-h2",
+          "failure_reason": null,
+          "occurred_at": "2025-12-25T00:00:00+00:00",
+          "status": "succeeded"
+        }
+      ],
+      "signals_conflict": false
+    },
+    "expect_unknown": false,
+    "expected_outcome": "fraud_suspected",
+    "id": "fraud_suspected-v0",
+    "max_confidence": 1.0,
+    "min_confidence": 0.6,
+    "notes": "clear reason with supporting history"
+  },
+  {
+    "context": {
+      "applicable_policies": [
+        "A payment may be retried at most 3 times."
+      ],
+      "case_id": "00000000-0000-0000-0000-000000000000",
+      "case_state": "diagnosing",
+      "customer": {
+        "external_id": "cust-fraud_suspected-v1",
+        "historical_success_rate": 0.7143,
+        "successful_payments": 5,
+        "tenure_days": 35,
+        "total_payments": 7
+      },
+      "evidence_sufficiency": "sufficient",
+      "failure": {
+        "consecutive_failures": 2,
+        "days_since_last_success": 7,
+        "distinct_prior_failure_reasons": [
+          "fraud_suspected"
+        ]
+      },
+      "payment": {
+        "amount": "4999.00",
+        "currency": "INR",
+        "external_reference": "fraud_suspected-v1",
+        "failure_reason": "fraud_suspected",
+        "occurred_at": "2026-01-01T00:00:00+00:00",
+        "status": "failed"
+      },
+      "previous_interventions": [],
+      "recent_history": [
+        {
+          "amount": "4999.00",
+          "currency": "INR",
+          "external_reference": "fraud_suspected-v1-h0",
+          "failure_reason": null,
+          "occurred_at": "2025-11-27T00:00:00+00:00",
+          "status": "succeeded"
+        },
+        {
+          "amount": "4999.00",
+          "currency": "INR",
+          "external_reference": "fraud_suspected-v1-h1",
+          "failure_reason": null,
+          "occurred_at": "2025-12-04T00:00:00+00:00",
+          "status": "succeeded"
+        },
+        {
+          "amount": "4999.00",
+          "currency": "INR",
+          "external_reference": "fraud_suspected-v1-h2",
+          "failure_reason": null,
+          "occurred_at": "2025-12-11T00:00:00+00:00",
+          "status": "succeeded"
+        },
+        {
+          "amount": "4999.00",
+          "currency": "INR",
+          "external_reference": "fraud_suspected-v1-h3",
+          "failure_reason": null,
+          "occurred_at": "2025-12-18T00:00:00+00:00",
+          "status": "succeeded"
+        },
+        {
+          "amount": "4999.00",
+          "currency": "INR",
+          "external_reference": "fraud_suspected-v1-h4",
+          "failure_reason": null,
+          "occurred_at": "2025-12-25T00:00:00+00:00",
+          "status": "succeeded"
+        }
+      ],
+      "signals_conflict": false
+    },
+    "expect_unknown": false,
+    "expected_outcome": "fraud_suspected",
+    "id": "fraud_suspected-v1",
+    "max_confidence": 1.0,
+    "min_confidence": 0.6,
+    "notes": "clear reason with supporting history"
+  },
+  {
+    "context": {
+      "applicable_policies": [
+        "A payment may be retried at most 3 times."
+      ],
+      "case_id": "00000000-0000-0000-0000-000000000000",
+      "case_state": "diagnosing",
+      "customer": {
+        "external_id": "cust-fraud_suspected-v2",
+        "historical_success_rate": 0.7273,
+        "successful_payments": 8,
+        "tenure_days": 56,
+        "total_payments": 11
+      },
+      "evidence_sufficiency": "sufficient",
+      "failure": {
+        "consecutive_failures": 3,
+        "days_since_last_success": 7,
+        "distinct_prior_failure_reasons": [
+          "fraud_suspected"
+        ]
+      },
+      "payment": {
+        "amount": "4999.00",
+        "currency": "INR",
+        "external_reference": "fraud_suspected-v2",
+        "failure_reason": "fraud_suspected",
+        "occurred_at": "2026-01-01T00:00:00+00:00",
+        "status": "failed"
+      },
+      "previous_interventions": [],
+      "recent_history": [
+        {
+          "amount": "4999.00",
+          "currency": "INR",
+          "external_reference": "fraud_suspected-v2-h0",
+          "failure_reason": null,
+          "occurred_at": "2025-11-06T00:00:00+00:00",
+          "status": "succeeded"
+        },
+        {
+          "amount": "4999.00",
+          "currency": "INR",
+          "external_reference": "fraud_suspected-v2-h1",
+          "failure_reason": null,
+          "occurred_at": "2025-11-13T00:00:00+00:00",
+          "status": "succeeded"
+        },
+        {
+          "amount": "4999.00",
+          "currency": "INR",
+          "external_reference": "fraud_suspected-v2-h2",
+          "failure_reason": null,
+          "occurred_at": "2025-11-20T00:00:00+00:00",
+          "status": "succeeded"
+        },
+        {
+          "amount": "4999.00",
+          "currency": "INR",
+          "external_reference": "fraud_suspected-v2-h3",
+          "failure_reason": null,
+          "occurred_at": "2025-11-27T00:00:00+00:00",
+          "status": "succeeded"
+        },
+        {
+          "amount": "4999.00",
+          "currency": "INR",
+          "external_reference": "fraud_suspected-v2-h4",
+          "failure_reason": null,
+          "occurred_at": "2025-12-04T00:00:00+00:00",
+          "status": "succeeded"
+        },
+        {
+          "amount": "4999.00",
+          "currency": "INR",
+          "external_reference": "fraud_suspected-v2-h5",
+          "failure_reason": null,
+          "occurred_at": "2025-12-11T00:00:00+00:00",
+          "status": "succeeded"
+        },
+        {
+          "amount": "4999.00",
+          "currency": "INR",
+          "external_reference": "fraud_suspected-v2-h6",
+          "failure_reason": null,
+          "occurred_at": "2025-12-18T00:00:00+00:00",
+          "status": "succeeded"
+        },
+        {
+          "amount": "4999.00",
+          "currency": "INR",
+          "external_reference": "fraud_suspected-v2-h7",
+          "failure_reason": null,
+          "occurred_at": "2025-12-25T00:00:00+00:00",
+          "status": "succeeded"
+        }
+      ],
+      "signals_conflict": false
+    },
+    "expect_unknown": false,
+    "expected_outcome": "fraud_suspected",
+    "id": "fraud_suspected-v2",
+    "max_confidence": 1.0,
+    "min_confidence": 0.6,
+    "notes": "clear reason with supporting history"
+  },
+  {
+    "context": {
+      "applicable_policies": [
+        "A payment may be retried at most 3 times."
+      ],
+      "case_id": "00000000-0000-0000-0000-000000000000",
+      "case_state": "diagnosing",
+      "customer": {
+        "external_id": "cust-fraud_suspected-v3",
+        "historical_success_rate": 0.6667,
+        "successful_payments": 2,
+        "tenure_days": 14,
+        "total_payments": 3
+      },
+      "evidence_sufficiency": "sufficient",
+      "failure": {
+        "consecutive_failures": 1,
+        "days_since_last_success": 7,
+        "distinct_prior_failure_reasons": []
+      },
+      "payment": {
+        "amount": "4999.00",
+        "currency": "INR",
+        "external_reference": "fraud_suspected-v3",
+        "failure_reason": "fraud_suspected",
+        "occurred_at": "2026-01-01T00:00:00+00:00",
+        "status": "failed"
+      },
+      "previous_interventions": [],
+      "recent_history": [
+        {
+          "amount": "4999.00",
+          "currency": "INR",
+          "external_reference": "fraud_suspected-v3-h0",
+          "failure_reason": null,
+          "occurred_at": "2025-12-18T00:00:00+00:00",
+          "status": "succeeded"
+        },
+        {
+          "amount": "4999.00",
+          "currency": "INR",
+          "external_reference": "fraud_suspected-v3-h1",
+          "failure_reason": null,
+          "occurred_at": "2025-12-25T00:00:00+00:00",
+          "status": "succeeded"
+        }
+      ],
+      "signals_conflict": false
+    },
+    "expect_unknown": false,
+    "expected_outcome": "fraud_suspected",
+    "id": "fraud_suspected-v3",
+    "max_confidence": 1.0,
+    "min_confidence": 0.6,
+    "notes": "clear reason with supporting history"
+  },
+  {
+    "context": {
+      "applicable_policies": [
+        "A payment may be retried at most 3 times."
+      ],
+      "case_id": "00000000-0000-0000-0000-000000000000",
+      "case_state": "diagnosing",
+      "customer": {
+        "external_id": "cust-fraud_suspected-v4",
+        "historical_success_rate": 0.6667,
+        "successful_payments": 4,
+        "tenure_days": 28,
+        "total_payments": 6
+      },
+      "evidence_sufficiency": "sufficient",
+      "failure": {
+        "consecutive_failures": 1,
+        "days_since_last_success": 7,
+        "distinct_prior_failure_reasons": [
+          "fraud_suspected"
+        ]
+      },
+      "payment": {
+        "amount": "4999.00",
+        "currency": "INR",
+        "external_reference": "fraud_suspected-v4",
+        "failure_reason": "fraud_suspected",
+        "occurred_at": "2026-01-01T00:00:00+00:00",
+        "status": "failed"
+      },
+      "previous_interventions": [],
+      "recent_history": [
+        {
+          "amount": "4999.00",
+          "currency": "INR",
+          "external_reference": "fraud_suspected-v4-h0",
+          "failure_reason": null,
+          "occurred_at": "2025-12-04T00:00:00+00:00",
+          "status": "succeeded"
+        },
+        {
+          "amount": "4999.00",
+          "currency": "INR",
+          "external_reference": "fraud_suspected-v4-h1",
+          "failure_reason": null,
+          "occurred_at": "2025-12-11T00:00:00+00:00",
+          "status": "succeeded"
+        },
+        {
+          "amount": "4999.00",
+          "currency": "INR",
+          "external_reference": "fraud_suspected-v4-h2",
+          "failure_reason": null,
+          "occurred_at": "2025-12-18T00:00:00+00:00",
+          "status": "succeeded"
+        },
+        {
+          "amount": "4999.00",
+          "currency": "INR",
+          "external_reference": "fraud_suspected-v4-h3",
+          "failure_reason": null,
+          "occurred_at": "2025-12-25T00:00:00+00:00",
+          "status": "succeeded"
+        }
+      ],
+      "signals_conflict": false
+    },
+    "expect_unknown": false,
+    "expected_outcome": "fraud_suspected",
+    "id": "fraud_suspected-v4",
+    "max_confidence": 1.0,
+    "min_confidence": 0.6,
+    "notes": "clear reason with supporting history"
+  },
+  {
+    "context": {
+      "applicable_policies": [
+        "A payment may be retried at most 3 times."
+      ],
+      "case_id": "00000000-0000-0000-0000-000000000000",
+      "case_state": "diagnosing",
+      "customer": {
+        "external_id": "cust-fraud_suspected-v5",
+        "historical_success_rate": 0.8571,
+        "successful_payments": 6,
+        "tenure_days": 42,
+        "total_payments": 7
+      },
+      "evidence_sufficiency": "sufficient",
+      "failure": {
+        "consecutive_failures": 1,
+        "days_since_last_success": 7,
+        "distinct_prior_failure_reasons": []
+      },
+      "payment": {
+        "amount": "4999.00",
+        "currency": "INR",
+        "external_reference": "fraud_suspected-v5",
+        "failure_reason": "fraud_suspected",
+        "occurred_at": "2026-01-01T00:00:00+00:00",
+        "status": "failed"
+      },
+      "previous_interventions": [],
+      "recent_history": [
+        {
+          "amount": "4999.00",
+          "currency": "INR",
+          "external_reference": "fraud_suspected-v5-h0",
+          "failure_reason": null,
+          "occurred_at": "2025-11-20T00:00:00+00:00",
+          "status": "succeeded"
+        },
+        {
+          "amount": "4999.00",
+          "currency": "INR",
+          "external_reference": "fraud_suspected-v5-h1",
+          "failure_reason": null,
+          "occurred_at": "2025-11-27T00:00:00+00:00",
+          "status": "succeeded"
+        },
+        {
+          "amount": "4999.00",
+          "currency": "INR",
+          "external_reference": "fraud_suspected-v5-h2",
+          "failure_reason": null,
+          "occurred_at": "2025-12-04T00:00:00+00:00",
+          "status": "succeeded"
+        },
+        {
+          "amount": "4999.00",
+          "currency": "INR",
+          "external_reference": "fraud_suspected-v5-h3",
+          "failure_reason": null,
+          "occurred_at": "2025-12-11T00:00:00+00:00",
+          "status": "succeeded"
+        },
+        {
+          "amount": "4999.00",
+          "currency": "INR",
+          "external_reference": "fraud_suspected-v5-h4",
+          "failure_reason": null,
+          "occurred_at": "2025-12-18T00:00:00+00:00",
+          "status": "succeeded"
+        },
+        {
+          "amount": "4999.00",
+          "currency": "INR",
+          "external_reference": "fraud_suspected-v5-h5",
+          "failure_reason": null,
+          "occurred_at": "2025-12-25T00:00:00+00:00",
+          "status": "succeeded"
+        }
+      ],
+      "signals_conflict": true
+    },
+    "expect_unknown": false,
+    "expected_outcome": "fraud_suspected",
+    "id": "fraud_suspected-v5",
+    "max_confidence": 0.5,
+    "min_confidence": 0.0,
+    "notes": "fraud flag on an established clean customer -> expect low confidence"
+  },
+  {
+    "context": {
+      "applicable_policies": [
+        "A payment may be retried at most 3 times."
+      ],
+      "case_id": "00000000-0000-0000-0000-000000000000",
+      "case_state": "diagnosing",
+      "customer": {
+        "external_id": "cust-authentication_required-v0",
+        "historical_success_rate": 0.75,
+        "successful_payments": 3,
+        "tenure_days": 21,
+        "total_payments": 4
+      },
+      "evidence_sufficiency": "sufficient",
+      "failure": {
+        "consecutive_failures": 1,
+        "days_since_last_success": 7,
+        "distinct_prior_failure_reasons": []
+      },
+      "payment": {
+        "amount": "4999.00",
+        "currency": "INR",
+        "external_reference": "authentication_required-v0",
+        "failure_reason": "authentication_required",
+        "occurred_at": "2026-01-01T00:00:00+00:00",
+        "status": "failed"
+      },
+      "previous_interventions": [],
+      "recent_history": [
+        {
+          "amount": "4999.00",
+          "currency": "INR",
+          "external_reference": "authentication_required-v0-h0",
+          "failure_reason": null,
+          "occurred_at": "2025-12-11T00:00:00+00:00",
+          "status": "succeeded"
+        },
+        {
+          "amount": "4999.00",
+          "currency": "INR",
+          "external_reference": "authentication_required-v0-h1",
+          "failure_reason": null,
+          "occurred_at": "2025-12-18T00:00:00+00:00",
+          "status": "succeeded"
+        },
+        {
+          "amount": "4999.00",
+          "currency": "INR",
+          "external_reference": "authentication_required-v0-h2",
+          "failure_reason": null,
+          "occurred_at": "2025-12-25T00:00:00+00:00",
+          "status": "succeeded"
+        }
+      ],
+      "signals_conflict": false
+    },
+    "expect_unknown": false,
+    "expected_outcome": "authentication_required",
+    "id": "authentication_required-v0",
+    "max_confidence": 1.0,
+    "min_confidence": 0.6,
+    "notes": "clear reason with supporting history"
+  },
+  {
+    "context": {
+      "applicable_policies": [
+        "A payment may be retried at most 3 times."
+      ],
+      "case_id": "00000000-0000-0000-0000-000000000000",
+      "case_state": "diagnosing",
+      "customer": {
+        "external_id": "cust-authentication_required-v1",
+        "historical_success_rate": 0.7143,
+        "successful_payments": 5,
+        "tenure_days": 35,
+        "total_payments": 7
+      },
+      "evidence_sufficiency": "sufficient",
+      "failure": {
+        "consecutive_failures": 2,
+        "days_since_last_success": 7,
+        "distinct_prior_failure_reasons": [
+          "authentication_required"
+        ]
+      },
+      "payment": {
+        "amount": "4999.00",
+        "currency": "INR",
+        "external_reference": "authentication_required-v1",
+        "failure_reason": "authentication_required",
+        "occurred_at": "2026-01-01T00:00:00+00:00",
+        "status": "failed"
+      },
+      "previous_interventions": [],
+      "recent_history": [
+        {
+          "amount": "4999.00",
+          "currency": "INR",
+          "external_reference": "authentication_required-v1-h0",
+          "failure_reason": null,
+          "occurred_at": "2025-11-27T00:00:00+00:00",
+          "status": "succeeded"
+        },
+        {
+          "amount": "4999.00",
+          "currency": "INR",
+          "external_reference": "authentication_required-v1-h1",
+          "failure_reason": null,
+          "occurred_at": "2025-12-04T00:00:00+00:00",
+          "status": "succeeded"
+        },
+        {
+          "amount": "4999.00",
+          "currency": "INR",
+          "external_reference": "authentication_required-v1-h2",
+          "failure_reason": null,
+          "occurred_at": "2025-12-11T00:00:00+00:00",
+          "status": "succeeded"
+        },
+        {
+          "amount": "4999.00",
+          "currency": "INR",
+          "external_reference": "authentication_required-v1-h3",
+          "failure_reason": null,
+          "occurred_at": "2025-12-18T00:00:00+00:00",
+          "status": "succeeded"
+        },
+        {
+          "amount": "4999.00",
+          "currency": "INR",
+          "external_reference": "authentication_required-v1-h4",
+          "failure_reason": null,
+          "occurred_at": "2025-12-25T00:00:00+00:00",
+          "status": "succeeded"
+        }
+      ],
+      "signals_conflict": false
+    },
+    "expect_unknown": false,
+    "expected_outcome": "authentication_required",
+    "id": "authentication_required-v1",
+    "max_confidence": 1.0,
+    "min_confidence": 0.6,
+    "notes": "clear reason with supporting history"
+  },
+  {
+    "context": {
+      "applicable_policies": [
+        "A payment may be retried at most 3 times."
+      ],
+      "case_id": "00000000-0000-0000-0000-000000000000",
+      "case_state": "diagnosing",
+      "customer": {
+        "external_id": "cust-authentication_required-v2",
+        "historical_success_rate": 0.7273,
+        "successful_payments": 8,
+        "tenure_days": 56,
+        "total_payments": 11
+      },
+      "evidence_sufficiency": "sufficient",
+      "failure": {
+        "consecutive_failures": 3,
+        "days_since_last_success": 7,
+        "distinct_prior_failure_reasons": [
+          "authentication_required"
+        ]
+      },
+      "payment": {
+        "amount": "4999.00",
+        "currency": "INR",
+        "external_reference": "authentication_required-v2",
+        "failure_reason": "authentication_required",
+        "occurred_at": "2026-01-01T00:00:00+00:00",
+        "status": "failed"
+      },
+      "previous_interventions": [],
+      "recent_history": [
+        {
+          "amount": "4999.00",
+          "currency": "INR",
+          "external_reference": "authentication_required-v2-h0",
+          "failure_reason": null,
+          "occurred_at": "2025-11-06T00:00:00+00:00",
+          "status": "succeeded"
+        },
+        {
+          "amount": "4999.00",
+          "currency": "INR",
+          "external_reference": "authentication_required-v2-h1",
+          "failure_reason": null,
+          "occurred_at": "2025-11-13T00:00:00+00:00",
+          "status": "succeeded"
+        },
+        {
+          "amount": "4999.00",
+          "currency": "INR",
+          "external_reference": "authentication_required-v2-h2",
+          "failure_reason": null,
+          "occurred_at": "2025-11-20T00:00:00+00:00",
+          "status": "succeeded"
+        },
+        {
+          "amount": "4999.00",
+          "currency": "INR",
+          "external_reference": "authentication_required-v2-h3",
+          "failure_reason": null,
+          "occurred_at": "2025-11-27T00:00:00+00:00",
+          "status": "succeeded"
+        },
+        {
+          "amount": "4999.00",
+          "currency": "INR",
+          "external_reference": "authentication_required-v2-h4",
+          "failure_reason": null,
+          "occurred_at": "2025-12-04T00:00:00+00:00",
+          "status": "succeeded"
+        },
+        {
+          "amount": "4999.00",
+          "currency": "INR",
+          "external_reference": "authentication_required-v2-h5",
+          "failure_reason": null,
+          "occurred_at": "2025-12-11T00:00:00+00:00",
+          "status": "succeeded"
+        },
+        {
+          "amount": "4999.00",
+          "currency": "INR",
+          "external_reference": "authentication_required-v2-h6",
+          "failure_reason": null,
+          "occurred_at": "2025-12-18T00:00:00+00:00",
+          "status": "succeeded"
+        },
+        {
+          "amount": "4999.00",
+          "currency": "INR",
+          "external_reference": "authentication_required-v2-h7",
+          "failure_reason": null,
+          "occurred_at": "2025-12-25T00:00:00+00:00",
+          "status": "succeeded"
+        }
+      ],
+      "signals_conflict": false
+    },
+    "expect_unknown": false,
+    "expected_outcome": "authentication_required",
+    "id": "authentication_required-v2",
+    "max_confidence": 1.0,
+    "min_confidence": 0.6,
+    "notes": "clear reason with supporting history"
+  },
+  {
+    "context": {
+      "applicable_policies": [
+        "A payment may be retried at most 3 times."
+      ],
+      "case_id": "00000000-0000-0000-0000-000000000000",
+      "case_state": "diagnosing",
+      "customer": {
+        "external_id": "cust-authentication_required-v3",
+        "historical_success_rate": 0.6667,
+        "successful_payments": 2,
+        "tenure_days": 14,
+        "total_payments": 3
+      },
+      "evidence_sufficiency": "sufficient",
+      "failure": {
+        "consecutive_failures": 1,
+        "days_since_last_success": 7,
+        "distinct_prior_failure_reasons": []
+      },
+      "payment": {
+        "amount": "4999.00",
+        "currency": "INR",
+        "external_reference": "authentication_required-v3",
+        "failure_reason": "authentication_required",
+        "occurred_at": "2026-01-01T00:00:00+00:00",
+        "status": "failed"
+      },
+      "previous_interventions": [],
+      "recent_history": [
+        {
+          "amount": "4999.00",
+          "currency": "INR",
+          "external_reference": "authentication_required-v3-h0",
+          "failure_reason": null,
+          "occurred_at": "2025-12-18T00:00:00+00:00",
+          "status": "succeeded"
+        },
+        {
+          "amount": "4999.00",
+          "currency": "INR",
+          "external_reference": "authentication_required-v3-h1",
+          "failure_reason": null,
+          "occurred_at": "2025-12-25T00:00:00+00:00",
+          "status": "succeeded"
+        }
+      ],
+      "signals_conflict": false
+    },
+    "expect_unknown": false,
+    "expected_outcome": "authentication_required",
+    "id": "authentication_required-v3",
+    "max_confidence": 1.0,
+    "min_confidence": 0.6,
+    "notes": "clear reason with supporting history"
+  },
+  {
+    "context": {
+      "applicable_policies": [
+        "A payment may be retried at most 3 times."
+      ],
+      "case_id": "00000000-0000-0000-0000-000000000000",
+      "case_state": "diagnosing",
+      "customer": {
+        "external_id": "cust-authentication_required-v4",
+        "historical_success_rate": 0.6667,
+        "successful_payments": 4,
+        "tenure_days": 28,
+        "total_payments": 6
+      },
+      "evidence_sufficiency": "sufficient",
+      "failure": {
+        "consecutive_failures": 1,
+        "days_since_last_success": 7,
+        "distinct_prior_failure_reasons": [
+          "authentication_required"
+        ]
+      },
+      "payment": {
+        "amount": "4999.00",
+        "currency": "INR",
+        "external_reference": "authentication_required-v4",
+        "failure_reason": "authentication_required",
+        "occurred_at": "2026-01-01T00:00:00+00:00",
+        "status": "failed"
+      },
+      "previous_interventions": [],
+      "recent_history": [
+        {
+          "amount": "4999.00",
+          "currency": "INR",
+          "external_reference": "authentication_required-v4-h0",
+          "failure_reason": null,
+          "occurred_at": "2025-12-04T00:00:00+00:00",
+          "status": "succeeded"
+        },
+        {
+          "amount": "4999.00",
+          "currency": "INR",
+          "external_reference": "authentication_required-v4-h1",
+          "failure_reason": null,
+          "occurred_at": "2025-12-11T00:00:00+00:00",
+          "status": "succeeded"
+        },
+        {
+          "amount": "4999.00",
+          "currency": "INR",
+          "external_reference": "authentication_required-v4-h2",
+          "failure_reason": null,
+          "occurred_at": "2025-12-18T00:00:00+00:00",
+          "status": "succeeded"
+        },
+        {
+          "amount": "4999.00",
+          "currency": "INR",
+          "external_reference": "authentication_required-v4-h3",
+          "failure_reason": null,
+          "occurred_at": "2025-12-25T00:00:00+00:00",
+          "status": "succeeded"
+        }
+      ],
+      "signals_conflict": false
+    },
+    "expect_unknown": false,
+    "expected_outcome": "authentication_required",
+    "id": "authentication_required-v4",
+    "max_confidence": 1.0,
+    "min_confidence": 0.6,
+    "notes": "clear reason with supporting history"
+  },
+  {
+    "context": {
+      "applicable_policies": [
+        "A payment may be retried at most 3 times."
+      ],
+      "case_id": "00000000-0000-0000-0000-000000000000",
+      "case_state": "diagnosing",
+      "customer": {
+        "external_id": "cust-authentication_required-v5",
+        "historical_success_rate": 0.8571,
+        "successful_payments": 6,
+        "tenure_days": 42,
+        "total_payments": 7
+      },
+      "evidence_sufficiency": "sufficient",
+      "failure": {
+        "consecutive_failures": 1,
+        "days_since_last_success": 7,
+        "distinct_prior_failure_reasons": []
+      },
+      "payment": {
+        "amount": "4999.00",
+        "currency": "INR",
+        "external_reference": "authentication_required-v5",
+        "failure_reason": "authentication_required",
+        "occurred_at": "2026-01-01T00:00:00+00:00",
+        "status": "failed"
+      },
+      "previous_interventions": [],
+      "recent_history": [
+        {
+          "amount": "4999.00",
+          "currency": "INR",
+          "external_reference": "authentication_required-v5-h0",
+          "failure_reason": null,
+          "occurred_at": "2025-11-20T00:00:00+00:00",
+          "status": "succeeded"
+        },
+        {
+          "amount": "4999.00",
+          "currency": "INR",
+          "external_reference": "authentication_required-v5-h1",
+          "failure_reason": null,
+          "occurred_at": "2025-11-27T00:00:00+00:00",
+          "status": "succeeded"
+        },
+        {
+          "amount": "4999.00",
+          "currency": "INR",
+          "external_reference": "authentication_required-v5-h2",
+          "failure_reason": null,
+          "occurred_at": "2025-12-04T00:00:00+00:00",
+          "status": "succeeded"
+        },
+        {
+          "amount": "4999.00",
+          "currency": "INR",
+          "external_reference": "authentication_required-v5-h3",
+          "failure_reason": null,
+          "occurred_at": "2025-12-11T00:00:00+00:00",
+          "status": "succeeded"
+        },
+        {
+          "amount": "4999.00",
+          "currency": "INR",
+          "external_reference": "authentication_required-v5-h4",
+          "failure_reason": null,
+          "occurred_at": "2025-12-18T00:00:00+00:00",
+          "status": "succeeded"
+        },
+        {
+          "amount": "4999.00",
+          "currency": "INR",
+          "external_reference": "authentication_required-v5-h5",
+          "failure_reason": null,
+          "occurred_at": "2025-12-25T00:00:00+00:00",
+          "status": "succeeded"
+        }
+      ],
+      "signals_conflict": false
+    },
+    "expect_unknown": false,
+    "expected_outcome": "authentication_required",
+    "id": "authentication_required-v5",
+    "max_confidence": 1.0,
+    "min_confidence": 0.6,
+    "notes": "clear reason with supporting history"
+  },
+  {
+    "context": {
+      "applicable_policies": [
+        "A payment may be retried at most 3 times."
+      ],
+      "case_id": "00000000-0000-0000-0000-000000000000",
+      "case_state": "diagnosing",
+      "customer": {
+        "external_id": "cust-card_not_supported-v0",
+        "historical_success_rate": 0.75,
+        "successful_payments": 3,
+        "tenure_days": 21,
+        "total_payments": 4
+      },
+      "evidence_sufficiency": "sufficient",
+      "failure": {
+        "consecutive_failures": 1,
+        "days_since_last_success": 7,
+        "distinct_prior_failure_reasons": []
+      },
+      "payment": {
+        "amount": "4999.00",
+        "currency": "INR",
+        "external_reference": "card_not_supported-v0",
+        "failure_reason": "card_not_supported",
+        "occurred_at": "2026-01-01T00:00:00+00:00",
+        "status": "failed"
+      },
+      "previous_interventions": [],
+      "recent_history": [
+        {
+          "amount": "4999.00",
+          "currency": "INR",
+          "external_reference": "card_not_supported-v0-h0",
+          "failure_reason": null,
+          "occurred_at": "2025-12-11T00:00:00+00:00",
+          "status": "succeeded"
+        },
+        {
+          "amount": "4999.00",
+          "currency": "INR",
+          "external_reference": "card_not_supported-v0-h1",
+          "failure_reason": null,
+          "occurred_at": "2025-12-18T00:00:00+00:00",
+          "status": "succeeded"
+        },
+        {
+          "amount": "4999.00",
+          "currency": "INR",
+          "external_reference": "card_not_supported-v0-h2",
+          "failure_reason": null,
+          "occurred_at": "2025-12-25T00:00:00+00:00",
+          "status": "succeeded"
+        }
+      ],
+      "signals_conflict": false
+    },
+    "expect_unknown": false,
+    "expected_outcome": "card_not_supported",
+    "id": "card_not_supported-v0",
+    "max_confidence": 1.0,
+    "min_confidence": 0.6,
+    "notes": "clear reason with supporting history"
+  },
+  {
+    "context": {
+      "applicable_policies": [
+        "A payment may be retried at most 3 times."
+      ],
+      "case_id": "00000000-0000-0000-0000-000000000000",
+      "case_state": "diagnosing",
+      "customer": {
+        "external_id": "cust-card_not_supported-v1",
+        "historical_success_rate": 0.7143,
+        "successful_payments": 5,
+        "tenure_days": 35,
+        "total_payments": 7
+      },
+      "evidence_sufficiency": "sufficient",
+      "failure": {
+        "consecutive_failures": 2,
+        "days_since_last_success": 7,
+        "distinct_prior_failure_reasons": [
+          "card_not_supported"
+        ]
+      },
+      "payment": {
+        "amount": "4999.00",
+        "currency": "INR",
+        "external_reference": "card_not_supported-v1",
+        "failure_reason": "card_not_supported",
+        "occurred_at": "2026-01-01T00:00:00+00:00",
+        "status": "failed"
+      },
+      "previous_interventions": [],
+      "recent_history": [
+        {
+          "amount": "4999.00",
+          "currency": "INR",
+          "external_reference": "card_not_supported-v1-h0",
+          "failure_reason": null,
+          "occurred_at": "2025-11-27T00:00:00+00:00",
+          "status": "succeeded"
+        },
+        {
+          "amount": "4999.00",
+          "currency": "INR",
+          "external_reference": "card_not_supported-v1-h1",
+          "failure_reason": null,
+          "occurred_at": "2025-12-04T00:00:00+00:00",
+          "status": "succeeded"
+        },
+        {
+          "amount": "4999.00",
+          "currency": "INR",
+          "external_reference": "card_not_supported-v1-h2",
+          "failure_reason": null,
+          "occurred_at": "2025-12-11T00:00:00+00:00",
+          "status": "succeeded"
+        },
+        {
+          "amount": "4999.00",
+          "currency": "INR",
+          "external_reference": "card_not_supported-v1-h3",
+          "failure_reason": null,
+          "occurred_at": "2025-12-18T00:00:00+00:00",
+          "status": "succeeded"
+        },
+        {
+          "amount": "4999.00",
+          "currency": "INR",
+          "external_reference": "card_not_supported-v1-h4",
+          "failure_reason": null,
+          "occurred_at": "2025-12-25T00:00:00+00:00",
+          "status": "succeeded"
+        }
+      ],
+      "signals_conflict": false
+    },
+    "expect_unknown": false,
+    "expected_outcome": "card_not_supported",
+    "id": "card_not_supported-v1",
+    "max_confidence": 1.0,
+    "min_confidence": 0.6,
+    "notes": "clear reason with supporting history"
+  },
+  {
+    "context": {
+      "applicable_policies": [
+        "A payment may be retried at most 3 times."
+      ],
+      "case_id": "00000000-0000-0000-0000-000000000000",
+      "case_state": "diagnosing",
+      "customer": {
+        "external_id": "cust-card_not_supported-v2",
+        "historical_success_rate": 0.7273,
+        "successful_payments": 8,
+        "tenure_days": 56,
+        "total_payments": 11
+      },
+      "evidence_sufficiency": "sufficient",
+      "failure": {
+        "consecutive_failures": 3,
+        "days_since_last_success": 7,
+        "distinct_prior_failure_reasons": [
+          "card_not_supported"
+        ]
+      },
+      "payment": {
+        "amount": "4999.00",
+        "currency": "INR",
+        "external_reference": "card_not_supported-v2",
+        "failure_reason": "card_not_supported",
+        "occurred_at": "2026-01-01T00:00:00+00:00",
+        "status": "failed"
+      },
+      "previous_interventions": [],
+      "recent_history": [
+        {
+          "amount": "4999.00",
+          "currency": "INR",
+          "external_reference": "card_not_supported-v2-h0",
+          "failure_reason": null,
+          "occurred_at": "2025-11-06T00:00:00+00:00",
+          "status": "succeeded"
+        },
+        {
+          "amount": "4999.00",
+          "currency": "INR",
+          "external_reference": "card_not_supported-v2-h1",
+          "failure_reason": null,
+          "occurred_at": "2025-11-13T00:00:00+00:00",
+          "status": "succeeded"
+        },
+        {
+          "amount": "4999.00",
+          "currency": "INR",
+          "external_reference": "card_not_supported-v2-h2",
+          "failure_reason": null,
+          "occurred_at": "2025-11-20T00:00:00+00:00",
+          "status": "succeeded"
+        },
+        {
+          "amount": "4999.00",
+          "currency": "INR",
+          "external_reference": "card_not_supported-v2-h3",
+          "failure_reason": null,
+          "occurred_at": "2025-11-27T00:00:00+00:00",
+          "status": "succeeded"
+        },
+        {
+          "amount": "4999.00",
+          "currency": "INR",
+          "external_reference": "card_not_supported-v2-h4",
+          "failure_reason": null,
+          "occurred_at": "2025-12-04T00:00:00+00:00",
+          "status": "succeeded"
+        },
+        {
+          "amount": "4999.00",
+          "currency": "INR",
+          "external_reference": "card_not_supported-v2-h5",
+          "failure_reason": null,
+          "occurred_at": "2025-12-11T00:00:00+00:00",
+          "status": "succeeded"
+        },
+        {
+          "amount": "4999.00",
+          "currency": "INR",
+          "external_reference": "card_not_supported-v2-h6",
+          "failure_reason": null,
+          "occurred_at": "2025-12-18T00:00:00+00:00",
+          "status": "succeeded"
+        },
+        {
+          "amount": "4999.00",
+          "currency": "INR",
+          "external_reference": "card_not_supported-v2-h7",
+          "failure_reason": null,
+          "occurred_at": "2025-12-25T00:00:00+00:00",
+          "status": "succeeded"
+        }
+      ],
+      "signals_conflict": false
+    },
+    "expect_unknown": false,
+    "expected_outcome": "card_not_supported",
+    "id": "card_not_supported-v2",
+    "max_confidence": 1.0,
+    "min_confidence": 0.6,
+    "notes": "clear reason with supporting history"
+  },
+  {
+    "context": {
+      "applicable_policies": [
+        "A payment may be retried at most 3 times."
+      ],
+      "case_id": "00000000-0000-0000-0000-000000000000",
+      "case_state": "diagnosing",
+      "customer": {
+        "external_id": "cust-card_not_supported-v3",
+        "historical_success_rate": 0.6667,
+        "successful_payments": 2,
+        "tenure_days": 14,
+        "total_payments": 3
+      },
+      "evidence_sufficiency": "sufficient",
+      "failure": {
+        "consecutive_failures": 1,
+        "days_since_last_success": 7,
+        "distinct_prior_failure_reasons": []
+      },
+      "payment": {
+        "amount": "4999.00",
+        "currency": "INR",
+        "external_reference": "card_not_supported-v3",
+        "failure_reason": "card_not_supported",
+        "occurred_at": "2026-01-01T00:00:00+00:00",
+        "status": "failed"
+      },
+      "previous_interventions": [],
+      "recent_history": [
+        {
+          "amount": "4999.00",
+          "currency": "INR",
+          "external_reference": "card_not_supported-v3-h0",
+          "failure_reason": null,
+          "occurred_at": "2025-12-18T00:00:00+00:00",
+          "status": "succeeded"
+        },
+        {
+          "amount": "4999.00",
+          "currency": "INR",
+          "external_reference": "card_not_supported-v3-h1",
+          "failure_reason": null,
+          "occurred_at": "2025-12-25T00:00:00+00:00",
+          "status": "succeeded"
+        }
+      ],
+      "signals_conflict": false
+    },
+    "expect_unknown": false,
+    "expected_outcome": "card_not_supported",
+    "id": "card_not_supported-v3",
+    "max_confidence": 1.0,
+    "min_confidence": 0.6,
+    "notes": "clear reason with supporting history"
+  },
+  {
+    "context": {
+      "applicable_policies": [
+        "A payment may be retried at most 3 times."
+      ],
+      "case_id": "00000000-0000-0000-0000-000000000000",
+      "case_state": "diagnosing",
+      "customer": {
+        "external_id": "cust-card_not_supported-v4",
+        "historical_success_rate": 0.6667,
+        "successful_payments": 4,
+        "tenure_days": 28,
+        "total_payments": 6
+      },
+      "evidence_sufficiency": "sufficient",
+      "failure": {
+        "consecutive_failures": 1,
+        "days_since_last_success": 7,
+        "distinct_prior_failure_reasons": [
+          "card_not_supported"
+        ]
+      },
+      "payment": {
+        "amount": "4999.00",
+        "currency": "INR",
+        "external_reference": "card_not_supported-v4",
+        "failure_reason": "card_not_supported",
+        "occurred_at": "2026-01-01T00:00:00+00:00",
+        "status": "failed"
+      },
+      "previous_interventions": [],
+      "recent_history": [
+        {
+          "amount": "4999.00",
+          "currency": "INR",
+          "external_reference": "card_not_supported-v4-h0",
+          "failure_reason": null,
+          "occurred_at": "2025-12-04T00:00:00+00:00",
+          "status": "succeeded"
+        },
+        {
+          "amount": "4999.00",
+          "currency": "INR",
+          "external_reference": "card_not_supported-v4-h1",
+          "failure_reason": null,
+          "occurred_at": "2025-12-11T00:00:00+00:00",
+          "status": "succeeded"
+        },
+        {
+          "amount": "4999.00",
+          "currency": "INR",
+          "external_reference": "card_not_supported-v4-h2",
+          "failure_reason": null,
+          "occurred_at": "2025-12-18T00:00:00+00:00",
+          "status": "succeeded"
+        },
+        {
+          "amount": "4999.00",
+          "currency": "INR",
+          "external_reference": "card_not_supported-v4-h3",
+          "failure_reason": null,
+          "occurred_at": "2025-12-25T00:00:00+00:00",
+          "status": "succeeded"
+        }
+      ],
+      "signals_conflict": false
+    },
+    "expect_unknown": false,
+    "expected_outcome": "card_not_supported",
+    "id": "card_not_supported-v4",
+    "max_confidence": 1.0,
+    "min_confidence": 0.6,
+    "notes": "clear reason with supporting history"
+  },
+  {
+    "context": {
+      "applicable_policies": [
+        "A payment may be retried at most 3 times."
+      ],
+      "case_id": "00000000-0000-0000-0000-000000000000",
+      "case_state": "diagnosing",
+      "customer": {
+        "external_id": "cust-card_not_supported-v5",
+        "historical_success_rate": 0.8571,
+        "successful_payments": 6,
+        "tenure_days": 42,
+        "total_payments": 7
+      },
+      "evidence_sufficiency": "sufficient",
+      "failure": {
+        "consecutive_failures": 1,
+        "days_since_last_success": 7,
+        "distinct_prior_failure_reasons": []
+      },
+      "payment": {
+        "amount": "4999.00",
+        "currency": "INR",
+        "external_reference": "card_not_supported-v5",
+        "failure_reason": "card_not_supported",
+        "occurred_at": "2026-01-01T00:00:00+00:00",
+        "status": "failed"
+      },
+      "previous_interventions": [],
+      "recent_history": [
+        {
+          "amount": "4999.00",
+          "currency": "INR",
+          "external_reference": "card_not_supported-v5-h0",
+          "failure_reason": null,
+          "occurred_at": "2025-11-20T00:00:00+00:00",
+          "status": "succeeded"
+        },
+        {
+          "amount": "4999.00",
+          "currency": "INR",
+          "external_reference": "card_not_supported-v5-h1",
+          "failure_reason": null,
+          "occurred_at": "2025-11-27T00:00:00+00:00",
+          "status": "succeeded"
+        },
+        {
+          "amount": "4999.00",
+          "currency": "INR",
+          "external_reference": "card_not_supported-v5-h2",
+          "failure_reason": null,
+          "occurred_at": "2025-12-04T00:00:00+00:00",
+          "status": "succeeded"
+        },
+        {
+          "amount": "4999.00",
+          "currency": "INR",
+          "external_reference": "card_not_supported-v5-h3",
+          "failure_reason": null,
+          "occurred_at": "2025-12-11T00:00:00+00:00",
+          "status": "succeeded"
+        },
+        {
+          "amount": "4999.00",
+          "currency": "INR",
+          "external_reference": "card_not_supported-v5-h4",
+          "failure_reason": null,
+          "occurred_at": "2025-12-18T00:00:00+00:00",
+          "status": "succeeded"
+        },
+        {
+          "amount": "4999.00",
+          "currency": "INR",
+          "external_reference": "card_not_supported-v5-h5",
+          "failure_reason": null,
+          "occurred_at": "2025-12-25T00:00:00+00:00",
+          "status": "succeeded"
+        }
+      ],
+      "signals_conflict": false
+    },
+    "expect_unknown": false,
+    "expected_outcome": "card_not_supported",
+    "id": "card_not_supported-v5",
+    "max_confidence": 1.0,
+    "min_confidence": 0.6,
+    "notes": "clear reason with supporting history"
+  },
+  {
+    "context": {
+      "applicable_policies": [
+        "A payment may be retried at most 3 times."
+      ],
+      "case_id": "00000000-0000-0000-0000-000000000000",
+      "case_state": "diagnosing",
+      "customer": {
+        "external_id": "cust-sparse-nr-0",
+        "historical_success_rate": 0.0,
+        "successful_payments": 0,
+        "tenure_days": 7,
+        "total_payments": 1
+      },
+      "evidence_sufficiency": "sparse",
+      "failure": {
+        "consecutive_failures": 1,
+        "days_since_last_success": null,
+        "distinct_prior_failure_reasons": []
+      },
+      "payment": {
+        "amount": "4999.00",
+        "currency": "INR",
+        "external_reference": "sparse-nr-0",
+        "failure_reason": null,
+        "occurred_at": "2026-01-01T00:00:00+00:00",
+        "status": "failed"
+      },
+      "previous_interventions": [],
+      "recent_history": [],
+      "signals_conflict": false
+    },
+    "expect_unknown": true,
+    "expected_outcome": "unknown",
+    "id": "sparse-no-reason-0",
+    "max_confidence": 0.5,
+    "min_confidence": 0.0,
+    "notes": "no failure reason -> must not guess a specific cause"
+  },
+  {
+    "context": {
+      "applicable_policies": [
+        "A payment may be retried at most 3 times."
+      ],
+      "case_id": "00000000-0000-0000-0000-000000000000",
+      "case_state": "diagnosing",
+      "customer": {
+        "external_id": "cust-sparse-nr-1",
+        "historical_success_rate": 0.5,
+        "successful_payments": 1,
+        "tenure_days": 7,
+        "total_payments": 2
+      },
+      "evidence_sufficiency": "sparse",
+      "failure": {
+        "consecutive_failures": 1,
+        "days_since_last_success": 7,
+        "distinct_prior_failure_reasons": []
+      },
+      "payment": {
+        "amount": "4999.00",
+        "currency": "INR",
+        "external_reference": "sparse-nr-1",
+        "failure_reason": null,
+        "occurred_at": "2026-01-01T00:00:00+00:00",
+        "status": "failed"
+      },
+      "previous_interventions": [],
+      "recent_history": [
+        {
+          "amount": "4999.00",
+          "currency": "INR",
+          "external_reference": "sparse-nr-1-h0",
+          "failure_reason": null,
+          "occurred_at": "2025-12-25T00:00:00+00:00",
+          "status": "succeeded"
+        }
+      ],
+      "signals_conflict": false
+    },
+    "expect_unknown": true,
+    "expected_outcome": "unknown",
+    "id": "sparse-no-reason-1",
+    "max_confidence": 0.5,
+    "min_confidence": 0.0,
+    "notes": "no failure reason -> must not guess a specific cause"
+  },
+  {
+    "context": {
+      "applicable_policies": [
+        "A payment may be retried at most 3 times."
+      ],
+      "case_id": "00000000-0000-0000-0000-000000000000",
+      "case_state": "diagnosing",
+      "customer": {
+        "external_id": "cust-sparse-nr-2",
+        "historical_success_rate": 0.6667,
+        "successful_payments": 2,
+        "tenure_days": 14,
+        "total_payments": 3
+      },
+      "evidence_sufficiency": "sparse",
+      "failure": {
+        "consecutive_failures": 1,
+        "days_since_last_success": 7,
+        "distinct_prior_failure_reasons": []
+      },
+      "payment": {
+        "amount": "4999.00",
+        "currency": "INR",
+        "external_reference": "sparse-nr-2",
+        "failure_reason": null,
+        "occurred_at": "2026-01-01T00:00:00+00:00",
+        "status": "failed"
+      },
+      "previous_interventions": [],
+      "recent_history": [
+        {
+          "amount": "4999.00",
+          "currency": "INR",
+          "external_reference": "sparse-nr-2-h0",
+          "failure_reason": null,
+          "occurred_at": "2025-12-18T00:00:00+00:00",
+          "status": "succeeded"
+        },
+        {
+          "amount": "4999.00",
+          "currency": "INR",
+          "external_reference": "sparse-nr-2-h1",
+          "failure_reason": null,
+          "occurred_at": "2025-12-25T00:00:00+00:00",
+          "status": "succeeded"
+        }
+      ],
+      "signals_conflict": false
+    },
+    "expect_unknown": true,
+    "expected_outcome": "unknown",
+    "id": "sparse-no-reason-2",
+    "max_confidence": 0.5,
+    "min_confidence": 0.0,
+    "notes": "no failure reason -> must not guess a specific cause"
+  },
+  {
+    "context": {
+      "applicable_policies": [
+        "A payment may be retried at most 3 times."
+      ],
+      "case_id": "00000000-0000-0000-0000-000000000000",
+      "case_state": "diagnosing",
+      "customer": {
+        "external_id": "cust-sparse-nr-3",
+        "historical_success_rate": 0.75,
+        "successful_payments": 3,
+        "tenure_days": 21,
+        "total_payments": 4
+      },
+      "evidence_sufficiency": "sparse",
+      "failure": {
+        "consecutive_failures": 1,
+        "days_since_last_success": 7,
+        "distinct_prior_failure_reasons": []
+      },
+      "payment": {
+        "amount": "4999.00",
+        "currency": "INR",
+        "external_reference": "sparse-nr-3",
+        "failure_reason": null,
+        "occurred_at": "2026-01-01T00:00:00+00:00",
+        "status": "failed"
+      },
+      "previous_interventions": [],
+      "recent_history": [
+        {
+          "amount": "4999.00",
+          "currency": "INR",
+          "external_reference": "sparse-nr-3-h0",
+          "failure_reason": null,
+          "occurred_at": "2025-12-11T00:00:00+00:00",
+          "status": "succeeded"
+        },
+        {
+          "amount": "4999.00",
+          "currency": "INR",
+          "external_reference": "sparse-nr-3-h1",
+          "failure_reason": null,
+          "occurred_at": "2025-12-18T00:00:00+00:00",
+          "status": "succeeded"
+        },
+        {
+          "amount": "4999.00",
+          "currency": "INR",
+          "external_reference": "sparse-nr-3-h2",
+          "failure_reason": null,
+          "occurred_at": "2025-12-25T00:00:00+00:00",
+          "status": "succeeded"
+        }
+      ],
+      "signals_conflict": false
+    },
+    "expect_unknown": true,
+    "expected_outcome": "unknown",
+    "id": "sparse-no-reason-3",
+    "max_confidence": 0.5,
+    "min_confidence": 0.0,
+    "notes": "no failure reason -> must not guess a specific cause"
+  },
+  {
+    "context": {
+      "applicable_policies": [
+        "A payment may be retried at most 3 times."
+      ],
+      "case_id": "00000000-0000-0000-0000-000000000000",
+      "case_state": "diagnosing",
+      "customer": {
+        "external_id": "cust-sparse-nr-4",
+        "historical_success_rate": 0.0,
+        "successful_payments": 0,
+        "tenure_days": 7,
+        "total_payments": 1
+      },
+      "evidence_sufficiency": "sparse",
+      "failure": {
+        "consecutive_failures": 1,
+        "days_since_last_success": null,
+        "distinct_prior_failure_reasons": []
+      },
+      "payment": {
+        "amount": "4999.00",
+        "currency": "INR",
+        "external_reference": "sparse-nr-4",
+        "failure_reason": null,
+        "occurred_at": "2026-01-01T00:00:00+00:00",
+        "status": "failed"
+      },
+      "previous_interventions": [],
+      "recent_history": [],
+      "signals_conflict": false
+    },
+    "expect_unknown": true,
+    "expected_outcome": "unknown",
+    "id": "sparse-no-reason-4",
+    "max_confidence": 0.5,
+    "min_confidence": 0.0,
+    "notes": "no failure reason -> must not guess a specific cause"
+  },
+  {
+    "context": {
+      "applicable_policies": [
+        "A payment may be retried at most 3 times."
+      ],
+      "case_id": "00000000-0000-0000-0000-000000000000",
+      "case_state": "diagnosing",
+      "customer": {
+        "external_id": "cust-sparse-nr-5",
+        "historical_success_rate": 0.5,
+        "successful_payments": 1,
+        "tenure_days": 7,
+        "total_payments": 2
+      },
+      "evidence_sufficiency": "sparse",
+      "failure": {
+        "consecutive_failures": 1,
+        "days_since_last_success": 7,
+        "distinct_prior_failure_reasons": []
+      },
+      "payment": {
+        "amount": "4999.00",
+        "currency": "INR",
+        "external_reference": "sparse-nr-5",
+        "failure_reason": null,
+        "occurred_at": "2026-01-01T00:00:00+00:00",
+        "status": "failed"
+      },
+      "previous_interventions": [],
+      "recent_history": [
+        {
+          "amount": "4999.00",
+          "currency": "INR",
+          "external_reference": "sparse-nr-5-h0",
+          "failure_reason": null,
+          "occurred_at": "2025-12-25T00:00:00+00:00",
+          "status": "succeeded"
+        }
+      ],
+      "signals_conflict": false
+    },
+    "expect_unknown": true,
+    "expected_outcome": "unknown",
+    "id": "sparse-no-reason-5",
+    "max_confidence": 0.5,
+    "min_confidence": 0.0,
+    "notes": "no failure reason -> must not guess a specific cause"
+  },
+  {
+    "context": {
+      "applicable_policies": [
+        "A payment may be retried at most 3 times."
+      ],
+      "case_id": "00000000-0000-0000-0000-000000000000",
+      "case_state": "diagnosing",
+      "customer": {
+        "external_id": "cust-sparse-nr-6",
+        "historical_success_rate": 0.6667,
+        "successful_payments": 2,
+        "tenure_days": 14,
+        "total_payments": 3
+      },
+      "evidence_sufficiency": "sparse",
+      "failure": {
+        "consecutive_failures": 1,
+        "days_since_last_success": 7,
+        "distinct_prior_failure_reasons": []
+      },
+      "payment": {
+        "amount": "4999.00",
+        "currency": "INR",
+        "external_reference": "sparse-nr-6",
+        "failure_reason": null,
+        "occurred_at": "2026-01-01T00:00:00+00:00",
+        "status": "failed"
+      },
+      "previous_interventions": [],
+      "recent_history": [
+        {
+          "amount": "4999.00",
+          "currency": "INR",
+          "external_reference": "sparse-nr-6-h0",
+          "failure_reason": null,
+          "occurred_at": "2025-12-18T00:00:00+00:00",
+          "status": "succeeded"
+        },
+        {
+          "amount": "4999.00",
+          "currency": "INR",
+          "external_reference": "sparse-nr-6-h1",
+          "failure_reason": null,
+          "occurred_at": "2025-12-25T00:00:00+00:00",
+          "status": "succeeded"
+        }
+      ],
+      "signals_conflict": false
+    },
+    "expect_unknown": true,
+    "expected_outcome": "unknown",
+    "id": "sparse-no-reason-6",
+    "max_confidence": 0.5,
+    "min_confidence": 0.0,
+    "notes": "no failure reason -> must not guess a specific cause"
+  },
+  {
+    "context": {
+      "applicable_policies": [
+        "A payment may be retried at most 3 times."
+      ],
+      "case_id": "00000000-0000-0000-0000-000000000000",
+      "case_state": "diagnosing",
+      "customer": {
+        "external_id": "cust-sparse-nr-7",
+        "historical_success_rate": 0.75,
+        "successful_payments": 3,
+        "tenure_days": 21,
+        "total_payments": 4
+      },
+      "evidence_sufficiency": "sparse",
+      "failure": {
+        "consecutive_failures": 1,
+        "days_since_last_success": 7,
+        "distinct_prior_failure_reasons": []
+      },
+      "payment": {
+        "amount": "4999.00",
+        "currency": "INR",
+        "external_reference": "sparse-nr-7",
+        "failure_reason": null,
+        "occurred_at": "2026-01-01T00:00:00+00:00",
+        "status": "failed"
+      },
+      "previous_interventions": [],
+      "recent_history": [
+        {
+          "amount": "4999.00",
+          "currency": "INR",
+          "external_reference": "sparse-nr-7-h0",
+          "failure_reason": null,
+          "occurred_at": "2025-12-11T00:00:00+00:00",
+          "status": "succeeded"
+        },
+        {
+          "amount": "4999.00",
+          "currency": "INR",
+          "external_reference": "sparse-nr-7-h1",
+          "failure_reason": null,
+          "occurred_at": "2025-12-18T00:00:00+00:00",
+          "status": "succeeded"
+        },
+        {
+          "amount": "4999.00",
+          "currency": "INR",
+          "external_reference": "sparse-nr-7-h2",
+          "failure_reason": null,
+          "occurred_at": "2025-12-25T00:00:00+00:00",
+          "status": "succeeded"
+        }
+      ],
+      "signals_conflict": false
+    },
+    "expect_unknown": true,
+    "expected_outcome": "unknown",
+    "id": "sparse-no-reason-7",
+    "max_confidence": 0.5,
+    "min_confidence": 0.0,
+    "notes": "no failure reason -> must not guess a specific cause"
+  },
+  {
+    "context": {
+      "applicable_policies": [
+        "A payment may be retried at most 3 times."
+      ],
+      "case_id": "00000000-0000-0000-0000-000000000000",
+      "case_state": "diagnosing",
+      "customer": {
+        "external_id": "cust-sparse-nh-0",
+        "historical_success_rate": 0.0,
+        "successful_payments": 0,
+        "tenure_days": 7,
+        "total_payments": 1
+      },
+      "evidence_sufficiency": "sparse",
+      "failure": {
+        "consecutive_failures": 1,
+        "days_since_last_success": null,
+        "distinct_prior_failure_reasons": []
+      },
+      "payment": {
+        "amount": "4999.00",
+        "currency": "INR",
+        "external_reference": "sparse-nh-0",
+        "failure_reason": "insufficient_funds",
+        "occurred_at": "2026-01-01T00:00:00+00:00",
+        "status": "failed"
+      },
+      "previous_interventions": [],
+      "recent_history": [],
+      "signals_conflict": false
+    },
+    "expect_unknown": true,
+    "expected_outcome": "unknown",
+    "id": "sparse-no-history-0",
+    "max_confidence": 0.5,
+    "min_confidence": 0.0,
+    "notes": "only one payment on record -> insufficient evidence"
+  },
+  {
+    "context": {
+      "applicable_policies": [
+        "A payment may be retried at most 3 times."
+      ],
+      "case_id": "00000000-0000-0000-0000-000000000000",
+      "case_state": "diagnosing",
+      "customer": {
+        "external_id": "cust-sparse-nh-1",
+        "historical_success_rate": 0.0,
+        "successful_payments": 0,
+        "tenure_days": 7,
+        "total_payments": 1
+      },
+      "evidence_sufficiency": "sparse",
+      "failure": {
+        "consecutive_failures": 1,
+        "days_since_last_success": null,
+        "distinct_prior_failure_reasons": []
+      },
+      "payment": {
+        "amount": "4999.00",
+        "currency": "INR",
+        "external_reference": "sparse-nh-1",
+        "failure_reason": "insufficient_funds",
+        "occurred_at": "2026-01-01T00:00:00+00:00",
+        "status": "failed"
+      },
+      "previous_interventions": [],
+      "recent_history": [],
+      "signals_conflict": false
+    },
+    "expect_unknown": true,
+    "expected_outcome": "unknown",
+    "id": "sparse-no-history-1",
+    "max_confidence": 0.5,
+    "min_confidence": 0.0,
+    "notes": "only one payment on record -> insufficient evidence"
+  },
+  {
+    "context": {
+      "applicable_policies": [
+        "A payment may be retried at most 3 times."
+      ],
+      "case_id": "00000000-0000-0000-0000-000000000000",
+      "case_state": "diagnosing",
+      "customer": {
+        "external_id": "cust-sparse-nh-2",
+        "historical_success_rate": 0.0,
+        "successful_payments": 0,
+        "tenure_days": 7,
+        "total_payments": 1
+      },
+      "evidence_sufficiency": "sparse",
+      "failure": {
+        "consecutive_failures": 1,
+        "days_since_last_success": null,
+        "distinct_prior_failure_reasons": []
+      },
+      "payment": {
+        "amount": "4999.00",
+        "currency": "INR",
+        "external_reference": "sparse-nh-2",
+        "failure_reason": "insufficient_funds",
+        "occurred_at": "2026-01-01T00:00:00+00:00",
+        "status": "failed"
+      },
+      "previous_interventions": [],
+      "recent_history": [],
+      "signals_conflict": false
+    },
+    "expect_unknown": true,
+    "expected_outcome": "unknown",
+    "id": "sparse-no-history-2",
+    "max_confidence": 0.5,
+    "min_confidence": 0.0,
+    "notes": "only one payment on record -> insufficient evidence"
+  },
+  {
+    "context": {
+      "applicable_policies": [
+        "A payment may be retried at most 3 times."
+      ],
+      "case_id": "00000000-0000-0000-0000-000000000000",
+      "case_state": "diagnosing",
+      "customer": {
+        "external_id": "cust-sparse-nh-3",
+        "historical_success_rate": 0.0,
+        "successful_payments": 0,
+        "tenure_days": 7,
+        "total_payments": 1
+      },
+      "evidence_sufficiency": "sparse",
+      "failure": {
+        "consecutive_failures": 1,
+        "days_since_last_success": null,
+        "distinct_prior_failure_reasons": []
+      },
+      "payment": {
+        "amount": "4999.00",
+        "currency": "INR",
+        "external_reference": "sparse-nh-3",
+        "failure_reason": "insufficient_funds",
+        "occurred_at": "2026-01-01T00:00:00+00:00",
+        "status": "failed"
+      },
+      "previous_interventions": [],
+      "recent_history": [],
+      "signals_conflict": false
+    },
+    "expect_unknown": true,
+    "expected_outcome": "unknown",
+    "id": "sparse-no-history-3",
+    "max_confidence": 0.5,
+    "min_confidence": 0.0,
+    "notes": "only one payment on record -> insufficient evidence"
+  },
+  {
+    "context": {
+      "applicable_policies": [
+        "A payment may be retried at most 3 times."
+      ],
+      "case_id": "00000000-0000-0000-0000-000000000000",
+      "case_state": "diagnosing",
+      "customer": {
+        "external_id": "cust-sparse-nh-4",
+        "historical_success_rate": 0.0,
+        "successful_payments": 0,
+        "tenure_days": 7,
+        "total_payments": 1
+      },
+      "evidence_sufficiency": "sparse",
+      "failure": {
+        "consecutive_failures": 1,
+        "days_since_last_success": null,
+        "distinct_prior_failure_reasons": []
+      },
+      "payment": {
+        "amount": "4999.00",
+        "currency": "INR",
+        "external_reference": "sparse-nh-4",
+        "failure_reason": "insufficient_funds",
+        "occurred_at": "2026-01-01T00:00:00+00:00",
+        "status": "failed"
+      },
+      "previous_interventions": [],
+      "recent_history": [],
+      "signals_conflict": false
+    },
+    "expect_unknown": true,
+    "expected_outcome": "unknown",
+    "id": "sparse-no-history-4",
+    "max_confidence": 0.5,
+    "min_confidence": 0.0,
+    "notes": "only one payment on record -> insufficient evidence"
+  },
+  {
+    "context": {
+      "applicable_policies": [
+        "A payment may be retried at most 3 times."
+      ],
+      "case_id": "00000000-0000-0000-0000-000000000000",
+      "case_state": "diagnosing",
+      "customer": {
+        "external_id": "cust-sparse-nh-5",
+        "historical_success_rate": 0.0,
+        "successful_payments": 0,
+        "tenure_days": 7,
+        "total_payments": 1
+      },
+      "evidence_sufficiency": "sparse",
+      "failure": {
+        "consecutive_failures": 1,
+        "days_since_last_success": null,
+        "distinct_prior_failure_reasons": []
+      },
+      "payment": {
+        "amount": "4999.00",
+        "currency": "INR",
+        "external_reference": "sparse-nh-5",
+        "failure_reason": "insufficient_funds",
+        "occurred_at": "2026-01-01T00:00:00+00:00",
+        "status": "failed"
+      },
+      "previous_interventions": [],
+      "recent_history": [],
+      "signals_conflict": false
+    },
+    "expect_unknown": true,
+    "expected_outcome": "unknown",
+    "id": "sparse-no-history-5",
+    "max_confidence": 0.5,
+    "min_confidence": 0.0,
+    "notes": "only one payment on record -> insufficient evidence"
+  },
+  {
+    "context": {
+      "applicable_policies": [
+        "A payment may be retried at most 3 times."
+      ],
+      "case_id": "00000000-0000-0000-0000-000000000000",
+      "case_state": "diagnosing",
+      "customer": {
+        "external_id": "cust-unmapped-0",
+        "historical_success_rate": 0.6667,
+        "successful_payments": 4,
+        "tenure_days": 28,
+        "total_payments": 6
+      },
+      "evidence_sufficiency": "sufficient",
+      "failure": {
+        "consecutive_failures": 1,
+        "days_since_last_success": 7,
+        "distinct_prior_failure_reasons": [
+          "gateway_timeout"
+        ]
+      },
+      "payment": {
+        "amount": "4999.00",
+        "currency": "INR",
+        "external_reference": "unmapped-0",
+        "failure_reason": "gateway_timeout",
+        "occurred_at": "2026-01-01T00:00:00+00:00",
+        "status": "failed"
+      },
+      "previous_interventions": [],
+      "recent_history": [
+        {
+          "amount": "4999.00",
+          "currency": "INR",
+          "external_reference": "unmapped-0-h0",
+          "failure_reason": null,
+          "occurred_at": "2025-12-04T00:00:00+00:00",
+          "status": "succeeded"
+        },
+        {
+          "amount": "4999.00",
+          "currency": "INR",
+          "external_reference": "unmapped-0-h1",
+          "failure_reason": null,
+          "occurred_at": "2025-12-11T00:00:00+00:00",
+          "status": "succeeded"
+        },
+        {
+          "amount": "4999.00",
+          "currency": "INR",
+          "external_reference": "unmapped-0-h2",
+          "failure_reason": null,
+          "occurred_at": "2025-12-18T00:00:00+00:00",
+          "status": "succeeded"
+        },
+        {
+          "amount": "4999.00",
+          "currency": "INR",
+          "external_reference": "unmapped-0-h3",
+          "failure_reason": null,
+          "occurred_at": "2025-12-25T00:00:00+00:00",
+          "status": "succeeded"
+        }
+      ],
+      "signals_conflict": false
+    },
+    "expect_unknown": true,
+    "expected_outcome": "unknown",
+    "id": "unmapped-0",
+    "max_confidence": 0.7,
+    "min_confidence": 0.0,
+    "notes": "reason 'gateway_timeout' is not in the taxonomy"
+  },
+  {
+    "context": {
+      "applicable_policies": [
+        "A payment may be retried at most 3 times."
+      ],
+      "case_id": "00000000-0000-0000-0000-000000000000",
+      "case_state": "diagnosing",
+      "customer": {
+        "external_id": "cust-unmapped-1",
+        "historical_success_rate": 0.6667,
+        "successful_payments": 4,
+        "tenure_days": 28,
+        "total_payments": 6
+      },
+      "evidence_sufficiency": "sufficient",
+      "failure": {
+        "consecutive_failures": 1,
+        "days_since_last_success": 7,
+        "distinct_prior_failure_reasons": [
+          "currency_mismatch"
+        ]
+      },
+      "payment": {
+        "amount": "4999.00",
+        "currency": "INR",
+        "external_reference": "unmapped-1",
+        "failure_reason": "currency_mismatch",
+        "occurred_at": "2026-01-01T00:00:00+00:00",
+        "status": "failed"
+      },
+      "previous_interventions": [],
+      "recent_history": [
+        {
+          "amount": "4999.00",
+          "currency": "INR",
+          "external_reference": "unmapped-1-h0",
+          "failure_reason": null,
+          "occurred_at": "2025-12-04T00:00:00+00:00",
+          "status": "succeeded"
+        },
+        {
+          "amount": "4999.00",
+          "currency": "INR",
+          "external_reference": "unmapped-1-h1",
+          "failure_reason": null,
+          "occurred_at": "2025-12-11T00:00:00+00:00",
+          "status": "succeeded"
+        },
+        {
+          "amount": "4999.00",
+          "currency": "INR",
+          "external_reference": "unmapped-1-h2",
+          "failure_reason": null,
+          "occurred_at": "2025-12-18T00:00:00+00:00",
+          "status": "succeeded"
+        },
+        {
+          "amount": "4999.00",
+          "currency": "INR",
+          "external_reference": "unmapped-1-h3",
+          "failure_reason": null,
+          "occurred_at": "2025-12-25T00:00:00+00:00",
+          "status": "succeeded"
+        }
+      ],
+      "signals_conflict": false
+    },
+    "expect_unknown": true,
+    "expected_outcome": "unknown",
+    "id": "unmapped-1",
+    "max_confidence": 0.7,
+    "min_confidence": 0.0,
+    "notes": "reason 'currency_mismatch' is not in the taxonomy"
+  },
+  {
+    "context": {
+      "applicable_policies": [
+        "A payment may be retried at most 3 times."
+      ],
+      "case_id": "00000000-0000-0000-0000-000000000000",
+      "case_state": "diagnosing",
+      "customer": {
+        "external_id": "cust-unmapped-2",
+        "historical_success_rate": 0.6667,
+        "successful_payments": 4,
+        "tenure_days": 28,
+        "total_payments": 6
+      },
+      "evidence_sufficiency": "sufficient",
+      "failure": {
+        "consecutive_failures": 1,
+        "days_since_last_success": 7,
+        "distinct_prior_failure_reasons": [
+          "unknown_error"
+        ]
+      },
+      "payment": {
+        "amount": "4999.00",
+        "currency": "INR",
+        "external_reference": "unmapped-2",
+        "failure_reason": "unknown_error",
+        "occurred_at": "2026-01-01T00:00:00+00:00",
+        "status": "failed"
+      },
+      "previous_interventions": [],
+      "recent_history": [
+        {
+          "amount": "4999.00",
+          "currency": "INR",
+          "external_reference": "unmapped-2-h0",
+          "failure_reason": null,
+          "occurred_at": "2025-12-04T00:00:00+00:00",
+          "status": "succeeded"
+        },
+        {
+          "amount": "4999.00",
+          "currency": "INR",
+          "external_reference": "unmapped-2-h1",
+          "failure_reason": null,
+          "occurred_at": "2025-12-11T00:00:00+00:00",
+          "status": "succeeded"
+        },
+        {
+          "amount": "4999.00",
+          "currency": "INR",
+          "external_reference": "unmapped-2-h2",
+          "failure_reason": null,
+          "occurred_at": "2025-12-18T00:00:00+00:00",
+          "status": "succeeded"
+        },
+        {
+          "amount": "4999.00",
+          "currency": "INR",
+          "external_reference": "unmapped-2-h3",
+          "failure_reason": null,
+          "occurred_at": "2025-12-25T00:00:00+00:00",
+          "status": "succeeded"
+        }
+      ],
+      "signals_conflict": false
+    },
+    "expect_unknown": true,
+    "expected_outcome": "unknown",
+    "id": "unmapped-2",
+    "max_confidence": 0.7,
+    "min_confidence": 0.0,
+    "notes": "reason 'unknown_error' is not in the taxonomy"
+  },
+  {
+    "context": {
+      "applicable_policies": [
+        "A payment may be retried at most 3 times."
+      ],
+      "case_id": "00000000-0000-0000-0000-000000000000",
+      "case_state": "diagnosing",
+      "customer": {
+        "external_id": "cust-unmapped-3",
+        "historical_success_rate": 0.6667,
+        "successful_payments": 4,
+        "tenure_days": 28,
+        "total_payments": 6
+      },
+      "evidence_sufficiency": "sufficient",
+      "failure": {
+        "consecutive_failures": 1,
+        "days_since_last_success": 7,
+        "distinct_prior_failure_reasons": [
+          "risk_hold"
+        ]
+      },
+      "payment": {
+        "amount": "4999.00",
+        "currency": "INR",
+        "external_reference": "unmapped-3",
+        "failure_reason": "risk_hold",
+        "occurred_at": "2026-01-01T00:00:00+00:00",
+        "status": "failed"
+      },
+      "previous_interventions": [],
+      "recent_history": [
+        {
+          "amount": "4999.00",
+          "currency": "INR",
+          "external_reference": "unmapped-3-h0",
+          "failure_reason": null,
+          "occurred_at": "2025-12-04T00:00:00+00:00",
+          "status": "succeeded"
+        },
+        {
+          "amount": "4999.00",
+          "currency": "INR",
+          "external_reference": "unmapped-3-h1",
+          "failure_reason": null,
+          "occurred_at": "2025-12-11T00:00:00+00:00",
+          "status": "succeeded"
+        },
+        {
+          "amount": "4999.00",
+          "currency": "INR",
+          "external_reference": "unmapped-3-h2",
+          "failure_reason": null,
+          "occurred_at": "2025-12-18T00:00:00+00:00",
+          "status": "succeeded"
+        },
+        {
+          "amount": "4999.00",
+          "currency": "INR",
+          "external_reference": "unmapped-3-h3",
+          "failure_reason": null,
+          "occurred_at": "2025-12-25T00:00:00+00:00",
+          "status": "succeeded"
+        }
+      ],
+      "signals_conflict": false
+    },
+    "expect_unknown": true,
+    "expected_outcome": "unknown",
+    "id": "unmapped-3",
+    "max_confidence": 0.7,
+    "min_confidence": 0.0,
+    "notes": "reason 'risk_hold' is not in the taxonomy"
+  }
+]

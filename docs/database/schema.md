@@ -3,6 +3,7 @@
 Managed by Alembic (`backend/migrations/`). Run `alembic upgrade head` to
 apply. Phase 1 tables: `customers`, `payments`, `ingestion_events`.
 Phase 3 tables: `recovery_cases`, `recovery_case_transitions`.
+Phase 4 table: `diagnoses`.
 
 ## `customers`
 
@@ -82,6 +83,31 @@ deleted by application code.
 | reason      | varchar(255)  | nullable; free-text why                                   |
 | actor       | varchar(100)  | what caused it, e.g. `api`, `system:open`                 |
 | created_at  | timestamptz   | server default now()                                      |
+
+## `diagnoses` (Phase 4)
+
+One row per diagnosis run for a recovery case (a case may be diagnosed more
+than once — e.g. a retry after a failed model call; the latest by
+`created_at` is the current one). `outcome` / `disposition` /
+`recommended_strategy` are stored as strings, validated at the application
+layer (`app/ai/schema.py`), not as Postgres enums — see ADR-005.
+
+| column                  | type          | notes                                            |
+| ----------------------- | ------------- | ------------------------------------------------ |
+| id                      | uuid, PK      |                                                  |
+| case_id                 | uuid, FK      | -> recovery_cases.id; indexed                     |
+| outcome                 | varchar(50)   | specific cause; `unknown` is valid               |
+| disposition             | varchar(50)   | routing category, derived from `outcome`          |
+| confidence              | numeric(4,3)  | 0.000–1.000                                       |
+| reasoning               | text          | short rationale                                   |
+| recommended_strategy    | varchar(50)   | advisory only (Phase 5 decides)                   |
+| recommended_delay_hours | integer       | nullable                                          |
+| schema_version          | varchar(10)   | diagnosis schema version (`"1"`)                  |
+| model_name              | varchar(100)  | e.g. `mock`, `qwen`                               |
+| model_version           | varchar(100)  | model/build id reported by the provider           |
+| prompt_version          | varchar(100)  | e.g. `diagnosis_prompt_v1`                        |
+| latency_ms              | integer       | model call latency                               |
+| created_at              | timestamptz   | server default now()                             |
 
 ## Recovery Case Semantics
 

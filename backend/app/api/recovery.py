@@ -3,7 +3,10 @@ from uuid import UUID
 from fastapi import APIRouter, Depends, HTTPException, Response, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.ai.diagnosis import DiagnosisValidationError
+from app.ai.providers.base import ReasoningModelError
 from app.core.errors import (
+    CaseNotDiagnosableError,
     IllegalStateTransitionError,
     PaymentNotFoundError,
     PaymentNotRecoverableError,
@@ -13,11 +16,13 @@ from app.db.session import get_db_session
 from app.models.recovery import RecoveryCaseState
 from app.recovery import service
 from app.schemas.recovery import (
+    DiagnosisOut,
     OpenCaseRequest,
     RecoveryCaseDetail,
     RecoveryCaseOut,
     TransitionRequest,
 )
+from app.services.diagnosis import diagnose_case, get_latest_diagnosis
 
 router = APIRouter(prefix="/recovery", tags=["recovery"])
 
@@ -70,6 +75,7 @@ async def get_recovery_case(
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(exc)) from exc
 
     history = await service.get_case_transitions(session, case_id)
+    latest_diagnosis = await get_latest_diagnosis(session, case_id)
     return RecoveryCaseDetail.model_validate(
         {
             "id": case.id,
@@ -79,6 +85,11 @@ async def get_recovery_case(
             "opened_at": case.opened_at,
             "closed_at": case.closed_at,
             "history": list(history),
+            "diagnosis": (
+                DiagnosisOut.model_validate(latest_diagnosis)
+                if latest_diagnosis is not None
+                else None
+            ),
         }
     )
 
@@ -99,3 +110,33 @@ async def transition_recovery_case(
         raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=str(exc)) from exc
 
     return RecoveryCaseOut.model_validate(case)
+
+
+@router.post("/cases/{case_id}/diagnose", response_model=DiagnosisOut)
+async def diagnose_recovery_case(
+    case_id: UUID,
+    session: AsyncSession = Depends(get_db_session),
+) -> DiagnosisOut:
+    """Run the configured reasoning model to diagnose a case's payment failure.
+
+    Advances the case ``detected -> diagnosing -> diagnosed`` and stores the
+    diagnosis. The model only diagnoses; it never decides or acts (ADR-003).
+
+    - ``404`` unknown case.
+    - ``409`` the case is not in ``detected``/``diagnosing``.
+    - ``502`` the model was unreachable or its output could not be
+      validated; the case is left in ``diagnosing`` and can be retried.
+    """
+    try:
+        _case, row = await diagnose_case(session, case_id)
+    except RecoveryCaseNotFoundError as exc:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(exc)) from exc
+    except CaseNotDiagnosableError as exc:
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=str(exc)) from exc
+    except (ReasoningModelError, DiagnosisValidationError) as exc:
+        raise HTTPException(
+            status_code=status.HTTP_502_BAD_GATEWAY,
+            detail=f"diagnosis could not be completed: {exc}",
+        ) from exc
+
+    return DiagnosisOut.model_validate(row)

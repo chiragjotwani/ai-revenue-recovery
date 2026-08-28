@@ -36,3 +36,7 @@ Thumbs.db
 
 # Logs
 *.log
+
+# Benchmark run outputs (Phase 4). The evaluation dataset itself is tracked;
+# individual run results are not.
+backend/benchmark_results_*.json

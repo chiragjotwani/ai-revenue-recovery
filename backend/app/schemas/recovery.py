@@ -37,5 +37,24 @@ class RecoveryCaseOut(BaseModel):
     closed_at: datetime | None
 
 
+class DiagnosisOut(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: uuid.UUID
+    outcome: str
+    disposition: str
+    confidence: float
+    reasoning: str
+    recommended_strategy: str
+    recommended_delay_hours: int | None
+    schema_version: str
+    model_name: str
+    model_version: str
+    prompt_version: str
+    latency_ms: int
+    created_at: datetime
+
+
 class RecoveryCaseDetail(RecoveryCaseOut):
     history: list[TransitionOut]
+    diagnosis: DiagnosisOut | None = None

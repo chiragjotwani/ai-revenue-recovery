@@ -2,17 +2,22 @@
 
 ## Current Phase
 
-Phase 3 — Recovery Case Management: COMPLETE (awaiting owner go-ahead
-before Phase 4). Phases 0–2 remain frozen (`docs/phase-0-2-freeze.md`).
+Phase 4 — AI Context & Diagnosis: COMPLETE (awaiting owner go-ahead before
+Phase 5). Phases 0–2 remain frozen (`docs/phase-0-2-freeze.md`).
 
-Owner decision recorded 2026-08-27: Phase 3 follows the frozen contract
-(Recovery Case Management state machine), not the ML-training
-interpretation from the buildathon brief. AI stays inference-only per
-ADR-003; LLM diagnosis remains Phase 4.
+Owner decisions recorded:
+- 2026-08-27: Phase 3 follows the frozen contract (Recovery Case
+  Management state machine), not the ML-training interpretation. AI stays
+  inference-only (ADR-003).
+- 2026-08-28: Phase 4 diagnosis taxonomy is two layers (specific `outcome`
+  + derived `disposition` — ADR-005). Qwen/Nemotron providers built as
+  real config-gated OpenAI-compatible HTTP clients; a 6 GB-friendly local
+  model path (Ollama `qwen3:4b`) is documented. GPU/model-selection
+  decision (KI-002) still open — Phase 4 runs on the `mock` provider.
 
 ## Current Stage
 
-N/A (Phase 3 closed; Phase 4 not started)
+N/A (Phase 4 closed; Phase 5 not started)
 
 ## Completed Phases
 
@@ -20,6 +25,53 @@ N/A (Phase 3 closed; Phase 4 not started)
 - Phase 1 — Data Foundation (frozen)
 - Phase 2 — Revenue Risk Detection (frozen)
 - Phase 3 — Recovery Case Management
+- Phase 4 — AI Context & Diagnosis
+
+## Completed Stages (Phase 4)
+
+- Diagnosis schema (`backend/app/ai/schema.py`): `DiagnosisOutcome` (10
+  specific causes incl. `unknown`), `DiagnosisDisposition` (4 routing
+  categories, **derived from outcome by code**, not by the model),
+  `RecoveryStrategy` (advisory), `ModelDiagnosisJSON` (the strict provider
+  contract) and `Diagnosis` (validated + enriched). ADR-005.
+- `RecoveryContextBuilder` (`backend/app/ai/context_builder.py`, Section
+  49): bounded customer / payment / failure / capped-history / policies
+  summary from Postgres only, plus derived `evidence_sufficiency` and
+  `signals_conflict` signals. Never raw rows.
+- Prompt versioning (`backend/app/ai/prompts.py`): `diagnosis_prompt_v1`,
+  stored with every diagnosis (Section 50).
+- `ReasoningModel` abstraction (`backend/app/ai/providers/`, Section 7):
+  ABC + `MockProvider` (deterministic default; no model/network) +
+  `QwenProvider` / `NemotronProvider` as real config-gated
+  OpenAI-compatible HTTP clients + a factory that falls back to `mock`
+  when a provider's base URL is unset.
+- Structured-output validation + safeguards (`backend/app/ai/diagnosis.py`,
+  Section 37): extract JSON → schema-validate → retry once → raise
+  `DiagnosisValidationError` (never proceed); sparse context downgrades an
+  over-confident answer to `unknown`; conflicting signals cap confidence.
+- `diagnoses` table (`backend/app/models/diagnosis.py`, migration
+  `2977e606c234`) storing outcome/disposition/confidence/reasoning/
+  strategy + `model_name` / `model_version` / `prompt_version` /
+  `schema_version` / `latency_ms` (Section 51). Strings not PG enums —
+  ADR-005. Upgrade/downgrade roundtrip + `alembic check` clean.
+- `diagnose_case` service + `POST /recovery/cases/{id}/diagnose`: build
+  context → run provider → validate → persist → advance
+  `detected → diagnosing → diagnosed`. `404` unknown / `409` wrong state /
+  `502` unusable model output (case left in `diagnosing`, retryable,
+  nothing persisted). `GET /recovery/cases/{id}` gains a `diagnosis` field.
+  The AI path has no write access to payments and no action executor
+  (ADR-003).
+- Evaluation set (`backend/evaluation/diagnosis_cases.json`, 72 synthetic
+  labelled cases; deterministic generator) + benchmark runner
+  (`backend/scripts/benchmark_diagnosis.py`): outcome accuracy, schema
+  compliance, hallucination rate, confidence-band adherence, latency,
+  throughput (Section 52). KI-007 records that the numbers are agreement
+  with synthetic labels, not real-world accuracy.
+- Frontend: diagnosis panel on `/recovery/[id]`.
+- ADR-005 added. KI-002 updated with the 6 GB GPU finding; KI-007 added.
+- Tests: `test_ai_diagnosis.py` (22), `test_ai_providers.py` (11),
+  `test_ai_context_builder.py` (4), `test_diagnosis_api.py` (5) — 42 new,
+  **91 total passing**.
 
 ## Completed Stages (Phase 3)
 
@@ -107,6 +159,9 @@ See `docs/known-issues.md`.
   no dedicated automated test (carried over from Phase 1); no frontend
   test runner exists yet, so `/recovery` pages are verified by rendering
   SSR HTML.
+- Phase 4: KI-007 added (synthetic evaluation set; benchmark accuracy is
+  label-agreement, not real-world). KI-002 updated (6 GB GPU can't host
+  the 30B candidates; `mock` provider is the Phase 4 default).
 
 ## Architecture Decisions
 
@@ -114,32 +169,32 @@ See `docs/known-issues.md`.
 - ADR-002: Modular monolith
 - ADR-003: LLM cannot directly execute financial actions
 - ADR-004: Explicit recovery state machine with an append-only transition log
+- ADR-005: Diagnosis output — two layers, derived disposition, everything versioned
 
 ## Last Successful Verification
 
-2026-08-27 Phase 3 gate. Backend: **pytest 49/49**, ruff check, ruff
-format --check, mypy strict (32 files), `alembic upgrade head` from clean,
-`alembic check` (no drift), `alembic downgrade -1`/`upgrade` roundtrip —
-all clean. Frontend: eslint, `next typegen` from clean, `tsc --noEmit`,
-`next build` (routes `/`, `/risk`, `/recovery`, `/recovery/[id]`) — all
-clean. Full stack rebuilt from clean (`docker compose down -v && up
---build`): both migrations auto-applied on backend container start;
-canonical scenario seeded; recovery case opened for the failed payment
-(`201`), re-open idempotent (`200`), legal transition
-`detected -> diagnosing` (`200`), illegal `diagnosing -> recovered`
-(`409`, nothing written), invalid state (`422`), unknown case (`404`),
-terminal `-> abandoned` set `closed_at` and froze the case (`409` on
-further transition); `/recovery` and `/recovery/[id]` rendered live
-cross-container data via SSR, unknown case id → 404 page. Phase 0–2
-regression still green within the 49.
+2026-08-28 Phase 4 gate. Backend: **pytest 91/91**, ruff check, ruff
+format --check, mypy strict (46 files), `alembic upgrade head` from clean
+(3 migrations), `alembic check` (no drift), `alembic downgrade -1`/
+`upgrade` roundtrip on the diagnoses migration — all clean. Frontend:
+eslint, `next typegen` from clean, `tsc --noEmit`, `next build` (routes
+`/`, `/risk`, `/recovery`, `/recovery/[id]`) — all clean.
+`benchmark_diagnosis.py --provider mock` runs over 72 eval cases (all
+metrics 1.0 by construction — KI-007). Full stack rebuilt from clean
+(`docker compose down -v && up --build`): all 3 migrations auto-applied on
+backend container start; canonical scenario seeded; case opened, then
+`POST /recovery/cases/{id}/diagnose` → `200`
+`insufficient_funds`/`retriable_transient`/conf 0.9/**retry +6h** (matches
+Section 38), case advanced `detected → diagnosing → diagnosed`, re-diagnose
+→ `409`; `/recovery/[id]` rendered the diagnosis panel via SSR across the
+container network. Phase 0–3 regression still green within the 91.
 
-The earlier Phase 0–2 freeze gate detail remains in
-`docs/phase-0-2-freeze.md`.
+The Phase 0–2 freeze gate detail remains in `docs/phase-0-2-freeze.md`.
 
 ## Last Git Commit
 
-`phase-3: implement recovery case state machine` — see `git log`.
-(Preceded by `freeze: phases 0-2 verified`.)
+`phase-4: implement AI recovery diagnosis` — see `git log`.
+(Preceded by `phase-3: …` and `freeze: phases 0-2 verified`.)
 
 ## Process Note
 

@@ -21,6 +21,20 @@ class Settings(BaseSettings):
 
     backend_port: int = 8000
 
+    # --- Reasoning model (Phase 4) ---
+    # Which ReasoningModel implementation to use for diagnosis:
+    # "mock" (default; deterministic, no model needed), "qwen", or "nemotron".
+    reasoning_provider: str = "mock"
+    # OpenAI-compatible base URLs for the self-hosted providers, e.g.
+    # "http://localhost:11434/v1" for a local Ollama server. When the URL
+    # for the selected provider is unset, the app falls back to the mock
+    # provider rather than failing. See docs/ai/local-model-setup.md.
+    ai_qwen_base_url: str | None = None
+    ai_qwen_model: str = "qwen3:4b"
+    ai_nemotron_base_url: str | None = None
+    ai_nemotron_model: str = "nemotron-mini"
+    ai_request_timeout_seconds: float = 60.0
+
     @property
     def is_production(self) -> bool:
         return self.environment.lower() == "production"

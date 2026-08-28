@@ -10,17 +10,44 @@ must record what, why, and impact.
 
 - **What**: The engineering prompt specifies self-hosted open-weight models
   (Qwen3-30B-A3B-Instruct-2507, Nemotron 3 Nano 30B-A3B) as reasoning
-  providers. These are ~30B-parameter models requiring substantial VRAM
-  (realistically 20GB+ quantized, 40GB+ for comfortable throughput). No
-  decision has been made yet on where these will run (local GPU, rented
-  GPU instance, or another hosting arrangement).
-- **Impact**: Phase 4 can and will be built and fully tested against the
-  `MockProvider` in the `ReasoningModel` abstraction. Real `QwenProvider`
-  and `NemotronProvider` implementations and the model benchmark (Section
-  52 of the engineering prompt) cannot be completed until infrastructure is
-  decided.
-- **Resolution plan**: Revisit explicitly when Phase 4 begins.
-- **Status**: Not bypassed — flagged in advance, no phase is blocked yet.
+  providers. These are ~30B-parameter models: even at 4-bit they need
+  ~17–18 GB just for weights, more for throughput.
+- **Hardware finding (2026-08-28)**: the available GPU is an NVIDIA
+  RTX 4050, **6 GB VRAM**. The 30B candidates do not fit in it. Realistic
+  paths: (a) a small model (~3–4 B, e.g. `qwen3:4b` via Ollama) locally on
+  the 6 GB card for development; (b) the 30B-A3B ("3 B active" MoE) on
+  CPU + ~20 GB system RAM via llama.cpp — slow but workable for a
+  background call; (c) a rented cloud GPU (24–80 GB) for the actual
+  Qwen-vs-Nemotron benchmark. See `docs/ai/local-model-setup.md`.
+- **Impact**: Phase 4 is built and fully tested against the deterministic
+  `MockProvider` (the default). `QwenProvider` / `NemotronProvider` are
+  implemented as real config-gated OpenAI-compatible HTTP clients and are
+  unit-tested with a faked transport, but a **meaningful** model benchmark
+  (Section 52) needs a real endpoint and therefore this decision.
+- **Resolution plan**: pick a hosting path before doing model selection.
+  The provider code and the benchmark runner are ready; only
+  `AI_QWEN_BASE_URL` / `AI_NEMOTRON_BASE_URL` need to point somewhere real.
+- **Status**: Not bypassed — Phase 4 does not depend on it; model
+  *selection* does.
+
+### KI-007: The diagnosis evaluation set is synthetic; benchmark accuracy is not real-world (Phase 4)
+
+- **What**: There is no real payment-failure data. Every case in
+  `backend/evaluation/diagnosis_cases.json` is synthetic and its label was
+  assigned by the generator from the scenario it constructs. The
+  `MockProvider` and the labels share the same reason→outcome logic, so
+  `mock` scores 1.0 on every metric by construction.
+- **Impact**: `benchmark_diagnosis.py` measures schema compliance,
+  hallucination behaviour on sparse cases, confidence-band adherence,
+  latency, and throughput — and *agreement with our synthetic labels*, not
+  real diagnostic accuracy. It is still a valid instrument for comparing
+  two real models against each other and for regression across prompt/model
+  versions.
+- **Resolution plan**: real accuracy validation comes only with live
+  recovery-outcome data (Phase 8+). Until then the evaluation set is
+  **fixed** and must not be edited to move a score.
+- **Status**: Documented limitation, not a defect. No Phase 4 requirement
+  is bypassed.
 
 ## Resolved
 

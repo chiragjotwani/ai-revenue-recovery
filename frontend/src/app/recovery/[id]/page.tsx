@@ -10,6 +10,21 @@ type Transition = {
   created_at: string;
 };
 
+type DiagnosisView = {
+  outcome: string;
+  disposition: string;
+  confidence: number;
+  reasoning: string;
+  recommended_strategy: string;
+  recommended_delay_hours: number | null;
+  model_name: string;
+  model_version: string;
+  prompt_version: string;
+  schema_version: string;
+  latency_ms: number;
+  created_at: string;
+};
+
 type RecoveryCaseDetail = {
   id: string;
   payment_id: string;
@@ -18,6 +33,7 @@ type RecoveryCaseDetail = {
   opened_at: string;
   closed_at: string | null;
   history: Transition[];
+  diagnosis: DiagnosisView | null;
 };
 
 async function getCase(id: string): Promise<RecoveryCaseDetail | null | "unreachable"> {
@@ -90,6 +106,38 @@ export default async function RecoveryCaseDetailPage({
             </dd>
           </div>
         </dl>
+
+        {data.diagnosis && (
+          <section>
+            <h2 className="mb-3 text-sm font-medium text-zinc-700 dark:text-zinc-300">
+              Diagnosis
+            </h2>
+            <div className="rounded-lg border border-zinc-200 bg-white px-4 py-4 text-sm dark:border-zinc-800 dark:bg-zinc-950">
+              <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
+                <span className="text-base font-semibold text-black dark:text-zinc-50">
+                  {data.diagnosis.outcome.replace(/_/g, " ")}
+                </span>
+                <span className="text-xs text-zinc-500 dark:text-zinc-400">
+                  {data.diagnosis.disposition.replace(/_/g, " ")} &middot;{" "}
+                  {(data.diagnosis.confidence * 100).toFixed(0)}% confidence
+                </span>
+              </div>
+              <p className="mt-2 text-zinc-700 dark:text-zinc-300">{data.diagnosis.reasoning}</p>
+              <p className="mt-3 text-xs text-zinc-500 dark:text-zinc-400">
+                Suggested (advisory): {data.diagnosis.recommended_strategy.replace(/_/g, " ")}
+                {data.diagnosis.recommended_delay_hours != null
+                  ? ` after ${data.diagnosis.recommended_delay_hours}h`
+                  : ""}
+                {" — the policy engine (Phase 5) decides what actually happens."}
+              </p>
+              <p className="mt-1 text-xs text-zinc-400 dark:text-zinc-500">
+                {data.diagnosis.model_name}/{data.diagnosis.model_version} &middot;{" "}
+                {data.diagnosis.prompt_version} &middot; schema v{data.diagnosis.schema_version}{" "}
+                &middot; {data.diagnosis.latency_ms}ms
+              </p>
+            </div>
+          </section>
+        )}
 
         <section>
           <h2 className="mb-3 text-sm font-medium text-zinc-700 dark:text-zinc-300">

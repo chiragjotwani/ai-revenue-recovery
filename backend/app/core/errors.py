@@ -55,6 +55,20 @@ class RecoveryCaseNotFoundError(DomainError):
         super().__init__(f"Recovery case {case_id!r} does not exist.")
 
 
+class CaseNotDiagnosableError(DomainError):
+    """Raised when a diagnosis is requested for a case that is not in a
+    state where diagnosis is valid (only ``detected`` or, on a retry after
+    a failed attempt, ``diagnosing``).
+    """
+
+    def __init__(self, state: object) -> None:
+        self.state = state
+        super().__init__(
+            f"Recovery case is in state {state!r}; a diagnosis can only be run "
+            "from 'detected' or 'diagnosing'."
+        )
+
+
 class IllegalStateTransitionError(DomainError):
     """Raised when a recovery case is asked to move between two states that
     the state machine does not permit (Section 16: illegal transitions must

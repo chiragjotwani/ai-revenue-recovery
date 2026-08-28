@@ -104,6 +104,18 @@ npm run build
   `POST /recovery/cases/{id}/transitions` — recovery case state machine.
   See `docs/api/recovery.md`. Case list/detail at frontend routes
   `/recovery` and `/recovery/[id]`.
+- `POST /recovery/cases/{id}/diagnose` — run the reasoning model to
+  diagnose the failure and advance the case. See `docs/ai/diagnosis.md`.
+
+## AI (reasoning model)
+
+Diagnosis (Phase 4) runs behind a provider abstraction. The default
+`REASONING_PROVIDER=mock` is deterministic and needs no model. To use a
+real model, run an OpenAI-compatible server (Ollama, llama.cpp, vLLM, …)
+and set `REASONING_PROVIDER=qwen` + `AI_QWEN_BASE_URL` — see
+`docs/ai/local-model-setup.md`. Compare providers with
+`python backend/scripts/benchmark_diagnosis.py --provider <name>` against
+`backend/evaluation/diagnosis_cases.json`.
 
 ## Database Migrations
 

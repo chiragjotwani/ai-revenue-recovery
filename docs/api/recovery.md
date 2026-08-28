@@ -117,6 +117,57 @@ Move a case to a new state.
   and no history row is added.
 - `422 Unprocessable Entity` — `to_state` is not a valid state value.
 
-See `backend/tests/test_recovery_api.py` and
-`backend/tests/test_recovery_state_machine.py` for the exact behaviour each
-case exercises, and `docs/database/schema.md` for the tables.
+## `POST /recovery/cases/{case_id}/diagnose` (Phase 4)
+
+Run the configured reasoning model to diagnose the case's payment failure.
+Builds a bounded context, calls the model, validates the output, stores a
+`Diagnosis`, and advances the case `detected -> diagnosing -> diagnosed`.
+The model only diagnoses — it never decides or acts (ADR-003). See
+`docs/ai/diagnosis.md`.
+
+No request body.
+
+### Responses
+
+- `200 OK` — diagnosis stored; returns:
+  ```json
+  {
+    "id": "uuid",
+    "outcome": "insufficient_funds",
+    "disposition": "retriable_transient",
+    "confidence": 0.9,
+    "reasoning": "…",
+    "recommended_strategy": "retry",
+    "recommended_delay_hours": 6,
+    "schema_version": "1",
+    "model_name": "mock",
+    "model_version": "1",
+    "prompt_version": "diagnosis_prompt_v1",
+    "latency_ms": 0,
+    "created_at": "ISO 8601 datetime"
+  }
+  ```
+  `outcome` is one of `insufficient_funds`, `card_expired`, `do_not_honor`,
+  `processing_error`, `stolen_card`, `lost_card`, `fraud_suspected`,
+  `authentication_required`, `card_not_supported`, `unknown`.
+  `disposition` is derived from `outcome`: `retriable_transient`,
+  `customer_action_required`, `suspected_fraud`, or `unknown`.
+  `recommended_strategy` / `recommended_delay_hours` are advisory only —
+  Phase 5's policy engine decides what actually happens.
+- `404 Not Found` — no case with that id.
+- `409 Conflict` — the case is not in `detected` or `diagnosing` (e.g. it
+  is already `diagnosed`).
+- `502 Bad Gateway` — the model was unreachable or its output could not be
+  validated after a retry. The case is left in `diagnosing`; nothing is
+  persisted; the diagnosis can be retried.
+
+## `GET /recovery/cases/{case_id}` — `diagnosis` field (Phase 4)
+
+The case detail response now includes `"diagnosis"`: the latest stored
+diagnosis (the object shown above) or `null` if none has run.
+
+See `backend/tests/test_recovery_api.py`,
+`backend/tests/test_recovery_state_machine.py`,
+`backend/tests/test_diagnosis_api.py`, and `backend/tests/test_ai_*.py` for
+the exact behaviour each case exercises, and `docs/database/schema.md` for
+the tables.
