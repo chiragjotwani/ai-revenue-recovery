@@ -79,3 +79,18 @@ class IllegalStateTransitionError(DomainError):
         self.from_state = from_state
         self.to_state = to_state
         super().__init__(f"Illegal recovery case transition: {from_state} -> {to_state}.")
+
+
+class TransitionPreconditionError(DomainError):
+    """Raised when a transition is shape-legal but the artifact it depends
+    on does not exist yet (e.g. moving to ``diagnosed`` with no persisted
+    ``Diagnosis``). Only raised when a caller opts into precondition
+    enforcement (Phase 4.1 WS-C: the default remains the Phase 3
+    shape-only behaviour). See ``app/recovery/preconditions.py``.
+    """
+
+    def __init__(self, from_state: object, to_state: object, reason: str) -> None:
+        self.from_state = from_state
+        self.to_state = to_state
+        self.reason = reason
+        super().__init__(f"Transition {from_state} -> {to_state} is not yet legitimate: {reason}.")

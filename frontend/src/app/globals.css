@@ -1,26 +1,114 @@
 @import "tailwindcss";
 
+/*
+  AI Revenue Recovery -- operator console.
+
+  A revenue-operations surface read in short, repeated glances: near-black
+  ground, dense tabular data, colour spent only as a status signal (never
+  decoration), one reserved cyan role that marks "the reasoning model is /
+  was here" -- distinct from good/warn/critical severity (ADR-003 made
+  visible). Committed dark; not a document.
+*/
+
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --bg: #0a0d12; /* page */
+  --bg-raised: #10141c; /* panels, one step up so 1px borders read */
+  --bg-inset: #0d1016; /* sunken strips */
+  --border: #1f2733;
+  --border-strong: #2b3648;
+
+  --text: #e7eaf0; /* body + data */
+  --text-muted: #9aa4b8; /* secondary */
+  --text-dim: #7d879c; /* labels; still >=4.5:1 on --bg (measured) */
+
+  /* Reserved severity roles -- always paired with a text label. */
+  --good: #34d399;
+  --good-bg: rgba(52, 211, 153, 0.12);
+  --warn: #fbbf24;
+  --warn-bg: rgba(251, 191, 36, 0.12);
+  --critical: #f87171;
+  --critical-bg: rgba(248, 113, 113, 0.12);
+  /* AI / liveness signal -- never a severity, never decoration. */
+  --signal: #22d3ee;
+  --signal-bg: rgba(34, 211, 238, 0.12);
+
+  --font-sans: var(--font-app-sans);
+  --font-mono: var(--font-app-mono);
 }
 
 @theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  --color-bg: var(--bg);
+  --color-bg-raised: var(--bg-raised);
+  --color-bg-inset: var(--bg-inset);
+  --color-border: var(--border);
+  --color-border-strong: var(--border-strong);
+  --color-text: var(--text);
+  --color-text-muted: var(--text-muted);
+  --color-text-dim: var(--text-dim);
+  --color-good: var(--good);
+  --color-warn: var(--warn);
+  --color-critical: var(--critical);
+  --color-signal: var(--signal);
+  --font-sans: var(--font-sans);
+  --font-mono: var(--font-mono);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+html {
+  color-scheme: dark;
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--font-sans), ui-sans-serif, system-ui, sans-serif;
+}
+
+::selection {
+  background: var(--signal);
+  color: #04121a;
+}
+
+/* Visible focus everywhere, never the browser default blue. */
+:focus-visible {
+  outline: 2px solid var(--signal);
+  outline-offset: 2px;
+  border-radius: 1px;
+}
+
+/* Numerals must not jitter column width as data updates. */
+.tabular {
+  font-variant-numeric: tabular-nums;
+}
+
+::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+::-webkit-scrollbar-track {
+  background: var(--bg-inset);
+}
+::-webkit-scrollbar-thumb {
+  background: var(--border-strong);
+}
+* {
+  scrollbar-color: var(--border-strong) var(--bg-inset);
+}
+
+@keyframes pulse-dot {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.4;
+  }
+}
+.pulse-dot {
+  animation: pulse-dot 1.8s ease-in-out infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .pulse-dot {
+    animation: none;
+  }
 }

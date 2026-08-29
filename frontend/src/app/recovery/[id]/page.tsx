@@ -1,169 +1,255 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import {
+  apiGet,
+  caseSeverity,
+  fmtTimestamp,
+  provenanceLabel,
+  riskSeverity,
+  TERMINAL_STATES,
+  type RecoveryCaseDetail,
+  type RiskAssessment,
+} from "@/lib/api";
+import { BackendUnavailable, Panel, ScoreMeter, StatusPill } from "@/components/ui";
 
-type Transition = {
-  id: string;
-  from_state: string | null;
-  to_state: string;
-  reason: string | null;
-  actor: string;
-  created_at: string;
-};
-
-type DiagnosisView = {
-  outcome: string;
-  disposition: string;
-  confidence: number;
-  reasoning: string;
-  recommended_strategy: string;
-  recommended_delay_hours: number | null;
-  model_name: string;
-  model_version: string;
-  prompt_version: string;
-  schema_version: string;
-  latency_ms: number;
-  created_at: string;
-};
-
-type RecoveryCaseDetail = {
-  id: string;
-  payment_id: string;
-  customer_id: string;
-  state: string;
-  opened_at: string;
-  closed_at: string | null;
-  history: Transition[];
-  diagnosis: DiagnosisView | null;
-};
-
-async function getCase(id: string): Promise<RecoveryCaseDetail | null | "unreachable"> {
-  const baseUrl = process.env.API_BASE_URL ?? "http://localhost:8000";
-  try {
-    const res = await fetch(`${baseUrl}/recovery/cases/${id}`, { cache: "no-store" });
-    if (res.status === 404) return null;
-    if (!res.ok) return "unreachable";
-    return (await res.json()) as RecoveryCaseDetail;
-  } catch {
-    return "unreachable";
-  }
-}
-
-function fmt(ts: string): string {
-  return new Date(ts).toISOString().replace("T", " ").slice(0, 19);
-}
-
-export default async function RecoveryCaseDetailPage({
-  params,
-}: PageProps<"/recovery/[id]">) {
+export async function generateMetadata({ params }: PageProps<"/recovery/[id]">) {
   const { id } = await params;
-  const data = await getCase(id);
+  return { title: `Case ${id.slice(0, 8)}` };
+}
 
-  if (data === "unreachable") {
-    return (
-      <div className="flex min-h-screen items-center justify-center bg-zinc-50 dark:bg-black">
-        <div className="rounded-lg border border-red-500/30 bg-red-500/10 px-6 py-4 text-sm text-red-700 dark:text-red-400">
-          Backend unreachable. Is the API running?
-        </div>
-      </div>
-    );
+const LIFECYCLE = [
+  "detected",
+  "diagnosing",
+  "diagnosed",
+  "decision_pending",
+  "action_scheduled",
+  "action_executed",
+  "observing",
+  "recovered",
+] as const;
+
+export default async function RecoveryCaseDetailPage({ params }: PageProps<"/recovery/[id]">) {
+  const { id } = await params;
+  const [caseRes, paymentsRes] = await Promise.all([
+    apiGet<RecoveryCaseDetail>(`/recovery/cases/${id}`),
+    apiGet<RiskAssessment[]>("/risk/payments"),
+  ]);
+
+  if (!caseRes.ok) {
+    // not_found (unknown id OR malformed reference) -> 404 page.
+    // unavailable (transport / 5xx) -> backend-unavailable state. (BUG-004)
+    if (caseRes.kind === "not_found") notFound();
+    return <BackendUnavailable />;
   }
-  if (data === null) notFound();
+
+  const c = caseRes.data;
+  const risk = paymentsRes.ok
+    ? paymentsRes.data.find((p) => p.payment_id === c.payment_id) ?? null
+    : null;
+  const isTerminal = TERMINAL_STATES.has(c.state);
+  const stepIndex = LIFECYCLE.indexOf(c.state as (typeof LIFECYCLE)[number]);
 
   return (
-    <div className="min-h-screen bg-zinc-50 px-8 py-12 dark:bg-black">
-      <main className="mx-auto flex max-w-3xl flex-col gap-8">
-        <div>
-          <Link
-            href="/recovery"
-            className="text-sm text-zinc-500 underline underline-offset-4 hover:text-zinc-800 dark:hover:text-zinc-300"
-          >
-            &larr; All recovery cases
-          </Link>
-          <h1 className="mt-2 font-mono text-xl font-semibold tracking-tight text-black dark:text-zinc-50">
-            Case {data.id}
+    <div className="flex flex-col gap-6">
+      <div>
+        <Link
+          href="/recovery"
+          className="font-mono text-xs uppercase tracking-widest text-text-dim hover:text-signal"
+        >
+          &larr; All recovery cases
+        </Link>
+        <div className="mt-2 flex flex-wrap items-center gap-3">
+          <h1 className="font-mono text-lg font-semibold tracking-tight">
+            Case {c.id.slice(0, 8)}
           </h1>
+          <StatusPill
+            label={c.state.replace(/_/g, " ")}
+            severity={caseSeverity(c.state)}
+            live={c.state === "diagnosing"}
+          />
         </div>
+        <p className="mt-1 font-mono text-xs text-text-dim">
+          opened {fmtTimestamp(c.opened_at)}
+          {c.closed_at ? ` · closed ${fmtTimestamp(c.closed_at)}` : ""}
+        </p>
+      </div>
 
-        <dl className="grid grid-cols-1 gap-3 text-sm sm:grid-cols-2">
-          <div>
-            <dt className="text-xs font-medium text-zinc-500 dark:text-zinc-400">Current state</dt>
-            <dd className="mt-0.5 text-black dark:text-zinc-100">{data.state.replace(/_/g, " ")}</dd>
-          </div>
-          <div>
-            <dt className="text-xs font-medium text-zinc-500 dark:text-zinc-400">Payment</dt>
-            <dd className="mt-0.5 font-mono text-xs text-black dark:text-zinc-100">
-              {data.payment_id}
+      {/* PAYMENT -> RISK */}
+      <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+        <Panel title="1 · Payment">
+          <dl className="grid grid-cols-2 gap-x-4 gap-y-2 text-sm">
+            <dt className="text-text-dim">Amount</dt>
+            <dd className="tabular font-mono text-text">
+              {risk ? `${risk.amount} ${risk.currency}` : "—"}
             </dd>
-          </div>
-          <div>
-            <dt className="text-xs font-medium text-zinc-500 dark:text-zinc-400">Opened</dt>
-            <dd className="mt-0.5 text-black dark:text-zinc-100">{fmt(data.opened_at)}</dd>
-          </div>
-          <div>
-            <dt className="text-xs font-medium text-zinc-500 dark:text-zinc-400">Closed</dt>
-            <dd className="mt-0.5 text-black dark:text-zinc-100">
-              {data.closed_at ? fmt(data.closed_at) : "—"}
-            </dd>
-          </div>
-        </dl>
-
-        {data.diagnosis && (
-          <section>
-            <h2 className="mb-3 text-sm font-medium text-zinc-700 dark:text-zinc-300">
-              Diagnosis
-            </h2>
-            <div className="rounded-lg border border-zinc-200 bg-white px-4 py-4 text-sm dark:border-zinc-800 dark:bg-zinc-950">
-              <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
-                <span className="text-base font-semibold text-black dark:text-zinc-50">
-                  {data.diagnosis.outcome.replace(/_/g, " ")}
-                </span>
-                <span className="text-xs text-zinc-500 dark:text-zinc-400">
-                  {data.diagnosis.disposition.replace(/_/g, " ")} &middot;{" "}
-                  {(data.diagnosis.confidence * 100).toFixed(0)}% confidence
-                </span>
+            <dt className="text-text-dim">Failure reason</dt>
+            <dd className="text-text">{risk?.failure_reason ?? "—"}</dd>
+            <dt className="text-text-dim">Reference</dt>
+            <dd className="font-mono text-xs text-text-muted">{risk?.external_reference ?? "—"}</dd>
+            <dt className="text-text-dim">Payment id</dt>
+            <dd className="font-mono text-xs text-text-muted">{c.payment_id}</dd>
+          </dl>
+        </Panel>
+        <Panel title="2 · Risk">
+          {risk ? (
+            <div className="flex flex-col gap-3 text-sm">
+              <div className="flex items-center gap-3">
+                <ScoreMeter
+                  value={risk.risk_score}
+                  severity={riskSeverity(risk.risk_level)}
+                  caption={`risk score ${risk.risk_score.toFixed(2)}`}
+                />
+                <StatusPill label={risk.risk_level} severity={riskSeverity(risk.risk_level)} />
               </div>
-              <p className="mt-2 text-zinc-700 dark:text-zinc-300">{data.diagnosis.reasoning}</p>
-              <p className="mt-3 text-xs text-zinc-500 dark:text-zinc-400">
-                Suggested (advisory): {data.diagnosis.recommended_strategy.replace(/_/g, " ")}
-                {data.diagnosis.recommended_delay_hours != null
-                  ? ` after ${data.diagnosis.recommended_delay_hours}h`
-                  : ""}
-                {" — the policy engine (Phase 5) decides what actually happens."}
-              </p>
-              <p className="mt-1 text-xs text-zinc-400 dark:text-zinc-500">
-                {data.diagnosis.model_name}/{data.diagnosis.model_version} &middot;{" "}
-                {data.diagnosis.prompt_version} &middot; schema v{data.diagnosis.schema_version}{" "}
-                &middot; {data.diagnosis.latency_ms}ms
+              <p className="text-text-muted">
+                {risk.consecutive_failures} consecutive failure
+                {risk.consecutive_failures === 1 ? "" : "s"} · historical success rate{" "}
+                {(risk.historical_success_rate * 100).toFixed(0)}%
               </p>
             </div>
-          </section>
-        )}
+          ) : (
+            <p className="text-sm text-text-muted">
+              This payment is not in the current at-risk set (it may have since succeeded, or
+              the case is closed).
+            </p>
+          )}
+        </Panel>
+      </div>
 
-        <section>
-          <h2 className="mb-3 text-sm font-medium text-zinc-700 dark:text-zinc-300">
-            Transition history
-          </h2>
-          <ol className="flex flex-col gap-2">
-            {data.history.map((t) => (
-              <li
-                key={t.id}
-                className="rounded-lg border border-zinc-200 bg-white px-4 py-3 text-sm dark:border-zinc-800 dark:bg-zinc-950"
-              >
-                <div className="flex items-center justify-between">
-                  <span className="font-medium text-black dark:text-zinc-100">
-                    {(t.from_state ?? "∅").replace(/_/g, " ")} &rarr; {t.to_state.replace(/_/g, " ")}
-                  </span>
-                  <span className="text-xs text-zinc-500 dark:text-zinc-400">{fmt(t.created_at)}</span>
-                </div>
-                <div className="mt-1 text-xs text-zinc-500 dark:text-zinc-400">
-                  by {t.actor}
-                  {t.reason ? ` — ${t.reason}` : ""}
-                </div>
-              </li>
-            ))}
+      {/* AI DIAGNOSIS -> RECOMMENDATION */}
+      <Panel
+        title="3 · AI diagnosis"
+        action={
+          c.diagnosis ? (
+            <ProvenanceTag modelName={c.diagnosis.model_name} />
+          ) : (
+            <span className="font-mono text-[11px] uppercase tracking-widest text-text-dim">
+              not run
+            </span>
+          )
+        }
+      >
+        {c.diagnosis ? (
+          <div className="flex flex-col gap-4 text-sm">
+            <div className="flex flex-wrap items-baseline gap-x-4 gap-y-1">
+              <span className="text-lg font-semibold text-text">
+                {c.diagnosis.outcome.replace(/_/g, " ")}
+              </span>
+              <span className="font-mono text-xs uppercase tracking-wide text-text-dim">
+                {c.diagnosis.disposition.replace(/_/g, " ")}
+              </span>
+            </div>
+            <div className="flex items-center gap-3">
+              <ScoreMeter
+                value={c.diagnosis.confidence}
+                severity="signal"
+                caption={`model-reported confidence ${c.diagnosis.confidence.toFixed(2)}`}
+              />
+              <span className="text-xs text-text-dim">
+                model-reported confidence (not a calibrated probability)
+              </span>
+            </div>
+            <p className="text-text-muted">{c.diagnosis.reasoning}</p>
+
+            <div className="border border-signal/30 bg-signal/[0.06] px-3 py-2.5">
+              <p className="font-mono text-[11px] uppercase tracking-widest text-signal">
+                4 · Recommendation — advisory only
+              </p>
+              <p className="mt-1 text-text">
+                {c.diagnosis.recommended_strategy.replace(/_/g, " ")}
+                {c.diagnosis.recommended_delay_hours != null
+                  ? ` after ${c.diagnosis.recommended_delay_hours}h`
+                  : ""}
+              </p>
+              <p className="mt-1 text-xs text-text-dim">
+                The Phase 5 policy engine decides what actually happens. Nothing is scheduled or
+                executed from this screen.
+              </p>
+            </div>
+
+            <p className="font-mono text-[11px] text-text-dim">
+              {c.diagnosis.model_name}/{c.diagnosis.model_version} · {c.diagnosis.prompt_version}{" "}
+              · schema v{c.diagnosis.schema_version} · {c.diagnosis.latency_ms} ms ·{" "}
+              {fmtTimestamp(c.diagnosis.created_at)}
+            </p>
+          </div>
+        ) : (
+          <p className="text-sm text-text-muted">
+            No diagnosis has been run for this case yet. In this phase, diagnosis is triggered
+            through the API (<span className="font-mono text-xs">POST /recovery/cases/{c.id.slice(0, 8)}…/diagnose</span>);
+            an operator trigger is out of scope until the decision engine exists.
+          </p>
+        )}
+      </Panel>
+
+      {/* RECOVERY STATUS -> OUTCOME */}
+      <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+        <Panel title="5 · Recovery status">
+          <ol className="flex flex-col gap-1.5 font-mono text-xs">
+            {LIFECYCLE.map((state, i) => {
+              const done = stepIndex >= 0 && i < stepIndex;
+              const current = state === c.state;
+              return (
+                <li
+                  key={state}
+                  className={`flex items-center gap-2 ${
+                    current ? "text-signal" : done ? "text-text-muted" : "text-text-dim"
+                  }`}
+                >
+                  <span aria-hidden="true">{current ? "▶" : done ? "✓" : "·"}</span>
+                  <span className="uppercase tracking-wide">{state.replace(/_/g, " ")}</span>
+                </li>
+              );
+            })}
           </ol>
-        </section>
-      </main>
+          {isTerminal && c.state !== "recovered" && (
+            <p className="mt-2 font-mono text-xs uppercase tracking-wide text-critical">
+              ended: {c.state}
+            </p>
+          )}
+        </Panel>
+        <Panel title="6 · Outcome">
+          {c.state === "recovered" ? (
+            <p className="text-sm text-good">Recovered · closed {fmtTimestamp(c.closed_at ?? "")}</p>
+          ) : isTerminal ? (
+            <p className="text-sm text-critical">
+              {c.state === "abandoned" ? "Abandoned" : "Failed"} · closed{" "}
+              {fmtTimestamp(c.closed_at ?? "")}
+            </p>
+          ) : (
+            <p className="text-sm text-text-muted">
+              In progress. No outcome yet — recovered revenue is measured in Phase 8.
+            </p>
+          )}
+        </Panel>
+      </div>
+
+      {/* AUDIT TRAIL */}
+      <Panel title="Transition history">
+        <ol className="flex flex-col gap-2">
+          {c.history.map((t) => (
+            <li key={t.id} className="border border-border/60 bg-bg-inset px-3 py-2 text-sm">
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <span className="font-mono text-xs text-text">
+                  {(t.from_state ?? "∅").replace(/_/g, " ")} &rarr; {t.to_state.replace(/_/g, " ")}
+                </span>
+                <span className="font-mono text-[11px] text-text-dim">
+                  {fmtTimestamp(t.created_at)}
+                </span>
+              </div>
+              <p className="mt-0.5 font-mono text-[11px] text-text-dim">
+                by {t.actor}
+                {t.reason ? ` — ${t.reason}` : ""}
+              </p>
+            </li>
+          ))}
+        </ol>
+      </Panel>
     </div>
   );
+}
+
+function ProvenanceTag({ modelName }: { modelName: string }) {
+  const p = provenanceLabel(modelName);
+  return <StatusPill label={p.text} severity={p.severity} />;
 }

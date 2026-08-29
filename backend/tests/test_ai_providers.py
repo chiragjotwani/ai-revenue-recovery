@@ -18,6 +18,7 @@ from app.ai.context_builder import (
     PaymentSummary,
     RecoveryContext,
 )
+from app.ai.prompts import DIAGNOSIS_PROMPT_VERSION
 from app.ai.providers.base import ReasoningModelError
 from app.ai.providers.factory import get_reasoning_model
 from app.ai.providers.mock import MockProvider
@@ -26,7 +27,7 @@ from app.ai.providers.qwen import QwenProvider
 from app.ai.schema import DiagnosisOutcome, ModelDiagnosisJSON
 from app.core.config import Settings
 
-_PROMPT_V = "diagnosis_prompt_v1"
+_PROMPT_V = DIAGNOSIS_PROMPT_VERSION
 
 
 def _context(failure_reason: str | None = "card_expired") -> RecoveryContext:

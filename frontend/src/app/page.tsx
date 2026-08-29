@@ -1,53 +1,185 @@
-type HealthResponse = {
-  status: string;
-  environment: string;
-};
+import Link from "next/link";
+import {
+  apiGet,
+  fmtTimestamp,
+  formatCurrencyMap,
+  OPEN_STATES,
+  riskSeverity,
+  type Health,
+  type RecoveryCase,
+  type RiskAssessment,
+  type RiskSummary,
+} from "@/lib/api";
+import {
+  BackendUnavailable,
+  EmptyState,
+  NotAvailableYet,
+  Panel,
+  Readout,
+  ScoreMeter,
+  StatusPill,
+} from "@/components/ui";
 
-async function getBackendHealth(): Promise<HealthResponse | null> {
-  // Server-only var (not NEXT_PUBLIC_): this fetch always runs server-side,
-  // so it must be read at container runtime, not inlined at build time.
-  const baseUrl = process.env.API_BASE_URL ?? "http://localhost:8000";
-  try {
-    const response = await fetch(`${baseUrl}/health`, { cache: "no-store" });
-    if (!response.ok) return null;
-    return (await response.json()) as HealthResponse;
-  } catch {
-    return null;
+export default async function OverviewPage() {
+  const [health, summary, payments, cases] = await Promise.all([
+    apiGet<Health>("/health"),
+    apiGet<RiskSummary>("/risk/summary"),
+    apiGet<RiskAssessment[]>("/risk/payments"),
+    apiGet<RecoveryCase[]>("/recovery/cases"),
+  ]);
+
+  if (!summary.ok || !payments.ok || !cases.ok) {
+    return <BackendUnavailable />;
   }
-}
 
-export default async function Home() {
-  const health = await getBackendHealth();
+  const openCases = cases.data.filter((c) => OPEN_STATES.has(c.state));
+  const diagnosedOrLater = cases.data.filter((c) =>
+    ["diagnosed", "decision_pending", "action_scheduled", "action_executed", "observing"].includes(
+      c.state,
+    ),
+  );
+  const topPayments = [...payments.data]
+    .sort((a, b) => b.risk_score - a.risk_score)
+    .slice(0, 5);
+  const levels = summary.data.risk_level_breakdown;
 
   return (
-    <div className="flex min-h-screen flex-col items-center justify-center bg-zinc-50 font-sans dark:bg-black">
-      <main className="flex w-full max-w-lg flex-col items-center gap-6 px-8 py-16 text-center">
-        <h1 className="text-3xl font-semibold tracking-tight text-black dark:text-zinc-50">
-          AI Revenue Recovery Platform
-        </h1>
-        <p className="text-zinc-600 dark:text-zinc-400">Phase 2 &mdash; Revenue Risk Detection</p>
-        <div
-          className={`rounded-lg border px-6 py-4 text-sm ${
-            health
-              ? "border-green-500/30 bg-green-500/10 text-green-700 dark:text-green-400"
-              : "border-red-500/30 bg-red-500/10 text-red-700 dark:text-red-400"
-          }`}
-        >
-          {health ? (
-            <>
-              Backend status: <strong>{health.status}</strong> ({health.environment})
-            </>
-          ) : (
-            <>Backend unreachable. Is the API running?</>
-          )}
+    <div className="flex flex-col gap-6">
+      <div>
+        <h1 className="text-xl font-semibold tracking-tight">Revenue recovery overview</h1>
+        <p className="mt-1 text-sm text-text-muted">
+          What revenue is at risk, why, and where each recovery case stands.
+        </p>
+      </div>
+
+      {/* 1-2. Revenue at risk + recoverable opportunity */}
+      <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
+        <Panel title="Revenue at risk">
+          <p className="tabular text-2xl font-semibold text-text">
+            {formatCurrencyMap(summary.data.currency_breakdown)}
+          </p>
+          <p className="mt-1 text-xs text-text-dim">
+            across {summary.data.at_risk_payment_count} failed payment
+            {summary.data.at_risk_payment_count === 1 ? "" : "s"} with no later success
+          </p>
+        </Panel>
+        <Panel title="Recoverable opportunity">
+          <NotAvailableYet
+            what="Recoverable share"
+            why="Needs the Phase 5 decision engine to classify which at-risk payments are actually recoverable."
+          />
+        </Panel>
+        <Panel title="Recovery performance">
+          <NotAvailableYet
+            what="Recovered revenue"
+            why="Needs Phase 8 revenue measurement (outcomes + control group)."
+          />
+        </Panel>
+      </div>
+
+      {/* 3. Active recovery cases */}
+      <Panel
+        title="Active recovery cases"
+        action={
+          <Link
+            href="/recovery"
+            className="font-mono text-[11px] uppercase tracking-widest text-text-dim hover:text-signal"
+          >
+            All cases &rarr;
+          </Link>
+        }
+      >
+        <div className="flex flex-wrap items-center gap-x-8 gap-y-2 font-mono text-xs">
+          <Readout label="OPEN" value={openCases.length} />
+          <Readout label="DIAGNOSED+" value={diagnosedOrLater.length} signal />
+          <Readout
+            label="CLOSED"
+            value={cases.data.length - openCases.length}
+          />
+          <Readout label="RISK MIX" value={`${levels.high} high / ${levels.medium} med / ${levels.low} low`} />
         </div>
-        <a
-          href="/risk"
-          className="text-sm font-medium text-zinc-700 underline underline-offset-4 dark:text-zinc-300"
-        >
-          View Revenue Risk Dashboard &rarr;
-        </a>
-      </main>
+      </Panel>
+
+      {/* 5. Highest-priority cases */}
+      <Panel title="Highest-priority at-risk payments">
+        {topPayments.length === 0 ? (
+          <EmptyState>No revenue currently at risk</EmptyState>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="w-full border-collapse text-left text-sm">
+              <caption className="sr-only">
+                At-risk payments ordered by risk score, highest first
+              </caption>
+              <thead>
+                <tr className="border-b border-border font-mono text-[11px] uppercase tracking-wide text-text-dim">
+                  <th scope="col" className="py-2 pr-4 font-medium">Reference</th>
+                  <th scope="col" className="py-2 pr-4 font-medium">Amount</th>
+                  <th scope="col" className="py-2 pr-4 font-medium">Failure reason</th>
+                  <th scope="col" className="py-2 pr-4 font-medium">Risk</th>
+                  <th scope="col" className="py-2 font-medium">Level</th>
+                </tr>
+              </thead>
+              <tbody>
+                {topPayments.map((p) => (
+                  <tr key={p.payment_id} className="border-b border-border/60">
+                    <td className="py-2 pr-4 font-mono text-xs text-text">{p.external_reference}</td>
+                    <td className="tabular py-2 pr-4 font-mono text-xs">
+                      {p.amount} {p.currency}
+                    </td>
+                    <td className="py-2 pr-4 text-text-muted">{p.failure_reason ?? "—"}</td>
+                    <td className="py-2 pr-4">
+                      <ScoreMeter
+                        value={p.risk_score}
+                        severity={riskSeverity(p.risk_level)}
+                        caption={`risk score ${p.risk_score.toFixed(2)}`}
+                      />
+                    </td>
+                    <td className="py-2">
+                      <StatusPill label={p.risk_level} severity={riskSeverity(p.risk_level)} />
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </Panel>
+
+      {/* 6. AI insight + system */}
+      <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+        <Panel title="AI diagnosis">
+          <p className="text-sm text-text-muted">
+            {diagnosedOrLater.length === 0
+              ? "No case has been diagnosed yet."
+              : `${diagnosedOrLater.length} case${diagnosedOrLater.length === 1 ? " has" : "s have"} an AI diagnosis. Open a case to see the cause, the model-reported confidence, and its provenance.`}
+          </p>
+          <p className="mt-2 text-xs text-text-dim">
+            The diagnosis is advisory. A deterministic policy engine (Phase 5) decides what
+            happens.
+          </p>
+        </Panel>
+        <Panel title="System">
+          <div className="flex flex-wrap items-center gap-3 text-sm">
+            {health.ok ? (
+              <>
+                <StatusPill
+                  label={health.data.status}
+                  severity={health.data.status === "ok" ? "good" : "critical"}
+                />
+                <span className="text-text-muted">
+                  environment{" "}
+                  <span className="font-mono text-text">{health.data.environment}</span>
+                </span>
+              </>
+            ) : (
+              <StatusPill label="unreachable" severity="critical" />
+            )}
+          </div>
+          <p className="mt-2 text-xs text-text-dim">
+            Last checked {fmtTimestamp(new Date().toISOString())}.
+          </p>
+        </Panel>
+      </div>
     </div>
   );
 }

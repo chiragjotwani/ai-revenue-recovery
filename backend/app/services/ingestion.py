@@ -53,12 +53,18 @@ async def ingest_payment_event(session: AsyncSession, event_in: PaymentEventIn) 
             duplicate=True,
         )
 
-    existing_payment = await session.scalar(
-        select(Payment).where(Payment.external_reference == event_in.payment.external_reference)
-    )
-    if existing_payment is not None:
-        raise PaymentReferenceConflictError(event_in.payment.external_reference)
-
+    # KI-008: there is deliberately no separate "does a Payment with this
+    # external_reference already exist?" pre-check here. A standalone SELECT
+    # between this idempotency-key check and the insert below is a
+    # time-of-check-to-time-of-use race: under genuine concurrency, a second
+    # caller sharing this same idempotency key can commit in the gap, and an
+    # isolated pre-check would then misread that committed row as a
+    # *different* logical event's conflict rather than recognising it as the
+    # caller's own duplicate. The external_reference uniqueness constraint is
+    # instead enforced by the database (Payment.external_reference is
+    # unique) and reconciled by the except-IntegrityError recheck below,
+    # which decides "duplicate" vs. "genuine conflict" by idempotency key --
+    # the same authority already used above -- with no separate racy check.
     try:
         customer = await _get_or_create_customer(
             session,

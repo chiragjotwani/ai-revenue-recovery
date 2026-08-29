@@ -6,6 +6,29 @@ must record what, why, and impact.
 
 ## Open
 
+### KI-009: Provider fallback-to-mock is observable only after the call completes (Phase 4.1)
+
+- **What**: `app/ai/providers/factory.py::get_reasoning_model` silently
+  substitutes `MockProvider` when `REASONING_PROVIDER` names a real
+  provider (`qwen`/`nemotron`) but that provider's base URL is unset —
+  there is no startup error, warning log, or distinct response signal at
+  the moment of substitution. The substitution *is* observable, but only
+  by inspecting the persisted diagnosis's `model_name` field after
+  diagnosis has already run (Rule 5 requires provider selection be
+  "explicit and observable").
+- **Impact**: an operator who misconfigures `AI_QWEN_BASE_URL` (typo,
+  forgot to set it) gets a real diagnosis-shaped response with no
+  indication anything is wrong unless they read `model_name` in the API
+  response or diagnosis row. Not a correctness bug — the response is
+  correctly labeled `"mock"` — but it is a weaker form of "explicit" than
+  the rule intends.
+- **Resolution plan**: consider a structured log warning at
+  `get_reasoning_model()` call time when a real provider was requested but
+  unavailable, or a response header, so the substitution is visible
+  without a follow-up query. Not implemented in Phase 4.1 — flagged for
+  owner decision since it touches the provider factory's public contract.
+- **Status**: Documented limitation, not silently hidden.
+
 ### KI-002: Self-hosted model infrastructure undecided (relevant from Phase 4)
 
 - **What**: The engineering prompt specifies self-hosted open-weight models
@@ -27,8 +50,22 @@ must record what, why, and impact.
 - **Resolution plan**: pick a hosting path before doing model selection.
   The provider code and the benchmark runner are ready; only
   `AI_QWEN_BASE_URL` / `AI_NEMOTRON_BASE_URL` need to point somewhere real.
-- **Status**: Not bypassed — Phase 4 does not depend on it; model
-  *selection* does.
+- **Update (2026-08-29, Phase 4.1)**: path (a) was exercised — a local
+  Ollama server running `qwen3:4b-instruct-2507-q8_0` (~4.3 GB) on the
+  6 GB card. `QwenProvider` was driven against it for real for all 8
+  Workstream B3 scenarios (`tests/test_ai_real_model.py`); 7/8 passed on
+  the first parametrized run, the 8th (`insufficient_funds`) failed on a
+  transient Ollama-side `500` and passed cleanly on isolated retry —
+  consistent with a cold-start/load hiccup in Ollama itself, not a defect
+  in the provider client. This validates the *integration contract*
+  (transport, schema validation, safeguards) against a real model; it is
+  still not a diagnostic-accuracy benchmark (that needs an independent
+  ground-truth set — see KI-007) and the 30B Qwen-vs-Nemotron comparison
+  the original engineering prompt asked for still needs the 24–80 GB
+  cloud-GPU path (c), not attempted.
+- **Status**: Partially resolved — a real model has been exercised in
+  development; the production hosting decision for the 30B-class
+  benchmark is still open.
 
 ### KI-007: The diagnosis evaluation set is synthetic; benchmark accuracy is not real-world (Phase 4)
 
@@ -50,6 +87,79 @@ must record what, why, and impact.
   is bypassed.
 
 ## Resolved
+
+### KI-008: Intermittent failure in concurrent-identical-ingestion race test (Phase 4.1) — RESOLVED
+
+- **What (original finding)**: `tests/test_concurrency.py::test_concurrent_identical_ingestion_creates_one_payment`
+  fires two identical `POST /events` requests concurrently and expects
+  both callers to see `201` (one fresh insert, one idempotent duplicate
+  hit). It failed once (`{201, 409}` instead of `{201, 201}`) across 7
+  full backend-suite runs in an earlier session. At that point it had not
+  been reproduced running alone, run 5x back-to-back alone, or in a
+  dedicated 15-iteration stress harness outside pytest, and was recorded
+  as UNVERIFIED per Rule 7 rather than silently ignored.
+- **Follow-up investigation**: a dedicated forensic pass (read-only, no
+  code changes) found the true failure rate was much higher than first
+  measured — 40% (12/30) across full-suite runs, 27–33% standalone — and
+  that it reproduces for a single isolated test invocation via pytest,
+  contradicting the original "full-suite only" theory. A tracing plugin
+  (loaded via `pytest -p`, monkeypatching in memory only) captured the
+  exact failing interleaving.
+- **Root cause (confirmed)**: `ingest_payment_event`
+  (`app/services/ingestion.py`) contained a standalone, unprotected
+  pre-check between the idempotency-key lookup and the protected
+  insert/`except IntegrityError` block:
+  ```python
+  existing_payment = await session.scalar(
+      select(Payment).where(Payment.external_reference == event_in.payment.external_reference)
+  )
+  if existing_payment is not None:
+      raise PaymentReferenceConflictError(event_in.payment.external_reference)
+  ```
+  This was a time-of-check-to-time-of-use race: when two requests sharing
+  the *same* idempotency key raced, the slower request's copy of this
+  check could run after the faster request's full transaction had already
+  committed, see the now-existing `Payment` row by `external_reference`,
+  and unconditionally treat it as a genuine conflict from a *different*
+  idempotency key — instead of recognising it as its own duplicate. The
+  captured trace showed the exception firing with no `_get_or_create_customer`
+  call ever made for the losing request, proving the failure came from
+  this pre-check, not from the `except IntegrityError` recovery block. The
+  investigation explicitly confirmed the `except IntegrityError`
+  rollback → recheck-by-idempotency-key pattern itself was **not** the
+  defect (verified separately via `open_case`, which uses that pattern
+  alone with no secondary pre-check, and never failed in 30 runs).
+- **Fix**: removed the standalone pre-check entirely. The
+  `external_reference` uniqueness decision is now made exclusively by the
+  database constraint plus the existing `except IntegrityError` recheck,
+  which was already correct and constraint-agnostic. No behavior changed
+  for any non-racing request; the only removed step was a redundant read
+  that was also the race window.
+- **Regression coverage added** (`tests/test_concurrency.py`):
+  KI008-01 (existing test, tightened intent via docstring) — concurrent
+  identical key+reference must both succeed; KI008-02
+  (`test_concurrent_same_reference_different_keys_is_a_genuine_conflict`,
+  tightened from `codes in ([201,201],[201,409])` to the only
+  architecturally-possible outcome `codes == [201, 409]`) — different keys,
+  same reference, must still conflict; KI008-03
+  (`test_sequential_replay_same_key_and_reference_is_idempotent`) —
+  sequential replay unaffected; KI008-04
+  (`test_concurrent_identical_ingestion_stress`) — the same race repeated
+  25 times in one test run, as a standing regression guard.
+- **Verification**: post-fix, `test_concurrent_identical_ingestion_creates_one_payment`
+  passed 60/60 standalone runs (vs. 27–40% failure pre-fix under the same
+  conditions), the full `test_concurrency.py` file passed 20/20 runs, and
+  the full backend suite (136 tests, now +2 from the new KI008-03/04 tests)
+  passed 30/30 full runs with zero failures. `ruff check`, `ruff format
+  --check`, and `mypy app` all clean. Phase 1 (`test_ingestion.py`,
+  `test_ingestion_amounts.py`), Phase 2 (`test_risk_scoring.py`,
+  `test_risk_api.py`), Phase 3 (`test_recovery_state_machine.py`,
+  `test_recovery_api.py`, `test_recovery_preconditions.py`,
+  `test_recovery_safety_contracts.py`), and Phase 4 (`test_ai_diagnosis.py`,
+  `test_ai_providers.py`, `test_diagnosis_api.py`, `test_ai_context_builder.py`,
+  `test_ai_failure_modes.py`, `test_ai_prompt_injection.py`) suites all
+  re-run and green.
+- **Status**: RESOLVED.
 
 ### KI-006: `revenue_at_risk` naively sums across currencies (Phase 2) — ACKNOWLEDGED, NOT A BUG
 

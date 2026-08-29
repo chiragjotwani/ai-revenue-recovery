@@ -1,11 +1,25 @@
 import uuid
 from datetime import datetime
 from decimal import Decimal
-from typing import Literal
+from typing import Annotated, Literal
 
 from pydantic import BaseModel, EmailStr, Field
 
 PaymentEventType = Literal["payment.succeeded", "payment.failed", "payment.pending"]
+
+# ``payments.amount`` is ``NUMERIC(12, 2)``: at most 10 integer digits and
+# exactly 2 fractional digits, so the largest storable value is
+# 9_999_999_999.99. The request contract is validated against that here so
+# that an out-of-range amount is a clean ``422`` (never an unhandled
+# database ``NumericValueOutOfRange`` / HTTP 500 -- BUG-002) and an amount
+# with sub-cent precision is *rejected*, never silently rounded to 2 dp
+# (BUG-003). The database is a backstop, not the primary validator.
+MAX_PAYMENT_AMOUNT = Decimal("9999999999.99")
+
+MoneyAmount = Annotated[
+    Decimal,
+    Field(gt=0, le=MAX_PAYMENT_AMOUNT, max_digits=12, decimal_places=2),
+]
 
 
 class CustomerIn(BaseModel):
@@ -16,7 +30,7 @@ class CustomerIn(BaseModel):
 
 class PaymentIn(BaseModel):
     external_reference: str = Field(min_length=1, max_length=255)
-    amount: Decimal = Field(gt=0)
+    amount: MoneyAmount
     currency: str = Field(min_length=3, max_length=3)
     failure_reason: str | None = None
 

@@ -1,4 +1,5 @@
 from fastapi import APIRouter, Depends, HTTPException, status
+from sqlalchemy.exc import DataError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.errors import PaymentReferenceConflictError
@@ -18,3 +19,13 @@ async def post_payment_event(
         return await ingest_payment_event(session, event_in)
     except PaymentReferenceConflictError as exc:
         raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=str(exc)) from exc
+    except DataError as exc:
+        # Backstop only: request-shape validation lives in the schema
+        # (app/schemas/ingestion.py). A DataError here means a value slipped
+        # past that contract and the database rejected it -- surface it as a
+        # 422, never a 500, and never leak the SQL.
+        await session.rollback()
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail="a field value is outside the range the platform accepts",
+        ) from exc

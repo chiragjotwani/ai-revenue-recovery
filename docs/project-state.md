@@ -2,8 +2,9 @@
 
 ## Current Phase
 
-Phase 4 — AI Context & Diagnosis: COMPLETE (awaiting owner go-ahead before
-Phase 5). Phases 0–2 remain frozen (`docs/phase-0-2-freeze.md`).
+Phase 4.1 — Stabilization, AI Validation & Product Foundation: CONDITIONAL
+(see verdict below; awaiting owner go-ahead before Phase 5). Phases 0–2
+remain frozen (`docs/phase-0-2-freeze.md`).
 
 Owner decisions recorded:
 - 2026-08-27: Phase 3 follows the frozen contract (Recovery Case
@@ -26,6 +27,58 @@ N/A (Phase 4 closed; Phase 5 not started)
 - Phase 2 — Revenue Risk Detection (frozen)
 - Phase 3 — Recovery Case Management
 - Phase 4 — AI Context & Diagnosis
+
+## Completed Stages (Phase 4.1)
+
+Full detail in the Phase 4.1 implementation report (session record). Summary:
+
+- **Correctness (Workstream A)**: fixed the migration downgrade leaving
+  the `payment_status` enum orphaned (roundtrip now clean, repeatable —
+  `tests/test_migrations.py`); oversized/sub-cent monetary input now
+  rejected at the API with 422 instead of reaching Postgres
+  (`tests/test_ingestion_amounts.py`); invalid recovery-case UUIDs now
+  render a distinct 404 instead of "backend unreachable" (BUG-004);
+  `GET /health/ready` added as a truthful readiness probe (Postgres only —
+  Redis is declared but not used by any code path yet, so it is
+  deliberately not probed).
+- **AI validation (Workstream B)**: traced provider abstraction end to end
+  (diagnosis service has no provider-specific logic); a local Ollama
+  endpoint was verified reachable and real-model integration tests were
+  added as conditional/opt-in (`tests/test_ai_real_model.py`) — see the
+  AI Reality Check in the Phase 4.1 report for whether they actually ran
+  in a given verification pass; `diagnosis_prompt_v2` adds an explicit
+  four-layer prompt-injection boundary
+  (system/context/untrusted-data/schema), tested in
+  `tests/test_ai_prompt_injection.py`; failure-mode coverage added for
+  timeout, malformed JSON, invalid schema, unsafe output text
+  (`tests/test_ai_failure_modes.py`); confidence is documented as
+  model-reported, not a calibrated probability.
+- **Recovery safety contracts (Workstream C)**: `app/recovery/preconditions.py`
+  declares the artifact each forward state transition depends on
+  (diagnosis, policy decision, action, observed payment event) and is
+  enforced in `transition_case`; Section 37 safety cases (forbidden
+  action, duplicate action, already-recovered, high-value escalation)
+  pinned as executable specs in `tests/test_recovery_safety_contracts.py`;
+  action/execution/idempotency-key identity contract written down for the
+  Phase 6 executor (`docs/recovery/action-idempotency.md`) — no executor
+  exists yet.
+- **Frontend (Workstream D)**: removed the "Phase 2" implementation-phase
+  language from the customer-facing UI; built a persistent app shell (nav,
+  live ticker) and a "Trading Floor Terminal" design system
+  (`DESIGN.md`); redesigned the dashboard around revenue-at-risk /
+  recoverable opportunity / active cases, explicitly labeling
+  not-yet-computable metrics "Not available yet" rather than fabricating
+  them; case detail page walks PAYMENT → RISK → AI DIAGNOSIS →
+  RECOMMENDATION → RECOVERY STATUS → OUTCOME with mock/real provenance
+  and an explicit "advisory only" label on the recommendation; added
+  `error.tsx` / `loading.tsx` / `not-found.tsx` and a distinct
+  backend-unavailable banner.
+- **Testing (Workstream E)**: added Vitest + React Testing Library
+  (`frontend/vitest.config.mts`), 24 frontend tests across 4 files;
+  concurrency tests for the `IntegrityError` recovery branches in
+  ingestion and case-open (`tests/test_concurrency.py`); reclassified the
+  mock benchmark as pipeline/schema validation only, not model accuracy
+  (KI-007, pre-existing, reaffirmed).
 
 ## Completed Stages (Phase 4)
 
@@ -172,6 +225,38 @@ See `docs/known-issues.md`.
 - ADR-005: Diagnosis output — two layers, derived disposition, everything versioned
 
 ## Last Successful Verification
+
+2026-08-30 KI-008 fix (this session). Root-caused and fixed the intermittent
+concurrent-ingestion race (see `docs/known-issues.md` KI-008, now RESOLVED):
+removed a time-of-check-to-time-of-use pre-check in
+`ingest_payment_event` that could misclassify a concurrent caller's own
+idempotency-key duplicate as a genuine cross-key conflict. Post-fix:
+`test_concurrent_identical_ingestion_creates_one_payment` 60/60 standalone
+runs clean (was 27–40% failure), `test_concurrency.py` 20/20 full-file
+runs clean, full backend suite (136 tests, +2 new KI-008 regression tests)
+30/30 full runs clean, `ruff check`/`ruff format --check`/`mypy app` all
+clean. Phase 1/2/3/4 relevant suites re-run and green. No frontend, AI,
+recovery-decisioning, or documentation-beyond-KI-008 changes made in this
+pass — scope was strictly the ingestion race fix and its regression
+coverage.
+
+2026-08-29 Phase 4.1 gate (this session). Backend: **pytest 133 passed, 8
+skipped, 4 xfailed** against dockerized Postgres/Redis (one concurrency
+test, `test_concurrent_identical_ingestion_creates_one_payment`, failed
+once intermittently across 7 full-suite runs — reproduces only inside the
+full suite, not in isolation or a 15-iteration stress harness; documented
+as an open, unresolved intermittent finding, not silently dropped — see
+KI-008), ruff check, ruff format --check, mypy strict (47 files) — all
+clean. Frontend: eslint, `tsc --noEmit`, vitest (24/24), `next build` — all
+clean. Docker stack rebuilt from the current working tree
+(`docker compose up -d --build backend frontend`) and browser-verified at
+390px/768px/1280px: dashboard, risk queue, recovery list, case-open, AI
+diagnosis panel (mock provenance visible), invalid-case 404, and
+backend-unavailable banner all behaved as designed; no console errors
+observed. Canonical scenario (historical success → failed payment → risk
+detected → case opened → context built → diagnosed →
+`insufficient_funds`/`retriable_transient`/retry+6h, advisory only) run
+manually end-to-end via the API and confirmed.
 
 2026-08-28 Phase 4 gate. Backend: **pytest 91/91**, ruff check, ruff
 format --check, mypy strict (46 files), `alembic upgrade head` from clean
