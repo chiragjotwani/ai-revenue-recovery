@@ -147,4 +147,49 @@ describe("RecoveryCaseDetailPage (BUG-004: invalid id vs backend down)", () => {
     expect(screen.getByText(/mock diagnosis/i)).toBeInTheDocument(); // provenance
     expect(screen.getByText(/advisory only/i)).toBeInTheDocument();
   });
+
+  it("renders a real decision (Phase 5F) on the case detail page", async () => {
+    stubRoutes({
+      "/recovery/cases/": [
+        200,
+        {
+          ...CASES[0],
+          state: "decision_pending",
+          history: [],
+          diagnosis: null,
+          decision: {
+            id: "dec-1",
+            case_id: CASES[0].id,
+            diagnosis_id: "diag-1",
+            recoverability: "likely_recoverable",
+            candidate_strategy: "retry",
+            approved_strategy: "retry",
+            decision_status: "approved",
+            rationale: [{ rule_id: "fraud_signal", outcome: "passed", reason_code: null }],
+            scheduled_not_before: "2026-08-28T20:00:00Z",
+            decision_engine_version: "1",
+            created_at: "2026-08-28T14:05:00Z",
+          },
+        },
+      ],
+      "/risk/payments": [200, PAYMENTS],
+    });
+    render(await RecoveryCaseDetailPage(detailProps(CASES[0].id)));
+
+    expect(screen.getByText("4 · Decision")).toBeInTheDocument();
+    expect(screen.getByText(/^approved$/i)).toBeInTheDocument();
+    expect(screen.getByText("fraud_signal")).toBeInTheDocument();
+    // No "Decide" button once a decision already exists.
+    expect(screen.queryByRole("button", { name: /decide/i })).not.toBeInTheDocument();
+  });
+
+  it("offers the Decide action for a diagnosed case with no decision yet", async () => {
+    stubRoutes({
+      "/recovery/cases/": [200, { ...CASES[0], state: "diagnosed", history: [], decision: null }],
+      "/risk/payments": [200, PAYMENTS],
+    });
+    render(await RecoveryCaseDetailPage(detailProps(CASES[0].id)));
+
+    expect(screen.getByRole("button", { name: /decide/i })).toBeInTheDocument();
+  });
 });

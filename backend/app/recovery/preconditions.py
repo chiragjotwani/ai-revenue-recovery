@@ -34,8 +34,11 @@ from dataclasses import dataclass
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.decision.schema import DecisionStatus
+from app.models.decision import DecisionResult
 from app.models.diagnosis import Diagnosis
 from app.models.recovery import RecoveryCase, RecoveryCaseState
+from app.services.diagnosis import get_latest_diagnosis
 
 _S = RecoveryCaseState
 
@@ -50,6 +53,57 @@ async def _requires_persisted_diagnosis(session: AsyncSession, case: RecoveryCas
     )
     if not count:
         return "no persisted diagnosis exists for this case"
+    return None
+
+
+async def _requires_decision_result(session: AsyncSession, case: RecoveryCase) -> str | None:
+    """Phase 5: the diagnosis must actually have been handed to, and
+    resolved by, the decision engine -- i.e. a ``DecisionResult`` exists
+    for the case's current diagnosis. Checked from inside
+    ``decide_case``'s own transaction (Phase 5D), after the
+    ``DecisionResult`` row has been flushed but not yet committed: the
+    flushed-but-uncommitted row is visible to this query because it runs
+    on the same session/transaction (ordinary Postgres read-your-writes
+    behaviour), not because of any cross-transaction visibility.
+    """
+    diagnosis = await get_latest_diagnosis(session, case.id)
+    if diagnosis is None:
+        return "no persisted diagnosis exists for this case"
+    count = await session.scalar(
+        select(func.count())
+        .select_from(DecisionResult)
+        .where(DecisionResult.case_id == case.id)
+        .where(DecisionResult.diagnosis_id == diagnosis.id)
+    )
+    if not count:
+        return "no DecisionResult exists for this case's current diagnosis"
+    return None
+
+
+async def _requires_approved_decision(session: AsyncSession, case: RecoveryCase) -> str | None:
+    """Phase 5: scheduling an action requires a policy-*approved*
+    DecisionResult for the case's current diagnosis -- an escalated or
+    rejected decision must never reach ``action_scheduled`` (that would
+    bypass the policy engine's own verdict). This does not invent a new
+    business rule: it only checks the ``decision_status`` Phase 5B/5C
+    already computed and persisted.
+    """
+    diagnosis = await get_latest_diagnosis(session, case.id)
+    if diagnosis is None:
+        return "no persisted diagnosis exists for this case"
+    decision = await session.scalar(
+        select(DecisionResult)
+        .where(DecisionResult.case_id == case.id)
+        .where(DecisionResult.diagnosis_id == diagnosis.id)
+    )
+    if decision is None:
+        return "no DecisionResult exists for this case's current diagnosis"
+    if decision.decision_status != DecisionStatus.APPROVED.value:
+        return (
+            f"the decision for this case is '{decision.decision_status}', "
+            "not 'approved' -- an action may only be scheduled for an "
+            "approved decision"
+        )
     return None
 
 
@@ -81,13 +135,13 @@ TRANSITION_PRECONDITIONS: dict[tuple[RecoveryCaseState, RecoveryCaseState], Prec
     ),
     (_S.DIAGNOSED, _S.DECISION_PENDING): Precondition(
         artifact="the diagnosis has been handed to the decision engine",
-        provided_by_phase="Phase 5",
-        checker=None,
+        provided_by_phase="Phase 5D",
+        checker=_requires_decision_result,
     ),
     (_S.DECISION_PENDING, _S.ACTION_SCHEDULED): Precondition(
         artifact="a policy-approved DecisionResult",
-        provided_by_phase="Phase 5",
-        checker=None,
+        provided_by_phase="Phase 5D",
+        checker=_requires_approved_decision,
     ),
     (_S.ACTION_SCHEDULED, _S.ACTION_EXECUTED): Precondition(
         artifact="an action/execution record for the scheduled action",

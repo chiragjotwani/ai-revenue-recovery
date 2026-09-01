@@ -10,6 +10,14 @@ afterEach(() => {
 // next/navigation is not available in jsdom; stub the bits the components use.
 vi.mock("next/navigation", () => ({
   usePathname: () => "/",
+  useRouter: () => ({
+    refresh: () => {},
+    push: () => {},
+    replace: () => {},
+    back: () => {},
+    forward: () => {},
+    prefetch: () => {},
+  }),
   notFound: () => {
     throw new Error("NEXT_NOT_FOUND");
   },

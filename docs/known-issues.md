@@ -83,6 +83,13 @@ must record what, why, and impact.
 - **Resolution plan**: real accuracy validation comes only with live
   recovery-outcome data (Phase 8+). Until then the evaluation set is
   **fixed** and must not be edited to move a score.
+- **Phase 5 extension (added 2026-08-31)**: the same discipline applies to
+  `backend/evaluation/decision_cases.json` /
+  `scripts/benchmark_decision_policy.py` (Phase 5H). That harness checks
+  the deterministic policy engine against its own hand-authored golden
+  cases — a specification check, not a real-accuracy or real-revenue
+  measurement. It must never be read as evidence of recovered revenue or
+  production conversion rates.
 - **Status**: Documented limitation, not a defect. No Phase 4 requirement
   is bypassed.
 
@@ -177,6 +184,13 @@ must record what, why, and impact.
   a single currency.
 - **Resolution plan**: revisit if/when multi-currency volume becomes real
   (introduce an FX rate source and convert to a reporting currency).
+- **Phase 5 dependency (added 2026-08-30)**: Phase 5's decision policy
+  engine has no high-value escalation rule for exactly this reason — a
+  "high-value" threshold needs a currency-normalized amount, which does
+  not safely exist until this issue is resolved (see ADR-006 and the
+  `xfail`ed `test_contract_high_value_escalates_to_manual_review` in
+  `backend/tests/test_recovery_safety_contracts.py`). Resolving KI-006
+  is now a precondition for that contract, not only for `revenue_at_risk`.
   Deliberately not solved now -- no exchange-rate source exists yet and
   guessing one would be premature (Section 44/45 discipline).
 - **Status**: Documented limitation, not silently hidden. Not a bypass of

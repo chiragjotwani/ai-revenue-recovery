@@ -85,9 +85,32 @@ export type Transition = {
   created_at: string;
 };
 
+export type DecisionRationaleEntry = {
+  rule_id: string;
+  outcome: "passed" | "failed" | "not_applicable";
+  reason_code: string | null;
+};
+
+export type DecisionStatus = "approved" | "rejected" | "escalated" | "superseded";
+
+export type Decision = {
+  id: string;
+  case_id: string;
+  diagnosis_id: string;
+  recoverability: string;
+  candidate_strategy: string;
+  approved_strategy: string;
+  decision_status: DecisionStatus;
+  rationale: DecisionRationaleEntry[];
+  scheduled_not_before: string | null;
+  decision_engine_version: string;
+  created_at: string;
+};
+
 export type RecoveryCaseDetail = RecoveryCase & {
   history: Transition[];
   diagnosis: Diagnosis | null;
+  decision: Decision | null;
 };
 
 // ---- domain helpers ----
@@ -105,6 +128,13 @@ export const OPEN_STATES = new Set([
 
 export function riskSeverity(level: string): "good" | "warn" | "critical" {
   return level === "high" ? "critical" : level === "medium" ? "warn" : "good";
+}
+
+export function decisionSeverity(status: DecisionStatus): "good" | "warn" | "critical" | "neutral" {
+  if (status === "approved") return "good";
+  if (status === "escalated") return "warn";
+  if (status === "rejected") return "critical";
+  return "neutral"; // superseded
 }
 
 export function caseSeverity(state: string): "good" | "warn" | "critical" | "neutral" {

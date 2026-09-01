@@ -69,6 +69,31 @@ class CaseNotDiagnosableError(DomainError):
         )
 
 
+class CaseNotDecidableError(DomainError):
+    """Raised when a decision is requested for a case that is not in a
+    state where deciding is valid (only ``diagnosed``, Phase 5).
+    """
+
+    def __init__(self, state: object) -> None:
+        self.state = state
+        super().__init__(
+            f"Recovery case is in state {state!r}; a decision can only be made from 'diagnosed'."
+        )
+
+
+class NoDiagnosisToDecideError(DomainError):
+    """Raised when a case is in ``diagnosed`` but no persisted ``Diagnosis``
+    can be found for it. Should not occur under the normal state machine
+    (a case can only reach ``diagnosed`` via a persisted diagnosis --
+    ``app/recovery/preconditions.py``); this is a defensive check, not an
+    expected path.
+    """
+
+    def __init__(self, case_id: object) -> None:
+        self.case_id = case_id
+        super().__init__(f"Recovery case {case_id!r} has no diagnosis to decide against.")
+
+
 class IllegalStateTransitionError(DomainError):
     """Raised when a recovery case is asked to move between two states that
     the state machine does not permit (Section 16: illegal transitions must

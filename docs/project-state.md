@@ -2,9 +2,10 @@
 
 ## Current Phase
 
-Phase 4.1 — Stabilization, AI Validation & Product Foundation: CONDITIONAL
-(see verdict below; awaiting owner go-ahead before Phase 5). Phases 0–2
-remain frozen (`docs/phase-0-2-freeze.md`).
+Phase 5 — Recovery Decision & Policy Engine: implementation and
+verification complete (5A–5I); **awaiting owner review for Phase 5
+freeze** (not yet frozen). Phase 4.1 (Stabilization) is complete. Phases
+0–2 remain frozen (`docs/phase-0-2-freeze.md`).
 
 Owner decisions recorded:
 - 2026-08-27: Phase 3 follows the frozen contract (Recovery Case
@@ -15,10 +16,17 @@ Owner decisions recorded:
   real config-gated OpenAI-compatible HTTP clients; a 6 GB-friendly local
   model path (Ollama `qwen3:4b`) is documented. GPU/model-selection
   decision (KI-002) still open — Phase 4 runs on the `mock` provider.
+- 2026-08-30: Phase 5 architecture approved with 15 issues resolved (see
+  the Phase 5 Architecture Revision report); no high-value/confidence
+  threshold introduced (KI-006 unresolved, ADR-006); decision identity is
+  exactly `(case_id, diagnosis_id)`.
+- 2026-08-30/31: Phase 5B Section-37 contract split per owner decision
+  (evidence-based escalation implemented and passing; high-value
+  escalation stays `xfail`, deferred pending KI-006).
 
 ## Current Stage
 
-N/A (Phase 4 closed; Phase 5 not started)
+N/A — Phase 5 (5A–5I) closed; Phase 6 not started.
 
 ## Completed Phases
 
@@ -27,6 +35,79 @@ N/A (Phase 4 closed; Phase 5 not started)
 - Phase 2 — Revenue Risk Detection (frozen)
 - Phase 3 — Recovery Case Management
 - Phase 4 — AI Context & Diagnosis
+- Phase 4.1 — Stabilization, AI Validation & Product Foundation
+- Phase 5 — Recovery Decision & Policy Engine (5A–5I; awaiting owner
+  review for freeze)
+
+## Completed Stages (Phase 5)
+
+- **5A — Decision Domain & Contracts** (`app/decision/schema.py`):
+  `Recoverability`, `DecisionStatus`, `DecisionRationaleEntry`,
+  `DecisionIdentity`, `DecisionResult` (domain type). Reuses
+  `RecoveryStrategy` from Phase 4; no confidence threshold, no monetary
+  field, no free-text reasoning field.
+- **5B — Deterministic Policy Engine** (`app/decision/policy.py`): pure
+  `evaluate(PolicyInput) -> PolicyOutcome`, 6 ordered rules
+  (already-paid, fraud, insufficient-evidence, retry-cap,
+  customer-action-compatibility, safe default). 390+ tests. Section-37
+  contracts split per owner decision (ADR-006): evidence-based escalation
+  is a real, passing assertion; high-value escalation remains `xfail`,
+  deferred to KI-006.
+- **5C — Decision Service** (`app/decision/service.py`,
+  `app/models/decision.py`, migration `95a41f6c2e7e`): orchestration,
+  persistence, and idempotency for `decide_case`. A concurrency defect
+  (`sqlalchemy.exc.MissingGreenlet` under 20-way concurrent identical
+  decide requests) was root-caused through three escalating
+  investigations (pool/pre-ping hypothesis → rejected; pre-warm
+  hypothesis → rejected; engine-lifecycle/cross-loop-reuse hypothesis →
+  a real but separate test-only hazard, also rejected as the root cause)
+  down to a single confirmed defect: a plain, unawaited
+  `diagnosis.id` attribute read immediately after `session.rollback()`
+  (SQLAlchemy expires ORM attributes on rollback regardless of
+  `expire_on_commit`), an expired-attribute access forbidden under
+  asyncio SQLAlchemy. Fixed by capturing `diagnosis_id` before the
+  rollback path. Verified: 100% reproducible in isolation before the fix
+  (20/20), 0/20 after; 30×20-way and 10×50-way stress runs clean against
+  the real, unmodified pool configuration; the concurrency test's
+  `xfail` marker was removed (now a genuine passing assertion).
+- **5D — Precondition Wiring** (`app/recovery/preconditions.py`):
+  checkers for `DIAGNOSED → DECISION_PENDING` (a `DecisionResult` exists
+  for the case's current diagnosis) and `DECISION_PENDING →
+  ACTION_SCHEDULED` (that decision is `approved`). `decide_case`'s own
+  transition now runs with `enforce_preconditions=True`.
+- **5E — Persistence Reconciliation**: verification only — 5C's
+  `DecisionResult` model/migration/unique-constraint/indexes/provenance
+  were already complete and correct; nothing rewritten. `alembic check`
+  clean, single migration head, upgrade/downgrade roundtrip clean.
+- **5F — API** (`app/api/recovery.py`, `app/schemas/recovery.py`):
+  `POST /recovery/cases/{id}/decide` (idempotent, `200` for
+  approved/escalated/rejected alike — a policy outcome is never an HTTP
+  error; `404`/`409`/`422`/`500` for genuine failure modes) and
+  `GET /recovery/cases/{id}` enriched with the case's `decision`.
+- **5G — Frontend**: the case-detail page's "4 · Decision" panel renders
+  recoverability, candidate/approved strategy (with a downgrade
+  indicator), decision status (approved/escalated/rejected/superseded,
+  none treated as an error), structured rationale, `scheduled_not_before`,
+  engine version, and decision time, sourced from the real API. A
+  `useActionState`-backed "Decide" form (only shown for a `diagnosed`
+  case) invokes the real `POST /decide` and handles 404/409/422/5xx
+  inline without crashing the page. Verified against the real backend via
+  a live local dev server and real seeded data (approved and escalated
+  cases) — browser-extension automation was unavailable in this session,
+  so verification used direct HTTP fetches of the real server-rendered
+  HTML instead of an interactive browser; this is recorded as a
+  limitation, not claimed as full visual/responsive browser verification.
+- **5H — Evaluation Harness** (`evaluation/decision_cases.json`,
+  `scripts/benchmark_decision_policy.py`,
+  `tests/test_decision_evaluation_harness.py`): 16 hand-authored golden
+  cases covering all 8 documented policy rules, safety invariants (fraud
+  never retries, already-paid always `no_action`, sparse/conflicting
+  evidence never auto-recovers, retry cap respected, no monetary/
+  confidence field, `PolicyInput` forbids extra fields), and determinism
+  (20x re-evaluation, byte-identical). Explicitly does not measure, and
+  is not a substitute for, real-world recovered revenue (KI-007 applies
+  with equal force to this harness).
+- **5I — Documentation Reconciliation**: this update.
 
 ## Completed Stages (Phase 4.1)
 
@@ -215,6 +296,14 @@ See `docs/known-issues.md`.
 - Phase 4: KI-007 added (synthetic evaluation set; benchmark accuracy is
   label-agreement, not real-world). KI-002 updated (6 GB GPU can't host
   the 30B candidates; `mock` provider is the Phase 4 default).
+- Phase 4.1: KI-008 added and RESOLVED (concurrent-ingestion TOCTOU race,
+  see below); KI-009 added, open (provider fallback-to-mock is only
+  observable after the call completes).
+- Phase 5: KI-006 remains open and unresolved by design (no high-value/
+  cross-currency threshold introduced — ADR-006; the corresponding
+  Section-37 contract stays `xfail`). KI-007's synthetic-data caveat
+  extends to the Phase 5H decision-policy evaluation harness as well
+  (golden policy cases, not a claim of real-world validity).
 
 ## Architecture Decisions
 
@@ -223,8 +312,40 @@ See `docs/known-issues.md`.
 - ADR-003: LLM cannot directly execute financial actions
 - ADR-004: Explicit recovery state machine with an append-only transition log
 - ADR-005: Diagnosis output — two layers, derived disposition, everything versioned
+- ADR-006: Model confidence is not a deterministic policy threshold (Phase 5)
 
 ## Last Successful Verification
+
+2026-08-31 Phase 5 (5A–5I) complete (this session). Backend: full suite
+**590 passed, 8 skipped (pre-existing, unrelated), 2 xfailed
+(`test_contract_high_value_escalates_to_manual_review` → KI-006,
+`test_contract_duplicate_action_is_idempotent` → Phase 6), 0 failed**,
+stable across 4 consecutive full-suite runs; `ruff check`, `ruff format
+--check`, `mypy` (no new-category errors in any 5A–5I implementation
+file) all clean. Decision-service concurrency: 30×20-way and 10×50-way
+stress runs against the real, unmodified `pool_pre_ping=True` engine, 0
+failures; the same invariant re-verified end-to-end through the real
+`POST /recovery/cases/{id}/decide` HTTP endpoint (20 concurrent requests
+→ 1 `DecisionResult`, 1 transition). A genuine test-infrastructure defect
+was found and fixed during this work: `app.db.session.engine`, a
+module-level singleton, was being reused across pytest's per-test event
+loops without disposal, an unsafe pattern SQLAlchemy's own documentation
+warns against; fixing it (dispose the engine at the start of every test)
+resolved an intermittent full-suite-only concurrency-test failure that
+did not reproduce in isolation. Frontend: `vitest` 41/41, `eslint`
+clean, `tsc --noEmit` clean, `next build` clean. Evaluation:
+`scripts/benchmark_decision_policy.py` 16/16 golden cases pass, safety
+invariants pass, determinism confirmed (20x re-evaluation, identical).
+Real end-to-end verification: seeded two real cases (one
+`insufficient_funds`, one `fraud_suspected`) through the live API and a
+locally-run frontend dev server, triggered real decisions via
+`POST /decide`, and confirmed the real server-rendered HTML showed the
+correct approved/escalated states, strategies, and rationale — the
+Chrome browser-automation extension was unavailable in this session, so
+this HTTP-level verification is the strongest evidence obtained; true
+interactive/visual/responsive-width browser verification was not
+performed and remains outstanding for a future session before Phase 5
+freeze if the owner wants it. No Phase 6/7/8 code was introduced.
 
 2026-08-30 KI-008 fix (this session). Root-caused and fixed the intermittent
 concurrent-ingestion race (see `docs/known-issues.md` KI-008, now RESOLVED):

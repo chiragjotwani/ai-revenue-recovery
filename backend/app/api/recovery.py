@@ -6,16 +6,21 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.ai.diagnosis import DiagnosisValidationError
 from app.ai.providers.base import ReasoningModelError
 from app.core.errors import (
+    CaseNotDecidableError,
     CaseNotDiagnosableError,
     IllegalStateTransitionError,
+    NoDiagnosisToDecideError,
     PaymentNotFoundError,
     PaymentNotRecoverableError,
     RecoveryCaseNotFoundError,
+    TransitionPreconditionError,
 )
 from app.db.session import get_db_session
+from app.decision.service import decide_case, get_decision_for_case
 from app.models.recovery import RecoveryCaseState
 from app.recovery import service
 from app.schemas.recovery import (
+    DecisionOut,
     DiagnosisOut,
     OpenCaseRequest,
     RecoveryCaseDetail,
@@ -76,6 +81,7 @@ async def get_recovery_case(
 
     history = await service.get_case_transitions(session, case_id)
     latest_diagnosis = await get_latest_diagnosis(session, case_id)
+    decision = await get_decision_for_case(session, case_id)
     return RecoveryCaseDetail.model_validate(
         {
             "id": case.id,
@@ -90,6 +96,7 @@ async def get_recovery_case(
                 if latest_diagnosis is not None
                 else None
             ),
+            "decision": (DecisionOut.model_validate(decision) if decision is not None else None),
         }
     )
 
@@ -140,3 +147,48 @@ async def diagnose_recovery_case(
         ) from exc
 
     return DiagnosisOut.model_validate(row)
+
+
+@router.post("/cases/{case_id}/decide", response_model=DecisionOut)
+async def decide_recovery_case(
+    case_id: UUID,
+    session: AsyncSession = Depends(get_db_session),
+) -> DecisionOut:
+    """Run the deterministic Phase 5 policy engine against a case's
+    diagnosis and persist the decision.
+
+    Advances the case ``diagnosed -> decision_pending``. Never calls an AI
+    provider and never executes a recovery action (Phase 5 Architecture
+    Revision) -- an ``escalated`` or ``rejected`` decision status is a
+    successful, valid decision result, not an error: it is returned with
+    ``200 OK`` like any other decision.
+
+    Idempotent on ``(case_id, diagnosis_id)``: a repeat call for a case
+    that has already been decided against its current diagnosis returns
+    the same persisted decision rather than raising or creating a second
+    one (``app.decision.service.decide_case``'s own idempotency, backed by
+    a database unique constraint -- KI-008). This endpoint adds no
+    second, API-level idempotency mechanism of its own.
+
+    - ``404`` unknown case.
+    - ``409`` the case is not in ``diagnosed`` (and has no existing
+      decision to replay).
+    - ``500`` a defensive invariant was violated (e.g. a ``diagnosed``
+      case somehow has no persisted diagnosis, or the decision engine's
+      own just-flushed row failed its precondition check) -- this should
+      not occur under the normal state machine and is not a condition a
+      client caused or can resolve by retrying with different input.
+    """
+    try:
+        _case, row = await decide_case(session, case_id)
+    except RecoveryCaseNotFoundError as exc:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(exc)) from exc
+    except CaseNotDecidableError as exc:
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=str(exc)) from exc
+    except (NoDiagnosisToDecideError, TransitionPreconditionError) as exc:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="the case could not be decided due to an unexpected internal state",
+        ) from exc
+
+    return DecisionOut.model_validate(row)

@@ -11,6 +11,7 @@ import {
   type RiskAssessment,
 } from "@/lib/api";
 import { BackendUnavailable, Panel, ScoreMeter, StatusPill } from "@/components/ui";
+import { DecidePanel } from "./decide-panel";
 
 export async function generateMetadata({ params }: PageProps<"/recovery/[id]">) {
   const { id } = await params;
@@ -153,7 +154,7 @@ export default async function RecoveryCaseDetailPage({ params }: PageProps<"/rec
 
             <div className="border border-signal/30 bg-signal/[0.06] px-3 py-2.5">
               <p className="font-mono text-[11px] uppercase tracking-widest text-signal">
-                4 · Recommendation — advisory only
+                Recommendation — advisory only
               </p>
               <p className="mt-1 text-text">
                 {c.diagnosis.recommended_strategy.replace(/_/g, " ")}
@@ -180,6 +181,11 @@ export default async function RecoveryCaseDetailPage({ params }: PageProps<"/rec
             an operator trigger is out of scope until the decision engine exists.
           </p>
         )}
+      </Panel>
+
+      {/* POLICY DECISION */}
+      <Panel title="4 · Decision">
+        <DecidePanel caseId={c.id} caseState={c.state} initialDecision={c.decision} />
       </Panel>
 
       {/* RECOVERY STATUS -> OUTCOME */}

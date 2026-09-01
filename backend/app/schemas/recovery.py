@@ -3,6 +3,7 @@ from datetime import datetime
 
 from pydantic import BaseModel, ConfigDict
 
+from app.decision.schema import DecisionRationaleEntry, DecisionStatus, Recoverability
 from app.models.recovery import RecoveryCaseState
 
 
@@ -55,6 +56,23 @@ class DiagnosisOut(BaseModel):
     created_at: datetime
 
 
+class DecisionOut(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: uuid.UUID
+    case_id: uuid.UUID
+    diagnosis_id: uuid.UUID
+    recoverability: Recoverability
+    candidate_strategy: str
+    approved_strategy: str
+    decision_status: DecisionStatus
+    rationale: list[DecisionRationaleEntry]
+    scheduled_not_before: datetime | None
+    decision_engine_version: str
+    created_at: datetime
+
+
 class RecoveryCaseDetail(RecoveryCaseOut):
     history: list[TransitionOut]
     diagnosis: DiagnosisOut | None = None
+    decision: DecisionOut | None = None
