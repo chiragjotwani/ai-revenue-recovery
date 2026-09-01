@@ -5,6 +5,7 @@ from pydantic import BaseModel, ConfigDict
 
 from app.decision.schema import DecisionRationaleEntry, DecisionStatus, Recoverability
 from app.models.recovery import RecoveryCaseState
+from app.outcome.schema import ObservedOutcome
 
 
 class OpenCaseRequest(BaseModel):
@@ -94,8 +95,22 @@ class ActionOut(BaseModel):
     executions: list[ActionExecutionOut] = []
 
 
+class OutcomeOut(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: uuid.UUID
+    case_id: uuid.UUID
+    action_id: uuid.UUID
+    attempt_no: int
+    outcome: ObservedOutcome
+    is_terminal: bool
+    evidence_payment_id: uuid.UUID | None
+    created_at: datetime
+
+
 class RecoveryCaseDetail(RecoveryCaseOut):
     history: list[TransitionOut]
     diagnosis: DiagnosisOut | None = None
     decision: DecisionOut | None = None
     action: ActionOut | None = None
+    outcome: OutcomeOut | None = None

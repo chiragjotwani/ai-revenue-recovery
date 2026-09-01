@@ -125,11 +125,25 @@ export type Action = {
   executions: ActionExecution[];
 };
 
+export type ObservedOutcome = "recovered" | "not_recovered" | "unresolved";
+
+export type Outcome = {
+  id: string;
+  case_id: string;
+  action_id: string;
+  attempt_no: number;
+  outcome: ObservedOutcome;
+  is_terminal: boolean;
+  evidence_payment_id: string | null;
+  created_at: string;
+};
+
 export type RecoveryCaseDetail = RecoveryCase & {
   history: Transition[];
   diagnosis: Diagnosis | null;
   decision: Decision | null;
   action: Action | null;
+  outcome: Outcome | null;
 };
 
 // ---- domain helpers ----
@@ -160,6 +174,12 @@ export function actionStatusSeverity(status: string): "good" | "warn" | "critica
   if (status === "executed") return "good";
   if (status === "failed") return "critical";
   return "neutral"; // scheduled
+}
+
+export function outcomeSeverity(outcome: ObservedOutcome): "good" | "warn" | "critical" | "neutral" {
+  if (outcome === "recovered") return "good";
+  if (outcome === "not_recovered") return "warn";
+  return "neutral"; // unresolved
 }
 
 export function caseSeverity(state: string): "good" | "warn" | "critical" | "neutral" {

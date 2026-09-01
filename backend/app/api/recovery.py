@@ -9,11 +9,13 @@ from app.core.errors import (
     CaseNotDecidableError,
     CaseNotDiagnosableError,
     CaseNotExecutableError,
+    CaseNotObservableError,
     CaseNotSchedulableError,
     DecisionNotApprovedError,
     IllegalStateTransitionError,
     NoApprovedDecisionError,
     NoDiagnosisToDecideError,
+    NoExecutedActionError,
     NoScheduledActionError,
     PaymentNotFoundError,
     PaymentNotRecoverableError,
@@ -24,12 +26,14 @@ from app.db.session import get_db_session
 from app.decision.actions import execute_action, get_action_for_case, schedule_action
 from app.decision.service import decide_case, get_decision_for_case
 from app.models.recovery import RecoveryCaseState
+from app.outcome.service import get_outcome_for_case, observe_outcome
 from app.recovery import service
 from app.schemas.recovery import (
     ActionOut,
     DecisionOut,
     DiagnosisOut,
     OpenCaseRequest,
+    OutcomeOut,
     RecoveryCaseDetail,
     RecoveryCaseOut,
     TransitionRequest,
@@ -90,6 +94,7 @@ async def get_recovery_case(
     latest_diagnosis = await get_latest_diagnosis(session, case_id)
     decision = await get_decision_for_case(session, case_id)
     action = await get_action_for_case(session, case_id)
+    outcome = await get_outcome_for_case(session, case_id)
     return RecoveryCaseDetail.model_validate(
         {
             "id": case.id,
@@ -106,6 +111,7 @@ async def get_recovery_case(
             ),
             "decision": (DecisionOut.model_validate(decision) if decision is not None else None),
             "action": (ActionOut.model_validate(action) if action is not None else None),
+            "outcome": (OutcomeOut.model_validate(outcome) if outcome is not None else None),
         }
     )
 
@@ -280,3 +286,49 @@ async def execute_recovery_action(
         ) from exc
 
     return ActionOut.model_validate(action)
+
+
+@router.post("/cases/{case_id}/observe-outcome", response_model=OutcomeOut)
+async def observe_recovery_outcome(
+    case_id: UUID,
+    session: AsyncSession = Depends(get_db_session),
+) -> OutcomeOut:
+    """Observe the real-world outcome of a case's executed action, from
+    authoritative payment evidence alone (Phase 7). Never calls an AI
+    provider, never re-runs the Phase 5 policy engine, never executes
+    another action, and never marks a case ``recovered`` merely because an
+    action executed -- ``action_executed`` and ``recovered`` are kept
+    strictly distinct (see ``app.outcome.service``).
+
+    Advances the case ``action_executed -> observing``, and further to
+    ``observing -> recovered`` only when a later successful payment for
+    the same customer is found. ``not_recovered``/``unresolved`` leave the
+    case in ``observing`` -- both are valid, non-error outcomes returned
+    with ``200 OK``, exactly like an escalated/rejected Phase 5 decision.
+
+    Idempotent: a repeat call with unchanged evidence returns the same
+    persisted observation rather than creating a duplicate
+    (``app.outcome.service.observe_outcome``'s own idempotency, backed by
+    a database unique constraint -- KI-008). Genuinely new evidence
+    (e.g. a payment succeeded since the last observation) creates a new,
+    append-only observation attempt rather than overwriting the old one.
+
+    - ``404`` unknown case.
+    - ``409`` the case is not in ``action_executed``/``observing``.
+    - ``500`` a defensive invariant was violated (e.g. an
+      ``action_executed`` case somehow has no executed action) -- not a
+      condition a client caused or can resolve by retrying.
+    """
+    try:
+        _case, row, _created = await observe_outcome(session, case_id)
+    except RecoveryCaseNotFoundError as exc:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(exc)) from exc
+    except CaseNotObservableError as exc:
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=str(exc)) from exc
+    except (NoExecutedActionError, TransitionPreconditionError) as exc:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="the outcome could not be observed due to an unexpected internal state",
+        ) from exc
+
+    return OutcomeOut.model_validate(row)

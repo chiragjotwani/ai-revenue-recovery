@@ -174,6 +174,31 @@ class NoScheduledActionError(DomainError):
         super().__init__(f"Recovery case {case_id!r} has no scheduled action to execute.")
 
 
+class CaseNotObservableError(DomainError):
+    """Raised when observing an outcome is requested for a case that is
+    not in a state where observation is valid (only ``action_executed``
+    or ``observing``, Phase 7).
+    """
+
+    def __init__(self, state: object) -> None:
+        self.state = state
+        super().__init__(
+            f"Recovery case is in state {state!r}; an outcome can only be observed "
+            "from 'action_executed' or 'observing'."
+        )
+
+
+class NoExecutedActionError(DomainError):
+    """Raised when a case is in ``action_executed``/``observing`` but no
+    persisted ``RecoveryAction`` can be found for its current decision.
+    Defensive -- should not occur under the normal state machine.
+    """
+
+    def __init__(self, case_id: object) -> None:
+        self.case_id = case_id
+        super().__init__(f"Recovery case {case_id!r} has no executed action to observe.")
+
+
 class TransitionPreconditionError(DomainError):
     """Raised when a transition is shape-legal but the artifact it depends
     on does not exist yet (e.g. moving to ``diagnosed`` with no persisted

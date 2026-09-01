@@ -13,6 +13,7 @@ import {
 import { BackendUnavailable, Panel, ScoreMeter, StatusPill } from "@/components/ui";
 import { DecidePanel } from "./decide-panel";
 import { ActionPanel } from "./action-panel";
+import { OutcomePanel } from "./outcome-panel";
 
 export async function generateMetadata({ params }: PageProps<"/recovery/[id]">) {
   const { id } = await params;
@@ -226,18 +227,13 @@ export default async function RecoveryCaseDetailPage({ params }: PageProps<"/rec
           )}
         </Panel>
         <Panel title="7 · Outcome">
-          {c.state === "recovered" ? (
-            <p className="text-sm text-good">Recovered · closed {fmtTimestamp(c.closed_at ?? "")}</p>
-          ) : isTerminal ? (
-            <p className="text-sm text-critical">
-              {c.state === "abandoned" ? "Abandoned" : "Failed"} · closed{" "}
-              {fmtTimestamp(c.closed_at ?? "")}
-            </p>
-          ) : (
-            <p className="text-sm text-text-muted">
-              In progress. No outcome yet — recovered revenue is measured in Phase 8.
-            </p>
-          )}
+          <OutcomePanel
+            caseId={c.id}
+            caseState={c.state}
+            actionStatus={c.action?.status ?? null}
+            initialOutcome={c.outcome}
+            closedAt={c.closed_at}
+          />
         </Panel>
       </div>
 

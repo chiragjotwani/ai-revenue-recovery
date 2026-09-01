@@ -35,10 +35,12 @@ from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.decision.schema import DecisionStatus
-from app.models.action import RecoveryAction
+from app.models.action import RecoveryAction, RecoveryActionStatus
 from app.models.decision import DecisionResult
 from app.models.diagnosis import Diagnosis
+from app.models.outcome import RecoveryOutcomeObservation
 from app.models.recovery import RecoveryCase, RecoveryCaseState
+from app.outcome.schema import ObservedOutcome
 from app.services.diagnosis import get_latest_diagnosis
 
 _S = RecoveryCaseState
@@ -138,6 +140,83 @@ async def _requires_scheduled_action(session: AsyncSession, case: RecoveryCase) 
     return None
 
 
+async def _get_current_action(session: AsyncSession, case: RecoveryCase) -> RecoveryAction | None:
+    """The RecoveryAction for a case's current, policy-approved decision --
+    the same lookup ``app.decision.actions.get_action_for_case`` performs,
+    reimplemented here (not imported) to keep this module's existing
+    dependency direction: ``app.decision.actions`` already imports
+    ``app.recovery.service``, which imports this module, so importing back
+    would be circular.
+    """
+    diagnosis = await get_latest_diagnosis(session, case.id)
+    if diagnosis is None:
+        return None
+    decision = await session.scalar(
+        select(DecisionResult)
+        .where(DecisionResult.case_id == case.id)
+        .where(DecisionResult.diagnosis_id == diagnosis.id)
+    )
+    if decision is None:
+        return None
+    action: RecoveryAction | None = await session.scalar(
+        select(RecoveryAction)
+        .where(RecoveryAction.case_id == case.id)
+        .where(RecoveryAction.action_type == decision.approved_strategy)
+        .where(RecoveryAction.decision_result_id == decision.id)
+    )
+    return action
+
+
+async def _requires_executed_action(session: AsyncSession, case: RecoveryCase) -> str | None:
+    """Phase 7: moving into observation requires that the scheduled action
+    has actually been executed (``app.decision.actions.execute_action``)
+    -- i.e. its ``RecoveryAction.status`` is ``executed``. This is the
+    checker Phase 6 left declared but unimplemented (it never drove this
+    transition itself); Phase 7 owns ``-> observing`` so fills it in here.
+    """
+    action = await _get_current_action(session, case)
+    if action is None:
+        return "no RecoveryAction exists for this case's approved decision"
+    if action.status != RecoveryActionStatus.EXECUTED.value:
+        return (
+            f"the action for this case is '{action.status}', not 'executed' -- "
+            "observation can only begin once the action has executed"
+        )
+    return None
+
+
+async def _requires_recovered_outcome(session: AsyncSession, case: RecoveryCase) -> str | None:
+    """Phase 7: closing a case as ``recovered`` requires that the latest
+    ``RecoveryOutcomeObservation`` for this case's current action actually
+    classified it as ``recovered`` -- from authoritative payment evidence,
+    never from an assumption that execution implies recovery. Checked from
+    inside ``observe_outcome``'s own transaction, after the observation
+    row has been flushed but not yet committed (ordinary Postgres
+    read-your-writes for this session), mirroring
+    ``_requires_decision_result`` exactly.
+    """
+    action = await _get_current_action(session, case)
+    if action is None:
+        return "no RecoveryAction exists for this case's approved decision"
+    latest: RecoveryOutcomeObservation | None = await session.scalar(
+        select(RecoveryOutcomeObservation)
+        .where(RecoveryOutcomeObservation.action_id == action.id)
+        .order_by(
+            RecoveryOutcomeObservation.attempt_no.desc(), RecoveryOutcomeObservation.id.desc()
+        )
+        .limit(1)
+    )
+    if latest is None:
+        return "no outcome has been observed for this case's action"
+    if latest.outcome != ObservedOutcome.RECOVERED.value:
+        return (
+            f"the latest observed outcome for this case is '{latest.outcome}', not "
+            "'recovered' -- a case may only close as recovered once authoritative "
+            "payment evidence supports it"
+        )
+    return None
+
+
 @dataclass(frozen=True)
 class Precondition:
     """The artifact a forward transition depends on."""
@@ -181,13 +260,13 @@ TRANSITION_PRECONDITIONS: dict[tuple[RecoveryCaseState, RecoveryCaseState], Prec
     ),
     (_S.ACTION_EXECUTED, _S.OBSERVING): Precondition(
         artifact="the executed action has been recorded and is awaiting outcome",
-        provided_by_phase="Phase 6",
-        checker=None,
+        provided_by_phase="Phase 7",
+        checker=_requires_executed_action,
     ),
     (_S.OBSERVING, _S.RECOVERED): Precondition(
         artifact="an observed successful payment event linked to this recovery case",
         provided_by_phase="Phase 7",
-        checker=None,
+        checker=_requires_recovered_outcome,
     ),
 }
 
