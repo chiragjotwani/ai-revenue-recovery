@@ -35,6 +35,7 @@ from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.decision.schema import DecisionStatus
+from app.models.action import RecoveryAction
 from app.models.decision import DecisionResult
 from app.models.diagnosis import Diagnosis
 from app.models.recovery import RecoveryCase, RecoveryCaseState
@@ -107,6 +108,36 @@ async def _requires_approved_decision(session: AsyncSession, case: RecoveryCase)
     return None
 
 
+async def _requires_scheduled_action(session: AsyncSession, case: RecoveryCase) -> str | None:
+    """Phase 6: executing an action requires that an action has actually
+    been scheduled (``app.decision.actions.schedule_action``) for this
+    case's current, policy-approved decision. Checked from inside
+    ``execute_action``'s own transaction, after the ``RecoveryAction`` row
+    was flushed in a prior transaction (ordinary Postgres read-your-writes
+    for this session) -- mirrors ``_requires_decision_result`` exactly.
+    """
+    diagnosis = await get_latest_diagnosis(session, case.id)
+    if diagnosis is None:
+        return "no persisted diagnosis exists for this case"
+    decision = await session.scalar(
+        select(DecisionResult)
+        .where(DecisionResult.case_id == case.id)
+        .where(DecisionResult.diagnosis_id == diagnosis.id)
+    )
+    if decision is None:
+        return "no DecisionResult exists for this case's current diagnosis"
+    count = await session.scalar(
+        select(func.count())
+        .select_from(RecoveryAction)
+        .where(RecoveryAction.case_id == case.id)
+        .where(RecoveryAction.action_type == decision.approved_strategy)
+        .where(RecoveryAction.decision_result_id == decision.id)
+    )
+    if not count:
+        return "no RecoveryAction exists for this case's approved decision"
+    return None
+
+
 @dataclass(frozen=True)
 class Precondition:
     """The artifact a forward transition depends on."""
@@ -146,7 +177,7 @@ TRANSITION_PRECONDITIONS: dict[tuple[RecoveryCaseState, RecoveryCaseState], Prec
     (_S.ACTION_SCHEDULED, _S.ACTION_EXECUTED): Precondition(
         artifact="an action/execution record for the scheduled action",
         provided_by_phase="Phase 6",
-        checker=None,
+        checker=_requires_scheduled_action,
     ),
     (_S.ACTION_EXECUTED, _S.OBSERVING): Precondition(
         artifact="the executed action has been recorded and is awaiting outcome",

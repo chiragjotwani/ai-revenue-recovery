@@ -12,6 +12,7 @@ import {
 } from "@/lib/api";
 import { BackendUnavailable, Panel, ScoreMeter, StatusPill } from "@/components/ui";
 import { DecidePanel } from "./decide-panel";
+import { ActionPanel } from "./action-panel";
 
 export async function generateMetadata({ params }: PageProps<"/recovery/[id]">) {
   const { id } = await params;
@@ -188,9 +189,19 @@ export default async function RecoveryCaseDetailPage({ params }: PageProps<"/rec
         <DecidePanel caseId={c.id} caseState={c.state} initialDecision={c.decision} />
       </Panel>
 
+      {/* ACTION SCHEDULING -> EXECUTION */}
+      <Panel title="5 · Action">
+        <ActionPanel
+          caseId={c.id}
+          caseState={c.state}
+          decisionStatus={c.decision?.decision_status ?? null}
+          initialAction={c.action}
+        />
+      </Panel>
+
       {/* RECOVERY STATUS -> OUTCOME */}
       <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-        <Panel title="5 · Recovery status">
+        <Panel title="6 · Recovery status">
           <ol className="flex flex-col gap-1.5 font-mono text-xs">
             {LIFECYCLE.map((state, i) => {
               const done = stepIndex >= 0 && i < stepIndex;
@@ -214,7 +225,7 @@ export default async function RecoveryCaseDetailPage({ params }: PageProps<"/rec
             </p>
           )}
         </Panel>
-        <Panel title="6 · Outcome">
+        <Panel title="7 · Outcome">
           {c.state === "recovered" ? (
             <p className="text-sm text-good">Recovered · closed {fmtTimestamp(c.closed_at ?? "")}</p>
           ) : isTerminal ? (

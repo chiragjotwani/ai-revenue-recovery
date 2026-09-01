@@ -72,7 +72,30 @@ class DecisionOut(BaseModel):
     created_at: datetime
 
 
+class ActionExecutionOut(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: uuid.UUID
+    attempt_no: int
+    idempotency_key: str
+    outcome: str
+    created_at: datetime
+
+
+class ActionOut(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: uuid.UUID
+    case_id: uuid.UUID
+    decision_result_id: uuid.UUID
+    action_type: str
+    status: str
+    created_at: datetime
+    executions: list[ActionExecutionOut] = []
+
+
 class RecoveryCaseDetail(RecoveryCaseOut):
     history: list[TransitionOut]
     diagnosis: DiagnosisOut | None = None
     decision: DecisionOut | None = None
+    action: ActionOut | None = None

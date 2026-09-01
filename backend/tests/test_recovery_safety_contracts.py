@@ -25,11 +25,12 @@ So this file has three parts:
 from __future__ import annotations
 
 import importlib.util
+import uuid
 from datetime import UTC, datetime, timedelta
 
 import pytest
 from httpx import AsyncClient
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.decision.schema import DecisionStatus
@@ -205,14 +206,73 @@ def test_contract_forbidden_action_is_policy_rejected() -> None:
     assert fraud.approved_strategy is not RecoveryStrategy.RETRY
 
 
-@pytest.mark.xfail(reason=_PHASE5, strict=False, raises=(ImportError, ModuleNotFoundError))
-def test_contract_duplicate_action_is_idempotent() -> None:
+async def test_contract_duplicate_action_is_idempotent(
+    client: AsyncClient, db_session: AsyncSession
+) -> None:
     """Scheduling the same action (same action-identity key) twice MUST
     return the existing action, never create or execute a second one.
-    """
-    from app.decision.actions import schedule_action  # noqa: F401
 
-    raise AssertionError("write the real assertion when action scheduling exists")
+    Implemented by Phase 6 (``app.decision.actions``): the unique
+    constraint on ``(case_id, action_type, decision_result_id)`` is the
+    authoritative idempotency mechanism (KI-008 discipline), not an
+    application-level pre-check.
+    """
+    from app.models.action import RecoveryAction
+
+    base = datetime(2026, 7, 1, tzinfo=UTC)
+    for i in range(3):
+        await client.post(
+            "/events",
+            json={
+                "idempotency_key": f"dup-s{i}",
+                "event_type": "payment.succeeded",
+                "source": "test",
+                "occurred_at": (base - timedelta(days=30 - i)).isoformat(),
+                "customer": {"external_id": "dup-cust", "email": "dup@e.com"},
+                "payment": {
+                    "external_reference": f"dup-s{i}",
+                    "amount": "4999.00",
+                    "currency": "inr",
+                },
+            },
+        )
+    payment = (
+        await client.post(
+            "/events",
+            json={
+                "idempotency_key": "dup-f",
+                "event_type": "payment.failed",
+                "source": "test",
+                "occurred_at": base.isoformat(),
+                "customer": {"external_id": "dup-cust", "email": "dup@e.com"},
+                "payment": {
+                    "external_reference": "dup-f",
+                    "amount": "4999.00",
+                    "currency": "inr",
+                    "failure_reason": "insufficient_funds",
+                },
+            },
+        )
+    ).json()
+
+    case_id = (
+        await client.post("/recovery/cases", json={"payment_id": payment["payment_id"]})
+    ).json()["id"]
+    assert (await client.post(f"/recovery/cases/{case_id}/diagnose")).status_code == 200
+    assert (await client.post(f"/recovery/cases/{case_id}/decide")).status_code == 200
+
+    first = await client.post(f"/recovery/cases/{case_id}/schedule-action")
+    second = await client.post(f"/recovery/cases/{case_id}/schedule-action")
+    assert first.status_code == 200
+    assert second.status_code == 200
+    assert first.json()["id"] == second.json()["id"]
+
+    row_count = await db_session.scalar(
+        select(func.count())
+        .select_from(RecoveryAction)
+        .where(RecoveryAction.case_id == uuid.UUID(case_id))
+    )
+    assert row_count == 1
 
 
 def test_contract_already_recovered_customer_routes_to_no_action() -> None:

@@ -106,6 +106,74 @@ class IllegalStateTransitionError(DomainError):
         super().__init__(f"Illegal recovery case transition: {from_state} -> {to_state}.")
 
 
+class CaseNotSchedulableError(DomainError):
+    """Raised when scheduling an action is requested for a case that is not
+    in a state where scheduling is valid (only ``decision_pending``, and
+    only when its decision exists -- Phase 6).
+    """
+
+    def __init__(self, state: object) -> None:
+        self.state = state
+        super().__init__(
+            f"Recovery case is in state {state!r}; an action can only be scheduled "
+            "from 'decision_pending'."
+        )
+
+
+class NoApprovedDecisionError(DomainError):
+    """Raised when a case is in ``decision_pending`` but no persisted
+    ``DecisionResult`` can be found for its current diagnosis. Should not
+    occur under the normal state machine (a case can only reach
+    ``decision_pending`` via a persisted decision --
+    ``app/recovery/preconditions.py``); this is a defensive check, not an
+    expected path.
+    """
+
+    def __init__(self, case_id: object) -> None:
+        self.case_id = case_id
+        super().__init__(f"Recovery case {case_id!r} has no decision to schedule an action for.")
+
+
+class DecisionNotApprovedError(DomainError):
+    """Raised when scheduling an action is attempted against a decision
+    that is not ``approved`` (Phase 6). An escalated or rejected decision
+    must never reach action scheduling -- that would bypass the policy
+    engine's own verdict (ADR-003).
+    """
+
+    def __init__(self, decision_status: object) -> None:
+        self.decision_status = decision_status
+        super().__init__(
+            f"Decision status is {decision_status!r}, not 'approved'; an action can only "
+            "be scheduled for an approved decision."
+        )
+
+
+class CaseNotExecutableError(DomainError):
+    """Raised when executing an action is requested for a case that is not
+    in a state where execution is valid (only ``action_scheduled``, Phase
+    6).
+    """
+
+    def __init__(self, state: object) -> None:
+        self.state = state
+        super().__init__(
+            f"Recovery case is in state {state!r}; an action can only be executed "
+            "from 'action_scheduled'."
+        )
+
+
+class NoScheduledActionError(DomainError):
+    """Raised when a case is in ``action_scheduled`` but no persisted
+    ``RecoveryAction`` can be found for its current decision. Defensive --
+    should not occur under the normal state machine.
+    """
+
+    def __init__(self, case_id: object) -> None:
+        self.case_id = case_id
+        super().__init__(f"Recovery case {case_id!r} has no scheduled action to execute.")
+
+
 class TransitionPreconditionError(DomainError):
     """Raised when a transition is shape-legal but the artifact it depends
     on does not exist yet (e.g. moving to ``diagnosed`` with no persisted

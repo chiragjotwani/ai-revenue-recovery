@@ -107,10 +107,29 @@ export type Decision = {
   created_at: string;
 };
 
+export type ActionExecution = {
+  id: string;
+  attempt_no: number;
+  idempotency_key: string;
+  outcome: string;
+  created_at: string;
+};
+
+export type Action = {
+  id: string;
+  case_id: string;
+  decision_result_id: string;
+  action_type: string;
+  status: "scheduled" | "executed" | "failed";
+  created_at: string;
+  executions: ActionExecution[];
+};
+
 export type RecoveryCaseDetail = RecoveryCase & {
   history: Transition[];
   diagnosis: Diagnosis | null;
   decision: Decision | null;
+  action: Action | null;
 };
 
 // ---- domain helpers ----
@@ -135,6 +154,12 @@ export function decisionSeverity(status: DecisionStatus): "good" | "warn" | "cri
   if (status === "escalated") return "warn";
   if (status === "rejected") return "critical";
   return "neutral"; // superseded
+}
+
+export function actionStatusSeverity(status: string): "good" | "warn" | "critical" | "neutral" {
+  if (status === "executed") return "good";
+  if (status === "failed") return "critical";
+  return "neutral"; // scheduled
 }
 
 export function caseSeverity(state: string): "good" | "warn" | "critical" | "neutral" {
