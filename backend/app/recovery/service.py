@@ -22,6 +22,8 @@ from app.core.errors import (
     RecoveryCaseNotFoundError,
     TransitionPreconditionError,
 )
+from app.events.publisher import outbox_publisher
+from app.events.schema import DomainEvent
 from app.models.payment import Payment, PaymentStatus
 from app.models.recovery import RecoveryCase, RecoveryCaseState, RecoveryCaseTransition
 from app.recovery import preconditions
@@ -104,6 +106,20 @@ async def open_case(
                 actor=actor,
             )
         )
+        await outbox_publisher.publish(
+            session,
+            DomainEvent(
+                event_type="recovery_case.opened",
+                aggregate_id=case.id,
+                aggregate_type="recovery_case",
+                payload={
+                    "payment_id": str(payment.id),
+                    "customer_id": str(payment.customer_id),
+                    "state": INITIAL_STATE.value,
+                    "actor": actor,
+                },
+            ),
+        )
         await session.commit()
     except IntegrityError:
         await session.rollback()
@@ -161,6 +177,20 @@ async def transition_case(
     case.state = to_state
     if is_terminal(to_state):
         case.closed_at = datetime.now(UTC)
+    await outbox_publisher.publish(
+        session,
+        DomainEvent(
+            event_type="recovery_case.transitioned",
+            aggregate_id=case.id,
+            aggregate_type="recovery_case",
+            payload={
+                "from_state": from_state.value,
+                "to_state": to_state.value,
+                "reason": reason,
+                "actor": actor,
+            },
+        ),
+    )
     await session.commit()
     await session.refresh(case)
     return case

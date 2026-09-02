@@ -2,9 +2,9 @@
 
 ## Current Phase
 
-Phase 11 — Historical Recovery Intelligence (scoped): implementation and
-verification complete, **frozen**. Phases 4.1, 5, 6, 7, 8, 9, and 10 are
-also frozen. Phases 0–2 remain frozen (`docs/phase-0-2-freeze.md`).
+Phase 12 — Asynchronous Event Architecture: implementation and
+verification complete, **frozen**. Phases 4.1, 5, 6, 7, 8, 9, 10, and 11
+are also frozen. Phases 0–2 remain frozen (`docs/phase-0-2-freeze.md`).
 
 Owner decisions recorded:
 - 2026-08-27: Phase 3 follows the frozen contract (Recovery Case
@@ -93,10 +93,35 @@ Owner decisions recorded:
   (does it rank matching-disposition/outcome cases higher?), never a
   claim about improved diagnosis accuracy (KI-007 applies with equal
   force here, same as Phase 5H/9's own evaluation harnesses).
+- 2026-09-02: Phase 12 (Asynchronous Event Architecture) built on top of
+  ADR-002's own forward reference ("see Phase 12 for the point at which
+  async/event infrastructure is introduced") -- resolving the apparent
+  Kafka-vs-modular-monolith tension by construction rather than by
+  picking a side: the backend stays one deployable service; Kafka is an
+  audit/integration bus only and never a trigger for domain logic (see
+  ADR-007). An outbox pattern (`domain_events`, written in the same
+  transaction as the state change it describes, via
+  `app.recovery.service.open_case`/`transition_case` -- the single
+  choke point for every case state change) avoids an unsafe dual-write
+  between Postgres and Kafka. Idempotent consumption
+  (`processed_events`, unique on `(event_id, consumer_group)`, same
+  KI-008 DB-authoritative discipline as every prior phase) plus bounded
+  retry and dead-lettering (`dead_letter_events`) mean a redelivered or
+  failing event never duplicates a business effect and never retries
+  forever. The one wired consumer, `EventAuditProjector`, is
+  deliberately read-only (a structured log line, no database write, no
+  domain-service call) -- it cannot duplicate a business effect no
+  matter how many times it is redelivered, by construction. Verified
+  live end-to-end via `docker compose` (not just unit tests): a real
+  `POST /recovery/cases` call produced an outbox row, the relay
+  (`scripts/event_relay.py`) published it to a real single-node KRaft
+  Kafka broker, and the consumer (`scripts/event_consumer.py`) consumed
+  and processed it (`outcome=handled attempts=1`), with `published_at`
+  and the `processed_events` marker both confirmed via `psql`.
 
 ## Current Stage
 
-N/A — Phase 11 closed. No Phase 12 started.
+N/A — Phase 12 closed. No Phase 13 started.
 
 ## Completed Phases
 
@@ -117,6 +142,46 @@ N/A — Phase 11 closed. No Phase 12 started.
 - Phase 11 — Historical Recovery Intelligence (scoped: deterministic
   structured-feature retrieval, no neural embeddings, no diagnosis-prompt
   change; frozen)
+- Phase 12 — Asynchronous Event Architecture (outbox + Kafka audit/
+  integration bus, no domain-logic trigger; frozen)
+
+## Completed Stages (Phase 12)
+
+Event architecture (`app/events/`, `scripts/event_relay.py`,
+`scripts/event_consumer.py`, migration `c2d8f6a91e53`, ADR-007). Four
+parts:
+
+1. **Contract** (`app/events/schema.py`) — `DomainEvent`: `event_id`,
+   `event_type`, `aggregate_id`, `aggregate_type`, `occurred_at`,
+   `schema_version`, `source`, `correlation_id` (defaults to
+   `aggregate_id` via `resolved_correlation_id()`), `payload` (bounded,
+   typed fields only — never raw AI free text, never a raw ORM row).
+2. **Outbox publication** (`app/events/publisher.py`,
+   `app.recovery.service.open_case`/`transition_case`) —
+   `OutboxEventPublisher.publish()` writes to the `domain_events` table
+   inside the caller's own transaction, never opens or commits its own;
+   an event is durable exactly when, and only when, the state change it
+   describes is.
+3. **Relay** (`scripts/event_relay.py`) — polls unpublished rows (partial
+   index `ix_domain_events_unpublished`), publishes to Kafka keyed by
+   `aggregate_id`, marks `published_at` only after a Kafka ack; if Kafka
+   is down the outbox just grows and requests keep succeeding.
+4. **Idempotent/retried/dead-lettered consumption**
+   (`app/events/consumer.py`, `app/events/handlers.py`,
+   `scripts/event_consumer.py`) — `process_event()` is DB-authoritative
+   idempotent (`processed_events`, unique on `(event_id,
+   consumer_group)`), retries a failing handler up to
+   `settings.event_consumer_max_attempts` times, and dead-letters
+   (`dead_letter_events`, with `error`/`attempts`) rather than retrying
+   forever or silently dropping. The wired handler,
+   `EventAuditProjector`, is read-only by design (a structured log line)
+   so it cannot duplicate a business effect on redelivery.
+
+Explicitly NOT done, by design: no domain service subscribes to Kafka to
+trigger further domain logic (ADR-007 forbids this — it would reopen the
+unsafe-dual-write/duplicate-effect problem the outbox exists to close);
+Kafka availability never affects request-serving (`KafkaUnavailableError`
+only affects the relay/consumer processes).
 
 ## Completed Stages (Phase 11)
 
@@ -628,6 +693,10 @@ See `docs/known-issues.md`.
   `app/retrieval/schema.py`'s module docstring — not a defect, the same
   scoped-and-disclosed-omission discipline as Phase 9/10, extended to the
   retrieval layer.
+- Phase 12: no new known issue introduced. KI-010 (no dedicated test
+  database) remains open and applies equally to the new Phase 12 test
+  file — `tests/test_events.py` was run against the same ad hoc
+  `arr_test_db` as every other suite this session.
 
 ## Architecture Decisions
 
@@ -637,8 +706,33 @@ See `docs/known-issues.md`.
 - ADR-004: Explicit recovery state machine with an append-only transition log
 - ADR-005: Diagnosis output — two layers, derived disposition, everything versioned
 - ADR-006: Model confidence is not a deterministic policy threshold (Phase 5)
+- ADR-007: Asynchronous event architecture — outbox pattern, Kafka as an
+  audit/integration bus only, never a domain-logic trigger (Phase 12)
 
 ## Last Successful Verification
+
+2026-09-02 Phase 12 (Asynchronous Event Architecture) complete (this
+session). Backend: full suite **688 passed, 8 skipped (pre-existing), 1
+xfailed (KI-006), 0 failed** against the isolated `arr_test_db`,
+including 14 new Phase 12 tests (outbox writes on case-open/transition,
+idempotent redelivery, retry-then-succeed, retry-exhaustion → dead
+letter, correlation-id defaulting, publisher no-commit semantics, Kafka
+transport unconfigured-broker edges). `ruff check`, `ruff format
+--check`, `mypy app scripts` (89 files) all clean. Migration
+`c2d8f6a91e53` applied cleanly to both the dev DB and `arr_test_db`.
+Docker: `kafka` (single-node KRaft, `apache/kafka:3.8.0`) came up
+healthy; `backend`/`event-relay`/`event-consumer` images rebuilt after
+fixing a real defect the build surfaced (aiokafka's optional C
+speedup extension needs `gcc`/`libc6-dev`/`zlib1g-dev`, absent from the
+`python:3.13-slim` base — added to the Dockerfile, removed again after
+`pip install` to keep the runtime image slim). Full live end-to-end
+verification (not just unit tests): `POST /events` +
+`POST /recovery/cases` against the running `backend` container wrote a
+real `domain_events` row; `event-relay` published it to the real Kafka
+broker and set `published_at`; `event-consumer` consumed it
+(`outcome=handled attempts=1`, confirmed in its logs) and wrote the
+`processed_events` idempotency marker — both confirmed directly via
+`psql` against the dev database. No Phase 13/14 code was introduced.
 
 2026-09-02 Phase 11 (Historical Recovery Intelligence, scoped) complete
 (this session). Backend: full suite **674 passed, 8 skipped
@@ -804,8 +898,9 @@ The Phase 0–2 freeze gate detail remains in `docs/phase-0-2-freeze.md`.
 
 ## Last Git Commit
 
-`phase-4: implement AI recovery diagnosis` — see `git log`.
-(Preceded by `phase-3: …` and `freeze: phases 0-2 verified`.)
+`phase-12: implement scalable event architecture` — see `git log`.
+(Preceded by `phase-11: implement historical recovery intelligence` and
+every phase back to `freeze: phases 0-2 verified`.)
 
 ## Process Note
 

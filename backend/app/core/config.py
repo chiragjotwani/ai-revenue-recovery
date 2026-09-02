@@ -35,6 +35,18 @@ class Settings(BaseSettings):
     ai_nemotron_model: str = "nemotron-mini"
     ai_request_timeout_seconds: float = 60.0
 
+    # --- Async event architecture (Phase 12, ADR-007) ---
+    # When unset, the relay/consumer scripts cannot connect and log that
+    # fact rather than silently doing nothing -- the outbox pattern means
+    # domain writes (app/events/publisher.py::OutboxEventPublisher) never
+    # depend on Kafka being reachable at all; only the relay does.
+    kafka_bootstrap_servers: str | None = None
+    kafka_domain_events_topic: str = "arr.domain-events"
+    kafka_consumer_group: str = "arr-event-audit-projector"
+    # Bounded retry before a consumed event is routed to the dead-letter
+    # table (ADR-007) -- not an infinite retry loop, not a silent drop.
+    event_consumer_max_attempts: int = 5
+
     @property
     def is_production(self) -> bool:
         return self.environment.lower() == "production"
