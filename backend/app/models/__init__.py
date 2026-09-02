@@ -4,6 +4,7 @@ from app.models.action import (
     RecoveryActionExecution,
     RecoveryActionStatus,
 )
+from app.models.case_feature_vector import CaseFeatureVector
 from app.models.customer import Customer
 from app.models.decision import DecisionResult
 from app.models.diagnosis import Diagnosis
@@ -15,6 +16,7 @@ from app.models.recovery import RecoveryCase, RecoveryCaseState, RecoveryCaseTra
 
 __all__ = [
     "ActionExecutionOutcome",
+    "CaseFeatureVector",
     "Customer",
     "DecisionResult",
     "Diagnosis",

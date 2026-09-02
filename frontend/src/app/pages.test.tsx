@@ -5,12 +5,21 @@ import RecoveryCaseDetailPage from "./recovery/[id]/page";
 
 type Route = string;
 
-/** Route-aware fetch stub: map URL suffix -> [status, body]. */
+/** Route-aware fetch stub: map URL suffix -> [status, body]. Prefers a key
+ * the URL actually ENDS WITH (a specific leaf endpoint, e.g.
+ * "/similar-cases") over one it merely CONTAINS (a broad prefix, e.g.
+ * "/recovery/cases/") -- otherwise the prefix key would swallow every
+ * more-specific sub-route that happens to contain it as a substring,
+ * regardless of insertion order. Falls back to substring containment
+ * (longest match) only when no key is an exact suffix. */
 function stubRoutes(routes: Record<Route, [number, unknown]>): void {
   vi.stubGlobal(
     "fetch",
     vi.fn(async (url: string) => {
-      const match = Object.keys(routes).find((r) => url.includes(r));
+      const keys = Object.keys(routes);
+      const suffixMatches = keys.filter((r) => url.endsWith(r));
+      const pool = suffixMatches.length > 0 ? suffixMatches : keys.filter((r) => url.includes(r));
+      const match = pool.sort((a, b) => b.length - a.length)[0];
       const [status, body] = match ? routes[match] : [404, {}];
       return {
         ok: status >= 200 && status < 300,
@@ -253,6 +262,7 @@ describe("RecoveryCaseDetailPage (BUG-004: invalid id vs backend down)", () => {
         },
       ],
       "/risk/payments": [200, PAYMENTS],
+      "/similar-cases": [200, []],
     });
     render(await RecoveryCaseDetailPage(detailProps(CASES[0].id)));
 
@@ -260,6 +270,57 @@ describe("RecoveryCaseDetailPage (BUG-004: invalid id vs backend down)", () => {
     expect(screen.getByText(/model-reported confidence/i)).toBeInTheDocument();
     expect(screen.getByText(/mock diagnosis/i)).toBeInTheDocument(); // provenance
     expect(screen.getByText(/advisory only/i)).toBeInTheDocument();
+  });
+
+  it("shows similar past cases as deterministic advisory info, never a prediction (Phase 11)", async () => {
+    const otherCaseId = "9d6f2b6a-9f2c-4c3f-8a2a-2f2f2f2f2f2f";
+    stubRoutes({
+      "/recovery/cases/": [
+        200,
+        {
+          ...CASES[0],
+          history: [],
+          diagnosis: {
+            outcome: "insufficient_funds",
+            disposition: "retriable_transient",
+            confidence: 0.9,
+            reasoning: "x",
+            recommended_strategy: "retry",
+            recommended_delay_hours: 6,
+            model_name: "mock",
+            model_version: "1",
+            prompt_version: "diagnosis_prompt_v2",
+            schema_version: "1",
+            latency_ms: 0,
+            created_at: "2026-08-28T14:01:49Z",
+          },
+        },
+      ],
+      "/risk/payments": [200, PAYMENTS],
+      "/similar-cases": [
+        200,
+        [
+          {
+            case_id: otherCaseId,
+            diagnosis_id: "d2",
+            similarity: 0.87,
+            disposition: "retriable_transient",
+            outcome: "insufficient_funds",
+            approved_strategy: "retry",
+            decision_status: "approved",
+            observed_outcome: "recovered",
+          },
+        ],
+      ],
+    });
+    render(await RecoveryCaseDetailPage(detailProps(CASES[0].id)));
+
+    expect(screen.getByText(/similar past cases/i)).toBeInTheDocument();
+    expect(screen.getByText("87%")).toBeInTheDocument();
+    expect(screen.getByText(otherCaseId.slice(0, 8))).toBeInTheDocument();
+    expect(screen.getByText(/not a learned\/neural embedding/i)).toBeInTheDocument();
+    // Never implies retrieval predicts this case's own outcome.
+    expect(screen.queryByText(/predicts this case/i)).not.toBeInTheDocument();
   });
 
   it("renders a real decision (Phase 5F) on the case detail page", async () => {

@@ -9,6 +9,7 @@ import {
   TERMINAL_STATES,
   type RecoveryCaseDetail,
   type RiskAssessment,
+  type SimilarCase,
 } from "@/lib/api";
 import { BackendUnavailable, Panel, ScoreMeter, StatusPill } from "@/components/ui";
 import { DecidePanel } from "./decide-panel";
@@ -48,6 +49,11 @@ export default async function RecoveryCaseDetailPage({ params }: PageProps<"/rec
   const c = caseRes.data;
   const risk = paymentsRes.ok
     ? paymentsRes.data.find((p) => p.payment_id === c.payment_id) ?? null
+    : null;
+  // Only fetched once diagnosed -- the endpoint 409s otherwise, and there
+  // is nothing to retrieve against before then.
+  const similarRes = c.diagnosis
+    ? await apiGet<SimilarCase[]>(`/recovery/cases/${id}/similar-cases`)
     : null;
   const isTerminal = TERMINAL_STATES.has(c.state);
   const stepIndex = LIFECYCLE.indexOf(c.state as (typeof LIFECYCLE)[number]);
@@ -184,6 +190,83 @@ export default async function RecoveryCaseDetailPage({ params }: PageProps<"/rec
           </p>
         )}
       </Panel>
+
+      {/* SIMILAR PAST CASES (Phase 11 -- advisory only, deterministic
+          structured-feature similarity, never a learned embedding or a
+          prediction; never feeds back into the diagnosis pipeline) */}
+      {similarRes && (
+        <Panel title="Similar past cases">
+          {similarRes.ok ? (
+            similarRes.data.length === 0 ? (
+              <p className="text-sm text-text-muted">
+                No other diagnosed cases yet to compare against.
+              </p>
+            ) : (
+              <div className="flex flex-col gap-3">
+                <div className="overflow-x-auto">
+                  <table className="w-full border-collapse text-left text-sm">
+                    <caption className="sr-only">
+                      Historical cases ranked by structured-feature similarity
+                    </caption>
+                    <thead>
+                      <tr className="border-b border-border font-mono text-[11px] uppercase tracking-wide text-text-dim">
+                        <th scope="col" className="py-2 pr-4 font-medium">
+                          Case
+                        </th>
+                        <th scope="col" className="py-2 pr-4 font-medium">
+                          Similarity
+                        </th>
+                        <th scope="col" className="py-2 pr-4 font-medium">
+                          Outcome
+                        </th>
+                        <th scope="col" className="py-2 pr-4 font-medium">
+                          Strategy
+                        </th>
+                        <th scope="col" className="py-2 font-medium">
+                          What happened
+                        </th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {similarRes.data.map((s) => (
+                        <tr key={s.case_id} className="border-b border-border/60">
+                          <td className="py-2 pr-4">
+                            <Link
+                              href={`/recovery/${s.case_id}`}
+                              className="font-mono text-xs text-signal hover:underline"
+                            >
+                              {s.case_id.slice(0, 8)}
+                            </Link>
+                          </td>
+                          <td className="tabular py-2 pr-4 font-mono text-xs">
+                            {(s.similarity * 100).toFixed(0)}%
+                          </td>
+                          <td className="py-2 pr-4 text-text-muted">
+                            {s.outcome.replace(/_/g, " ")}
+                          </td>
+                          <td className="py-2 pr-4 text-text-muted">
+                            {s.approved_strategy?.replace(/_/g, " ") ?? "—"}
+                          </td>
+                          <td className="py-2 text-text-muted">
+                            {s.observed_outcome?.replace(/_/g, " ") ?? "unresolved / not yet observed"}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+                <p className="text-xs text-text-dim">
+                  Ranked by deterministic structured-feature similarity (disposition, outcome,
+                  evidence signals, amount) -- not a learned/neural embedding, not a prediction of
+                  this case&apos;s outcome. Advisory only.
+                </p>
+              </div>
+            )
+          ) : (
+            <p className="text-sm text-text-muted">Similar-case retrieval is unavailable.</p>
+          )}
+        </Panel>
+      )}
 
       {/* POLICY DECISION */}
       <Panel title="4 · Decision">

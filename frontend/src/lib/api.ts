@@ -147,6 +147,21 @@ export type Measurement = {
   measured_at: string;
 };
 
+// ---- Phase 11: historical case retrieval (scoped -- see backend
+// app/retrieval/schema.py: deterministic structured-feature similarity,
+// never a learned/neural embedding, never a prediction) ----
+
+export type SimilarCase = {
+  case_id: string;
+  diagnosis_id: string;
+  similarity: number;
+  disposition: string;
+  outcome: string;
+  approved_strategy: string | null;
+  decision_status: string | null;
+  observed_outcome: ObservedOutcome | null;
+};
+
 export type RecoveryCaseDetail = RecoveryCase & {
   history: Transition[];
   diagnosis: Diagnosis | null;

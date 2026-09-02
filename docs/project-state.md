@@ -2,9 +2,9 @@
 
 ## Current Phase
 
-Phase 10 — AI Model Routing & Reliability (scoped): implementation and
-verification complete, **frozen**. Phases 4.1, 5, 6, 7, 8, and 9 are also
-frozen. Phases 0–2 remain frozen (`docs/phase-0-2-freeze.md`).
+Phase 11 — Historical Recovery Intelligence (scoped): implementation and
+verification complete, **frozen**. Phases 4.1, 5, 6, 7, 8, 9, and 10 are
+also frozen. Phases 0–2 remain frozen (`docs/phase-0-2-freeze.md`).
 
 Owner decisions recorded:
 - 2026-08-27: Phase 3 follows the frozen contract (Recovery Case
@@ -72,10 +72,31 @@ Owner decisions recorded:
   escalation is durably recorded on the diagnosis row itself
   (`Diagnosis.router_escalated` / `.router_escalation_reason`, migration
   `9a3e7b5c1d24`) rather than only in a transient log line.
+- 2026-09-02: Phase 11 scoped by explicit owner decision (asked
+  mid-session via AskUserQuestion, given the same class of tension Phase
+  9/10 both hit): the master plan (`docs/master-loop-engineering-prompt.md`,
+  Section 30) calls for "embeddings," "historical case retrieval," "vector
+  storage," "similarity search," "retrieval context," and "retrieval
+  evaluation." All six are implemented, but "embeddings" are DETERMINISTIC
+  STRUCTURED-FEATURE VECTORS (`app/retrieval/embedding.py`) -- a one-hot/
+  normalized encoding of a case's disposition, outcome, confidence, risk
+  features, and payment amount -- never a learned/neural embedding. No
+  embedding-model endpoint exists anywhere in this repository (the same
+  infrastructure gap KI-002 already documents for the reasoning-model
+  layer). "Retrieval context" is scoped to a read-only, operator-facing
+  "similar past cases" endpoint/panel -- it deliberately does NOT modify
+  Phase 4's frozen diagnosis prompt/context-builder pipeline (no new
+  prompt version, no change to the four-layer prompt-injection boundary),
+  since historical-case retrieval and similarity search are fully
+  realizable without reopening that frozen pipeline. "Retrieval
+  evaluation" is a correctness check of the ranking mechanism itself
+  (does it rank matching-disposition/outcome cases higher?), never a
+  claim about improved diagnosis accuracy (KI-007 applies with equal
+  force here, same as Phase 5H/9's own evaluation harnesses).
 
 ## Current Stage
 
-N/A — Phase 10 closed. No Phase 11 started.
+N/A — Phase 11 closed. No Phase 12 started.
 
 ## Completed Phases
 
@@ -93,6 +114,55 @@ N/A — Phase 10 closed. No Phase 11 started.
   frozen)
 - Phase 10 — AI Model Routing & Reliability (scoped: failure-based routing
   only, no confidence routing; frozen)
+- Phase 11 — Historical Recovery Intelligence (scoped: deterministic
+  structured-feature retrieval, no neural embeddings, no diagnosis-prompt
+  change; frozen)
+
+## Completed Stages (Phase 11)
+
+Historical Case Retrieval (`app/retrieval/`, migration `b1c4e9a72f38`).
+Three parts:
+
+* **Deterministic "embeddings"** (`app/retrieval/embedding.py::compute_case_features`)
+  -- a pure function (no randomness, no external call, no model) over a
+  case's already-recorded disposition/outcome (one-hot), model-reported
+  confidence, consecutive failures and historical success rate (reused
+  verbatim from `app.risk.features.compute_risk_features`, not
+  re-derived), and log-scaled payment amount. Explicitly NOT a learned/
+  neural embedding -- no embedding-model endpoint exists in this
+  repository, the same infrastructure gap KI-002 documents for the
+  reasoning-model layer.
+* **Vector storage & similarity search** (`CaseFeatureVector`, one row
+  per `(case_id, diagnosis_id)` -- mirrors `DecisionResult`'s identity
+  shape; plain-Python cosine similarity, no `pgvector`/new DB extension).
+  `ensure_case_features` is idempotent (KI-008 discipline: flush ->
+  `IntegrityError` -> rollback -> recheck). `find_similar_cases` lazily
+  backfills every other diagnosed case's vector on first use as a
+  candidate -- a real bug (candidates were never populated, so retrieval
+  always returned empty) was found and fixed by the session's own
+  retrieval-correctness test before this shipped.
+* **Retrieval context, scoped** -- `GET /recovery/cases/{id}/similar-cases`
+  is a read-only, operator-facing "similar past cases" lookup. It does
+  NOT modify Phase 4's frozen diagnosis prompt/context-builder pipeline
+  (no new prompt version, no change to the four-layer prompt-injection
+  boundary `tests/test_ai_prompt_injection.py` already covers) --
+  historical-case retrieval and similarity search are fully realizable
+  without reopening that frozen pipeline, so this module does not.
+
+"Retrieval evaluation" is a correctness check of the ranking mechanism
+(`test_matching_disposition_and_outcome_ranks_above_a_dissimilar_case`),
+never a claim about improved diagnosis accuracy -- KI-007 applies with
+equal force here. Frontend: a new "Similar past cases" panel on the
+case-detail page (only fetched once a case is diagnosed), reusing
+existing table/`Panel` conventions, explicitly labeled "not a learned/
+neural embedding, not a prediction of this case's outcome. Advisory
+only." A real test-infrastructure bug in the frontend's route-stub
+matcher was found and fixed in the same pass: a broad stubbed key like
+`"/recovery/cases/"` was swallowing the more specific `.../similar-cases`
+sub-route via substring matching regardless of insertion order; the
+matcher now prefers an exact URL-suffix match. Tests:
+`test_case_retrieval.py`, 9 backend tests (stable across 3 repeated
+runs) + 1 new frontend test, zero regressions in the full suite.
 
 ## Completed Stages (Phase 10)
 
@@ -552,6 +622,12 @@ See `docs/known-issues.md`.
   decision above and `app/ai/providers/router.py`'s module docstring —
   not a defect, a scoped and disclosed omission extending ADR-006's own
   discipline to the model-routing layer.
+- Phase 11: no new known issue introduced. Real neural embeddings from
+  the master plan's Phase 11 definition are deliberately not implemented
+  — see the 2026-09-02 owner decision above and
+  `app/retrieval/schema.py`'s module docstring — not a defect, the same
+  scoped-and-disclosed-omission discipline as Phase 9/10, extended to the
+  retrieval layer.
 
 ## Architecture Decisions
 
@@ -563,6 +639,27 @@ See `docs/known-issues.md`.
 - ADR-006: Model confidence is not a deterministic policy threshold (Phase 5)
 
 ## Last Successful Verification
+
+2026-09-02 Phase 11 (Historical Recovery Intelligence, scoped) complete
+(this session). Backend: full suite **674 passed, 8 skipped
+(pre-existing), 1 xfailed (KI-006), 0 failed**, run against the isolated
+`arr_test_db`; `test_case_retrieval.py` (9) stable across 3 repeated
+runs, including a genuine implementation bug found and fixed mid-session
+(candidate cases' feature vectors were never populated, so retrieval
+always returned empty -- fixed by lazily backfilling every other
+diagnosed case's vector on first use). `ruff check`, `ruff format
+--check`, `mypy app` (76 files) all clean. Migration `b1c4e9a72f38`
+(additive: new `case_feature_vectors` table) upgrade/downgrade/upgrade
+roundtrip clean on both the dev and isolated DB, `alembic check` clean,
+single head. Frontend: `vitest` 63/63 (a real test-infrastructure bug in
+the route-stub matcher was also found and fixed in this pass -- see
+Completed Stages below), `eslint` clean, `tsc --noEmit` clean, `next
+build` clean. Real end-to-end verification: seeded three diagnosed cases
+through the live API (two similar, one dissimilar), confirmed
+`GET /recovery/cases/{id}/similar-cases` ranked the similar case above
+the dissimilar one with real computed similarity scores, and confirmed
+the case-detail page's "Similar past cases" panel rendered them correctly
+with no console errors. No Phase 12 code was introduced.
 
 2026-09-02 Phase 10 (AI Model Routing & Reliability, scoped) complete
 (this session). Backend: full suite **665 passed, 8 skipped

@@ -30,6 +30,8 @@ from app.measurement.service import get_measurement_for_case, measure_case
 from app.models.recovery import RecoveryCaseState
 from app.outcome.service import get_outcome_for_case, observe_outcome
 from app.recovery import service
+from app.retrieval.schema import SimilarCase
+from app.retrieval.service import NoFeaturesAvailableError, find_similar_cases
 from app.schemas.recovery import (
     ActionOut,
     DecisionOut,
@@ -374,3 +376,27 @@ async def measure_recovery_case(
         raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=str(exc)) from exc
 
     return MeasurementOut.model_validate(row)
+
+
+@router.get("/cases/{case_id}/similar-cases", response_model=list[SimilarCase])
+async def get_similar_recovery_cases(
+    case_id: UUID,
+    session: AsyncSession = Depends(get_db_session),
+) -> list[SimilarCase]:
+    """The most similar historical cases to this one (Phase 11), ranked by
+    deterministic structured-feature similarity -- NOT a learned/neural
+    embedding, NOT a prediction of this case's outcome. Advisory
+    information only: this endpoint never schedules or executes an
+    action, never changes a decision, and never feeds anything back into
+    the Phase 4 diagnosis pipeline.
+
+    - ``404`` unknown case.
+    - ``409`` the case has no diagnosis yet (nothing to compute features
+      from).
+    """
+    try:
+        return await find_similar_cases(session, case_id)
+    except RecoveryCaseNotFoundError as exc:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(exc)) from exc
+    except NoFeaturesAvailableError as exc:
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=str(exc)) from exc
