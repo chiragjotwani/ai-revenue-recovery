@@ -115,6 +115,46 @@ describe("OverviewPage (dashboard)", () => {
     expect(screen.queryByText(/ai generated/i)).not.toBeInTheDocument();
     expect(screen.queryByText(/incremental/i)).not.toBeInTheDocument();
   });
+
+  it("shows strategy analytics as an observed frequency, never a prediction (Phase 9)", async () => {
+    stubRoutes({
+      "/health": [200, { status: "ok", environment: "development" }],
+      "/risk/summary": [200, SUMMARY],
+      "/risk/payments": [200, PAYMENTS],
+      "/recovery/cases": [200, CASES],
+      "/analytics/strategy-report": [
+        200,
+        {
+          dataset_size: 2,
+          low_sample_threshold: 5,
+          by_strategy: [
+            {
+              key: "retry",
+              total_case_count: 2,
+              observed_count: 2,
+              recovered_count: 1,
+              not_recovered_count: 1,
+              unresolved_count: 0,
+              empirical_recovery_rate: 0.5,
+              low_sample: true,
+            },
+          ],
+          by_disposition: [],
+          ml_model_status: "not_implemented",
+          ml_model_limitation: "No ML recovery-probability model or strategy optimizer is implemented.",
+        },
+      ],
+    });
+    render(await OverviewPage());
+
+    expect(screen.getByText(/strategy analytics/i)).toBeInTheDocument();
+    expect(screen.getByText("retry")).toBeInTheDocument();
+    expect(screen.getByText("1 / 2")).toBeInTheDocument();
+    expect(screen.getByText("50%")).toBeInTheDocument();
+    expect(screen.getByText(/low sample/i)).toBeInTheDocument();
+    expect(screen.getByText(/no ml recovery-probability model/i)).toBeInTheDocument();
+    expect(screen.queryByText(/optimi[sz]ed strategy/i)).not.toBeInTheDocument();
+  });
 });
 
 describe("RecoveryCaseDetailPage (BUG-004: invalid id vs backend down)", () => {

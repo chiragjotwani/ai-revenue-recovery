@@ -11,6 +11,7 @@ import {
   type RevenueReport,
   type RiskAssessment,
   type RiskSummary,
+  type StrategyAnalyticsReport,
 } from "@/lib/api";
 import {
   BackendUnavailable,
@@ -23,12 +24,13 @@ import {
 } from "@/components/ui";
 
 export default async function OverviewPage() {
-  const [health, summary, payments, cases, revenue] = await Promise.all([
+  const [health, summary, payments, cases, revenue, strategy] = await Promise.all([
     apiGet<Health>("/health"),
     apiGet<RiskSummary>("/risk/summary"),
     apiGet<RiskAssessment[]>("/risk/payments"),
     apiGet<RecoveryCase[]>("/recovery/cases"),
     apiGet<RevenueReport>("/measurement/report"),
+    apiGet<StrategyAnalyticsReport>("/analytics/strategy-report"),
   ]);
 
   if (!summary.ok || !payments.ok || !cases.ok) {
@@ -165,6 +167,69 @@ export default async function OverviewPage() {
               </tbody>
             </table>
           </div>
+        )}
+      </Panel>
+
+      {/* Strategy analytics (Phase 9: observed frequency only -- no ML model) */}
+      <Panel title="Strategy analytics">
+        {strategy.ok ? (
+          <div className="flex flex-col gap-3">
+            {strategy.data.by_strategy.length === 0 ? (
+              <EmptyState>No strategy history yet</EmptyState>
+            ) : (
+              <div className="overflow-x-auto">
+                <table className="w-full border-collapse text-left text-sm">
+                  <caption className="sr-only">Empirical recovery rate by strategy</caption>
+                  <thead>
+                    <tr className="border-b border-border font-mono text-[11px] uppercase tracking-wide text-text-dim">
+                      <th scope="col" className="py-2 pr-4 font-medium">
+                        Strategy
+                      </th>
+                      <th scope="col" className="py-2 pr-4 font-medium">
+                        Recovered / observed
+                      </th>
+                      <th scope="col" className="py-2 pr-4 font-medium">
+                        Empirical rate
+                      </th>
+                      <th scope="col" className="py-2 font-medium">
+                        Sample
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {strategy.data.by_strategy.map((s) => (
+                      <tr key={s.key} className="border-b border-border/60">
+                        <td className="py-2 pr-4 font-mono text-xs text-text">
+                          {s.key.replace(/_/g, " ")}
+                        </td>
+                        <td className="tabular py-2 pr-4 font-mono text-xs">
+                          {s.recovered_count} / {s.observed_count}
+                        </td>
+                        <td className="tabular py-2 pr-4 font-mono text-xs">
+                          {s.empirical_recovery_rate == null
+                            ? "—"
+                            : `${(s.empirical_recovery_rate * 100).toFixed(0)}%`}
+                        </td>
+                        <td className="py-2">
+                          {s.low_sample ? (
+                            <StatusPill label="low sample" severity="warn" />
+                          ) : (
+                            <span className="text-xs text-text-dim">n={s.observed_count}</span>
+                          )}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+            <p className="text-xs text-text-dim">{strategy.data.ml_model_limitation}</p>
+          </div>
+        ) : (
+          <NotAvailableYet
+            what="Strategy analytics"
+            why="Needs Phase 9 strategy analytics (historical dataset + recovery-rate aggregation)."
+          />
         )}
       </Panel>
 

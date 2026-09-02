@@ -1,5 +1,6 @@
 from fastapi import FastAPI
 
+from app.api.analytics import router as analytics_router
 from app.api.health import router as health_router
 from app.api.ingestion import router as ingestion_router
 from app.api.measurement import router as measurement_router
@@ -23,6 +24,7 @@ def create_app() -> FastAPI:
     app.include_router(risk_router)
     app.include_router(recovery_router)
     app.include_router(measurement_router)
+    app.include_router(analytics_router)
     return app
 
 

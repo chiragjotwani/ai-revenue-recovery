@@ -186,6 +186,33 @@ export type RevenueReport = {
   recovered_by_disposition: BreakdownEntry[];
 };
 
+// ---- Phase 9: strategy analytics (scoped -- no ML/probability/optimization) ----
+
+export type StrategyStat = {
+  key: string;
+  total_case_count: number;
+  observed_count: number;
+  recovered_count: number;
+  not_recovered_count: number;
+  unresolved_count: number;
+  empirical_recovery_rate: number | null;
+  low_sample: boolean;
+};
+
+/** Every rate here is an observed frequency over a disclosed sample size --
+ * never a prediction. `ml_model_status` is always "not_implemented": this
+ * system has no real-world outcome data at a volume that could train or
+ * validate one (KI-007).
+ */
+export type StrategyAnalyticsReport = {
+  dataset_size: number;
+  low_sample_threshold: number;
+  by_strategy: StrategyStat[];
+  by_disposition: StrategyStat[];
+  ml_model_status: "not_implemented";
+  ml_model_limitation: string;
+};
+
 // ---- domain helpers ----
 
 export const TERMINAL_STATES = new Set(["recovered", "abandoned", "failed"]);

@@ -2,9 +2,9 @@
 
 ## Current Phase
 
-Phase 8 — Recovered Revenue Measurement: implementation and verification
-complete, **frozen**. Phases 4.1, 5, 6, and 7 are also frozen. Phases 0–2
-remain frozen (`docs/phase-0-2-freeze.md`).
+Phase 9 — Recovery Strategy Learning (scoped): implementation and
+verification complete, **frozen**. Phases 4.1, 5, 6, 7, and 8 are also
+frozen. Phases 0–2 remain frozen (`docs/phase-0-2-freeze.md`).
 
 Owner decisions recorded:
 - 2026-08-27: Phase 3 follows the frozen contract (Recovery Case
@@ -37,10 +37,27 @@ Owner decisions recorded:
   `app/measurement/schema.py::COUNTERFACTUAL_LIMITATION`). KI-006 remains
   unresolved and is NOT worked around — every monetary aggregate is a
   per-currency list, never a cross-currency sum.
+- 2026-09-02: Phase 9 scoped by explicit owner decision (asked mid-session
+  via AskUserQuestion, given a genuine architectural tension the master
+  plan's own Phase 9 definition creates): the master plan
+  (`docs/master-loop-engineering-prompt.md`, Section 28) calls for a
+  "historical strategy dataset," "strategy analytics," an "ML recovery
+  model," "recovery probability," and "strategy optimization." Only the
+  first two are implemented. The ML model/probability/optimization are
+  deliberately NOT built — this system has no real-world outcome data at
+  any volume that could train or validate a genuine predictive model
+  (KI-007), and ADR-006 already forbids exactly this shape of thing
+  (confidence/probability driving policy) at the decision layer. Building
+  a "model" from a handful of synthetic demo cases would be statistically
+  meaningless theater, not a real capability — so it was not built, and
+  the gap is disclosed explicitly in every API response
+  (`ml_model_status: "not_implemented"` +
+  `app/analytics/schema.py::ML_MODEL_LIMITATION`) rather than silently
+  dropped or faked.
 
 ## Current Stage
 
-N/A — Phase 8 closed. No Phase 9 started.
+N/A — Phase 9 closed. No Phase 10 started.
 
 ## Completed Phases
 
@@ -54,6 +71,41 @@ N/A — Phase 8 closed. No Phase 9 started.
 - Phase 6 — Action Executor (frozen)
 - Phase 7 — Outcome Observation & Recovery Outcome (frozen)
 - Phase 8 — Recovered Revenue Measurement (frozen)
+- Phase 9 — Recovery Strategy Learning (scoped: dataset + analytics only;
+  frozen)
+
+## Completed Stages (Phase 9)
+
+Strategy Analytics (`app/analytics/`, no new persistence -- computes live
+from `RecoveryCase` + `DecisionResult` + `RecoveryAction` + `Diagnosis` +
+the current Phase 7 `RecoveryOutcomeObservation` per case, same pattern as
+`app.measurement.service.get_revenue_report`). `GET
+/analytics/strategy-dataset` returns the raw historical strategy dataset
+(one row per case with an executed/scheduled action: strategy,
+disposition, current outcome or `null`, currency) -- cases whose decision
+was escalated/rejected and never reached scheduling are excluded (they
+have no strategy to attribute). `GET /analytics/strategy-report`
+aggregates it into empirical recovery-rate statistics by strategy and by
+disposition: `recovered_count / observed_count`, `None` when
+`observed_count` is 0 (never divides by zero, never fabricates a rate
+from no evidence), with a `low_sample` flag (`LOW_SAMPLE_THRESHOLD = 5`,
+purely informational -- drives no automated behavior, gates nothing,
+unlike the forbidden confidence/high-value thresholds ADR-006/KI-006
+already rule out at the policy layer). Deliberately does NOT implement an
+ML recovery-probability model or strategy optimizer -- see the owner
+decision above and `app/analytics/schema.py`'s module docstring; every
+report carries `ml_model_status: "not_implemented"` and an explicit
+`ml_model_limitation` string. Frontend: a new "Strategy analytics" panel
+on the Overview dashboard (table of strategy -> recovered/observed ->
+empirical rate -> sample-size flag, plus the ML-limitation disclosure
+text), reusing existing `Panel`/`StatusPill`/`NotAvailableYet`
+conventions -- no new dashboard, no duplicate of the Phase 8 "Recovery
+performance" panel. Tests: `tests/test_strategy_analytics.py`, 9 tests
+covering dataset correctness, escalated-decision exclusion,
+divide-by-zero safety, low-sample disclosure, and an explicit scope-
+boundary test that scans `StrategyAnalyticsReport`/`StrategyStat`'s own
+field names for any probability/optimization/prediction/confidence/
+ranking term and asserts none exist.
 
 ## Completed Stages (Phase 5)
 
@@ -425,6 +477,12 @@ See `docs/known-issues.md`.
 - Phase 8: KI-006 extended, still open and unresolved by design —
   `GET /measurement/report` never sums across currencies either (every
   field is a per-currency list). No new known issues introduced.
+- Phase 9: no new known issue introduced. The master plan's "ML recovery
+  model" / "recovery probability" / "strategy optimization" deliverables
+  are deliberately not implemented (see the 2026-09-02 owner decision
+  above and `app/analytics/schema.py`) — not a defect, a scoped and
+  disclosed omission, the same discipline KI-007 already establishes for
+  the diagnosis/decision evaluation harnesses.
 
 ## Architecture Decisions
 
@@ -436,6 +494,20 @@ See `docs/known-issues.md`.
 - ADR-006: Model confidence is not a deterministic policy threshold (Phase 5)
 
 ## Last Successful Verification
+
+2026-09-02 Phase 9 (Recovery Strategy Learning, scoped) complete (this
+session). Backend: full suite **650 passed, 8 skipped (pre-existing), 1
+xfailed (KI-006), 0 failed**, run against the isolated `arr_test_db`;
+`test_strategy_analytics.py` (9 tests) stable across 3 repeated runs.
+`ruff check`, `ruff format --check`, `mypy app` (67 files) all clean. No
+migration needed (pure live-computed layer, no new table -- verified via
+`alembic check`, still a single head, no drift). Frontend: `vitest`
+61/61, `eslint` clean, `tsc --noEmit` clean, `next build` clean. Real
+end-to-end verification: confirmed `GET /analytics/strategy-report`
+against real dev data matched the browser-rendered "Strategy analytics"
+panel exactly (retry: 1/1 recovered, 100%, flagged "low sample"), no
+console errors, no causal/probability language anywhere. No Phase 10 code
+was introduced.
 
 2026-09-02 Phase 8 (Recovered Revenue Measurement) complete (this
 session). Backend: full suite **641 passed, 8 skipped (pre-existing), 1
