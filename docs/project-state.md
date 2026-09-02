@@ -2,9 +2,9 @@
 
 ## Current Phase
 
-Phase 12 — Asynchronous Event Architecture: implementation and
-verification complete, **frozen**. Phases 4.1, 5, 6, 7, 8, 9, 10, and 11
-are also frozen. Phases 0–2 remain frozen (`docs/phase-0-2-freeze.md`).
+Phase 13 — Analytics Data Platform (scoped): implementation and
+verification complete, **frozen**. Phases 4.1, 5, 6, 7, 8, 9, 10, 11, and
+12 are also frozen. Phases 0–2 remain frozen (`docs/phase-0-2-freeze.md`).
 
 Owner decisions recorded:
 - 2026-08-27: Phase 3 follows the frozen contract (Recovery Case
@@ -119,9 +119,33 @@ Owner decisions recorded:
   and processed it (`outcome=handled attempts=1`), with `published_at`
   and the `processed_events` marker both confirmed via `psql`.
 
+- 2026-09-02: Phase 13 scoped by explicit owner decision (asked
+  mid-session via AskUserQuestion, given the same class of tension Phase
+  9/10/11 each hit): the master plan calls for an analytical model
+  covering "revenue at risk, recovered revenue, natural recovery,
+  incremental recovery, recovery attempts, strategy performance, failure
+  categories, customer segments, model performance, and experiment
+  performance." Everything except "incremental recovery" and "experiment
+  performance" is implemented, for the same reason Phase 8 never computed
+  a causal recovered-revenue figure: no randomized control group or
+  other counterfactual design exists here (`app.warehouse.schema`'s
+  `EXPERIMENT_LIMITATION`). "Natural recovery" turned out to have its own
+  narrower gap, discovered while building this phase rather than assumed
+  upfront: Phase 7's `observe_outcome` (which Phase 8's own revenue
+  report depends on via `get_outcome_for_case`) only ever classifies a
+  case `recovered` when it has an executed `RecoveryAction` -- an
+  escalated/action-less case is definitionally `unresolved` under that
+  frozen rule, regardless of what the raw payment evidence shows.
+  Classifying such cases from raw evidence anyway (`classify_outcome` can
+  do this) would give them a different outcome than Phase 8's own report
+  computes for the identical case -- exactly the "redefine Phase 8's
+  financial semantics" this phase must not do. So `natural_recovery` is
+  disclosed as `not_measurable` (`NATURAL_RECOVERY_LIMITATION`) rather
+  than computed from a broadened, Phase-8-inconsistent definition.
+
 ## Current Stage
 
-N/A — Phase 12 closed. No Phase 13 started.
+N/A — Phase 13 closed. No Phase 14 started.
 
 ## Completed Phases
 
@@ -144,6 +168,49 @@ N/A — Phase 12 closed. No Phase 13 started.
   change; frozen)
 - Phase 12 — Asynchronous Event Architecture (outbox + Kafka audit/
   integration bus, no domain-logic trigger; frozen)
+- Phase 13 — Analytics Data Platform (scoped: observed-only analytics; no
+  incremental/experiment analytics, natural recovery disclosed as
+  not-measurable rather than redefining Phase 8's outcome semantics;
+  frozen)
+
+## Completed Stages (Phase 13)
+
+Analytics warehouse (`app/warehouse/`, `scripts/build_analytics_warehouse.py`,
+migration `2620086aa88c`). Separates the analytical read path from the
+operational tables it is derived from:
+
+1. **Extract/transform/load** (`app/warehouse/etl.py`) — reads every
+   `RecoveryCase` plus its `Payment`, latest `Diagnosis`,
+   current-decision `RecoveryAction` (with executions), and current
+   Phase 7 outcome (the exact same source tables and attribution rules
+   Phase 8/9 already use), derives a denormalized `CaseAnalyticsFact` row
+   per case, and upserts it keyed by `case_id` -- idempotent, safe to
+   rerun, never accumulates duplicates or stale rows.
+2. **Analytical storage** (`app/models/warehouse.py`,
+   `case_analytics_facts`) — one wide fact table, deliberately not a
+   star schema at this project's size; the only writer is the ETL, which
+   is what keeps a later ClickHouse/BigQuery/Snowflake migration a
+   load-step swap rather than a read-side rewrite.
+3. **Read service / API** (`app/warehouse/service.py`,
+   `GET /analytics/warehouse/facts`, `GET /analytics/warehouse/report`,
+   `POST /analytics/warehouse/rebuild`) — revenue at risk, observed
+   recovered revenue, total recovery attempts, recovery-rate breakdowns
+   by strategy/failure-reason/customer-segment, and model performance
+   (diagnosis count, avg confidence/latency, router-escalation rate) --
+   all computed from the pre-built materialization, not live joins.
+4. **Validation** — 16 tests covering idempotent rebuild (no duplicate
+   facts on rerun), null-handling (a case with no diagnosis/action still
+   produces a valid row), currency-safety (never mixes currencies),
+   never-divide-by-zero rate computation, customer-segment bucketing,
+   and UTC day-boundary/timezone handling.
+
+Explicitly NOT done, by design: "incremental recovery" and "experiment/
+control-treatment performance" (no counterfactual design exists --
+`EXPERIMENT_LIMITATION`); "natural recovery" (Phase 7's outcome
+observation is action-gated, so an action-less case cannot be honestly
+classified `recovered` without diverging from Phase 8's own definition
+for the same case -- `NATURAL_RECOVERY_LIMITATION`, see the 2026-09-02
+owner decision above).
 
 ## Completed Stages (Phase 12)
 
@@ -697,6 +764,13 @@ See `docs/known-issues.md`.
   database) remains open and applies equally to the new Phase 12 test
   file — `tests/test_events.py` was run against the same ad hoc
   `arr_test_db` as every other suite this session.
+- Phase 13: no new known issue introduced. "Incremental recovery" /
+  "experiment performance" and "natural recovery" from the master plan's
+  Phase 13 definition are deliberately not implemented — see the
+  2026-09-02 owner decision above and `app/warehouse/schema.py`'s module
+  docstring — not a defect, the same scoped-and-disclosed-omission
+  discipline as Phase 9/10/11, extended to the analytics-warehouse layer.
+  KI-010 remains open and applies equally to `tests/test_warehouse.py`.
 
 ## Architecture Decisions
 
@@ -710,6 +784,26 @@ See `docs/known-issues.md`.
   audit/integration bus only, never a domain-logic trigger (Phase 12)
 
 ## Last Successful Verification
+
+2026-09-02 Phase 13 (Analytics Data Platform, scoped) complete (this
+session). Backend: full suite **704 passed, 8 skipped (pre-existing), 1
+xfailed (KI-006), 0 failed** against the isolated `arr_test_db`,
+including 16 new Phase 13 tests (idempotent rebuild/no duplicate facts,
+null-handling for action-less/undiagnosed cases, currency-safety,
+never-divide-by-zero rates, customer-segment bucketing, UTC day-boundary/
+timezone handling, and explicit disclosure tests for both omitted
+metrics). `ruff check`, `ruff format --check`, `mypy app scripts` (96
+files) all clean. Migration `2620086aa88c` applied cleanly to both the
+dev DB and `arr_test_db`. Docker: `backend` image rebuilt and verified
+healthy at the new migration; full live end-to-end verification (not
+just unit tests): `POST /analytics/warehouse/rebuild` against the
+running container produced 8 real fact rows from data already in the
+dev database, and `GET /analytics/warehouse/report` returned correctly
+per-currency-bucketed revenue-at-risk/recovered figures, strategy/
+failure-reason/customer-segment rate breakdowns, and model-performance
+stats, with both `natural_recovery_status` and `experiment_status`
+correctly disclosed as unavailable rather than fabricated. No Phase 14
+code was introduced.
 
 2026-09-02 Phase 12 (Asynchronous Event Architecture) complete (this
 session). Backend: full suite **688 passed, 8 skipped (pre-existing), 1
@@ -898,9 +992,9 @@ The Phase 0–2 freeze gate detail remains in `docs/phase-0-2-freeze.md`.
 
 ## Last Git Commit
 
-`phase-12: implement scalable event architecture` — see `git log`.
-(Preceded by `phase-11: implement historical recovery intelligence` and
-every phase back to `freeze: phases 0-2 verified`.)
+`phase-13: implement analytics data platform` — see `git log`.
+(Preceded by `phase-12: implement scalable event architecture` and every
+phase back to `freeze: phases 0-2 verified`.)
 
 ## Process Note
 

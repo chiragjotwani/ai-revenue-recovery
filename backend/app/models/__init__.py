@@ -14,9 +14,11 @@ from app.models.measurement import RevenueMeasurement
 from app.models.outcome import RecoveryOutcomeObservation
 from app.models.payment import Payment, PaymentStatus
 from app.models.recovery import RecoveryCase, RecoveryCaseState, RecoveryCaseTransition
+from app.models.warehouse import CaseAnalyticsFact
 
 __all__ = [
     "ActionExecutionOutcome",
+    "CaseAnalyticsFact",
     "CaseFeatureVector",
     "Customer",
     "DeadLetterEvent",

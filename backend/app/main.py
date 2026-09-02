@@ -7,6 +7,7 @@ from app.api.ingestion import router as ingestion_router
 from app.api.measurement import router as measurement_router
 from app.api.recovery import router as recovery_router
 from app.api.risk import router as risk_router
+from app.api.warehouse import router as warehouse_router
 from app.core.config import get_settings
 from app.core.windows_compat import apply_windows_event_loop_policy
 
@@ -26,6 +27,7 @@ def create_app() -> FastAPI:
     app.include_router(recovery_router)
     app.include_router(measurement_router)
     app.include_router(analytics_router)
+    app.include_router(warehouse_router)
     app.include_router(ai_models_router)
     return app
 
