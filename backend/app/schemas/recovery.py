@@ -108,9 +108,21 @@ class OutcomeOut(BaseModel):
     created_at: datetime
 
 
+class MeasurementOut(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: uuid.UUID
+    case_id: uuid.UUID
+    payment_id: uuid.UUID
+    outcome_observation_id: uuid.UUID
+    status: ObservedOutcome
+    measured_at: datetime
+
+
 class RecoveryCaseDetail(RecoveryCaseOut):
     history: list[TransitionOut]
     diagnosis: DiagnosisOut | None = None
     decision: DecisionOut | None = None
     action: ActionOut | None = None
     outcome: OutcomeOut | None = None
+    measurement: MeasurementOut | None = None

@@ -2,10 +2,9 @@
 
 ## Current Phase
 
-Phase 5 — Recovery Decision & Policy Engine: implementation and
-verification complete (5A–5I); **awaiting owner review for Phase 5
-freeze** (not yet frozen). Phase 4.1 (Stabilization) is complete. Phases
-0–2 remain frozen (`docs/phase-0-2-freeze.md`).
+Phase 8 — Recovered Revenue Measurement: implementation and verification
+complete, **frozen**. Phases 4.1, 5, 6, and 7 are also frozen. Phases 0–2
+remain frozen (`docs/phase-0-2-freeze.md`).
 
 Owner decisions recorded:
 - 2026-08-27: Phase 3 follows the frozen contract (Recovery Case
@@ -23,10 +22,25 @@ Owner decisions recorded:
 - 2026-08-30/31: Phase 5B Section-37 contract split per owner decision
   (evidence-based escalation implemented and passing; high-value
   escalation stays `xfail`, deferred pending KI-006).
+- 2026-09-01: Phase 6 (Action Executor) frozen — no real payment-provider
+  integration exists or was invented; `retry`/`contact_customer`/
+  `request_payment_method_update` executions are honestly recorded as
+  `deferred_no_integration`, never fabricated as completed.
+- 2026-09-01: Phase 7 (Outcome Observation) frozen — reuses the exact
+  `already_paid`-style correlation already established in Phase 5/Phase 2,
+  no new fuzzy matching; `action_executed` and `recovered` are kept
+  structurally distinct.
+- 2026-09-02: Phase 8 (Recovered Revenue Measurement) frozen — every
+  reported number is OBSERVED evidence (a later successful/failed payment
+  exists), never a causal/incremental estimate; no counterfactual/control
+  cohort exists in this system, so none is claimed (see
+  `app/measurement/schema.py::COUNTERFACTUAL_LIMITATION`). KI-006 remains
+  unresolved and is NOT worked around — every monetary aggregate is a
+  per-currency list, never a cross-currency sum.
 
 ## Current Stage
 
-N/A — Phase 5 (5A–5I) closed; Phase 6 not started.
+N/A — Phase 8 closed. No Phase 9 started.
 
 ## Completed Phases
 
@@ -36,8 +50,10 @@ N/A — Phase 5 (5A–5I) closed; Phase 6 not started.
 - Phase 3 — Recovery Case Management
 - Phase 4 — AI Context & Diagnosis
 - Phase 4.1 — Stabilization, AI Validation & Product Foundation
-- Phase 5 — Recovery Decision & Policy Engine (5A–5I; awaiting owner
-  review for freeze)
+- Phase 5 — Recovery Decision & Policy Engine (5A–5I; frozen)
+- Phase 6 — Action Executor (frozen)
+- Phase 7 — Outcome Observation & Recovery Outcome (frozen)
+- Phase 8 — Recovered Revenue Measurement (frozen)
 
 ## Completed Stages (Phase 5)
 
@@ -108,6 +124,103 @@ N/A — Phase 5 (5A–5I) closed; Phase 6 not started.
   is not a substitute for, real-world recovered revenue (KI-007 applies
   with equal force to this harness).
 - **5I — Documentation Reconciliation**: this update.
+
+## Completed Stages (Phase 8)
+
+Recovered Revenue Measurement (`app/measurement/`, migration
+`4d8f0a2c6b91`): `RevenueMeasurement` — one idempotent, append-only-safe
+row per `(case_id, outcome_observation_id)`, storing no amount/currency of
+its own (both always read from the referenced `Payment` row — the sole
+monetary source of truth; no measurement caller can supply, inflate, or
+alter a figure). `measure_case` mirrors every prior phase's KI-008
+idempotency discipline (flush → `IntegrityError` → rollback → recheck,
+never a bare SELECT-then-INSERT); verified under 20-way concurrent
+identical requests, exactly one row. `GET /measurement/report`
+(`app/api/measurement.py`) computes a LIVE aggregate directly from
+`RecoveryCase` + `DecisionResult` + `Payment` + the current Phase 7
+`RecoveryOutcomeObservation` per case (same "compute live from source
+tables" shape as `GET /risk/summary`), never from `RevenueMeasurement`
+itself — avoids a staleness dependency on every case having had an
+explicit `/measure` call. Every monetary field is a per-currency list
+(`CurrencyAmount`/`BreakdownEntry`); nothing sums across currencies
+(KI-006 remains open and unresolved by design). `RevenueReport` carries a
+fixed `measurement_basis="observed_evidence"`, `counterfactual_available:
+false`, and an explicit `counterfactual_limitation` string: this system
+has no randomized control group, historical untreated cohort, or other
+counterfactual design, so no incremental/causal recovered-revenue number
+is computed or claimed anywhere — only observed facts (a later
+successful/failed payment exists as evidence). Attribution reuses
+Phase 7's own correlation rule exclusively (a case with no
+`RecoveryOutcomeObservation` is not measurable — `409`, not a guess).
+Frontend: the Overview dashboard's pre-existing "Recovery performance"
+`NotAvailableYet` placeholder (explicitly labeled "Needs Phase 8 revenue
+measurement" since Phase 4.1) is now filled with the real observed-
+recovered figure, labeled "observed fact, not an estimate of impact."
+Tests: `tests/test_revenue_measurement.py`, 18 tests covering recovered/
+not-recovered/unresolved measurement, currency separation, attribution,
+unrelated-payment rejection, duplicate/concurrent measurement (no double
+counting), provenance, security (no client-supplied amount/currency/
+status can become authoritative), and counterfactual-semantics
+assertions — stable across 5 repeated runs including the 20-way
+concurrency case.
+
+## Completed Stages (Phase 7)
+
+Outcome Observation (`app/outcome/`, migration `7c1b9e4f2a83`):
+`ObservedOutcome` (`recovered`/`not_recovered`/`unresolved`) and
+`RecoveryOutcomeObservation` (append-only, one row per observation
+attempt, keyed `(action_id, attempt_no)` — mirrors
+`RecoveryActionExecution`'s own shape deliberately). `observe_outcome`
+classifies exclusively from authoritative `Payment` evidence: a later
+`payment.succeeded`/`payment.failed` event for the same customer,
+occurring after the originally failed payment's `occurred_at` — the
+exact same deterministic relationship `app.decision.service`'s own
+`already_paid` check and `app.risk.service`'s at-risk exclusion already
+use; no new fuzzy matching, no time window, no confidence/monetary
+threshold. Wires the two precondition checkers Phase 4.1 declared and
+left open (`action_executed → observing`, `observing → recovered`) — no
+new recovery-case states were introduced. A real idempotency bug was
+found and fixed during implementation (by the session's own 20-way
+concurrency test, not left latent): the idempotent-replay check
+originally ran after the case-state gate, so a case that had already
+reached the terminal `recovered` state rejected a repeat identical
+observation with `409` instead of replaying it — fixed by reordering so
+idempotency is checked first. Frontend: the case-detail page's existing
+"7 · Outcome" panel (previously derived only from case state) was
+enhanced in place — no duplicate outcome UI — to show
+`recovered`/`not_recovered`/`unresolved` with evidence, distinctly from
+the Action panel's `executed` status. Tests: `test_outcome_observation.py`,
+15 tests, stable across 5 repeated runs including 20-way concurrency.
+
+## Completed Stages (Phase 6)
+
+Action Executor (`app/decision/actions.py`, models in
+`app/models/action.py`, migration `3f2a6c9d1e47`): `schedule_action`
+(`decision_pending → action_scheduled`) and `execute_action`
+(`action_scheduled → action_executed`), both keyed to a case's
+policy-approved `DecisionResult` only — escalated/rejected decisions get
+`409`, never reach scheduling. `action_type` is always the decision's own
+`approved_strategy`; neither function accepts a strategy parameter, so no
+caller (including any future AI-facing surface) can choose what runs —
+verified by a test that inspects the function signatures directly. No
+payment-provider or customer-messaging integration exists anywhere in
+this repository, and Phase 6 did not invent one:
+`ActionExecutionOutcome.DEFERRED_NO_INTEGRATION` honestly records that a
+`retry`/`contact_customer`/`request_payment_method_update` execution's
+mechanical step completed without claiming money moved or a message was
+sent; `no_action`/`manual_review` complete with
+`NO_SIDE_EFFECT_REQUIRED`. Two real concurrency/correctness bugs were
+found and fixed by the session's own 20-way concurrency tests (not left
+latent): a `MissingGreenlet` hazard from reading expired ORM attributes
+after `rollback()` (same class of defect as the Phase 5C root cause,
+fixed the same way — capture IDs before rollback), and a subtler
+SQLAlchemy identity-map staleness bug (a second query in the same session
+does not refresh an already-loaded relationship collection without an
+explicit `session.refresh()`). Frontend: new "5 · Action" panel mirroring
+the Decision panel's conventions. Tests: `test_action_executor.py`, 13
+tests, plus the previously-`xfail`ed Section-37
+`test_contract_duplicate_action_is_idempotent` is now a real passing
+assertion.
 
 ## Completed Stages (Phase 4.1)
 
@@ -304,6 +417,14 @@ See `docs/known-issues.md`.
   Section-37 contract stays `xfail`). KI-007's synthetic-data caveat
   extends to the Phase 5H decision-policy evaluation harness as well
   (golden policy cases, not a claim of real-world validity).
+- Phase 7: KI-010 added, open (no dedicated test database —
+  `DATABASE_URL` defaults to the shared dev Postgres; discovered when a
+  routine full-suite run truncated the dev browser-QA fixture; mitigated
+  each session since with an ad hoc `arr_test_db`, not yet a committed
+  fix).
+- Phase 8: KI-006 extended, still open and unresolved by design —
+  `GET /measurement/report` never sums across currencies either (every
+  field is a per-currency list). No new known issues introduced.
 
 ## Architecture Decisions
 
@@ -315,6 +436,27 @@ See `docs/known-issues.md`.
 - ADR-006: Model confidence is not a deterministic policy threshold (Phase 5)
 
 ## Last Successful Verification
+
+2026-09-02 Phase 8 (Recovered Revenue Measurement) complete (this
+session). Backend: full suite **641 passed, 8 skipped (pre-existing), 1
+xfailed (KI-006), 0 failed**, run against an isolated `arr_test_db` (not
+the shared dev DB — KI-010); `test_revenue_measurement.py` (18 tests)
+stable across 5 repeated runs including 20-way concurrent identical
+`/measure` requests → exactly 1 `RevenueMeasurement` row. `ruff check`,
+`ruff format --check`, `mypy app` (63 files) all clean. Migration
+`4d8f0a2c6b91` upgrade/downgrade/upgrade roundtrip clean on both the dev
+and isolated DB, `alembic check` clean, single head. Frontend: `vitest`
+60/60, `eslint` clean, `tsc --noEmit` clean, `next build` clean. Real
+end-to-end verification: seeded a recovered case and an unresolved case
+through the live API, confirmed `POST /recovery/cases/{id}/measure`
+returned the correct status for each, confirmed
+`GET /measurement/report` showed per-currency observed-recovered/
+not-recovered/unresolved totals with no cross-currency sum anywhere, and
+confirmed the Overview dashboard's "Recovery performance" panel (a
+`NotAvailableYet` placeholder since Phase 4.1) now shows the real
+observed-recovered figure labeled "observed fact, not an estimate of
+impact" — verified live in the browser, no console errors. No Phase 9
+code was introduced.
 
 2026-08-31 Phase 5 (5A–5I) complete (this session). Backend: full suite
 **590 passed, 8 skipped (pre-existing, unrelated), 2 xfailed

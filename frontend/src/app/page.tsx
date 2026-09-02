@@ -2,11 +2,13 @@ import Link from "next/link";
 import {
   apiGet,
   fmtTimestamp,
+  formatCurrencyAmounts,
   formatCurrencyMap,
   OPEN_STATES,
   riskSeverity,
   type Health,
   type RecoveryCase,
+  type RevenueReport,
   type RiskAssessment,
   type RiskSummary,
 } from "@/lib/api";
@@ -21,11 +23,12 @@ import {
 } from "@/components/ui";
 
 export default async function OverviewPage() {
-  const [health, summary, payments, cases] = await Promise.all([
+  const [health, summary, payments, cases, revenue] = await Promise.all([
     apiGet<Health>("/health"),
     apiGet<RiskSummary>("/risk/summary"),
     apiGet<RiskAssessment[]>("/risk/payments"),
     apiGet<RecoveryCase[]>("/recovery/cases"),
+    apiGet<RevenueReport>("/measurement/report"),
   ]);
 
   if (!summary.ok || !payments.ok || !cases.ok) {
@@ -70,10 +73,30 @@ export default async function OverviewPage() {
           />
         </Panel>
         <Panel title="Recovery performance">
-          <NotAvailableYet
-            what="Recovered revenue"
-            why="Needs Phase 8 revenue measurement (outcomes + control group)."
-          />
+          {revenue.ok ? (
+            <div className="flex flex-col gap-1">
+              <span className="font-mono text-[11px] uppercase tracking-widest text-text-dim">
+                Observed recovered
+              </span>
+              <p className="tabular text-2xl font-semibold text-good">
+                {formatCurrencyAmounts(revenue.data.observed_recovered)}
+              </p>
+              <p className="text-xs text-text-dim">
+                {revenue.data.recovered_case_count} of {revenue.data.eligible_case_count} eligible
+                case{revenue.data.eligible_case_count === 1 ? "" : "s"} (
+                {(revenue.data.observed_recovery_rate * 100).toFixed(0)}%) -- observed fact, not an
+                estimate of impact.{" "}
+                <Link href="/recovery" className="underline hover:text-signal">
+                  Details &rarr;
+                </Link>
+              </p>
+            </div>
+          ) : (
+            <NotAvailableYet
+              what="Recovered revenue"
+              why="Needs Phase 8 revenue measurement (outcomes + control group)."
+            />
+          )}
         </Panel>
       </div>
 

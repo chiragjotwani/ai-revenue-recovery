@@ -80,6 +80,41 @@ describe("OverviewPage (dashboard)", () => {
     render(await OverviewPage());
     expect(screen.getByText(/backend unavailable/i)).toBeInTheDocument();
   });
+
+  it("shows observed recovered revenue as an observed fact, never a causal claim", async () => {
+    stubRoutes({
+      "/health": [200, { status: "ok", environment: "development" }],
+      "/risk/summary": [200, SUMMARY],
+      "/risk/payments": [200, PAYMENTS],
+      "/recovery/cases": [200, CASES],
+      "/measurement/report": [
+        200,
+        {
+          measurement_basis: "observed_evidence",
+          counterfactual_available: false,
+          counterfactual_limitation: "No randomized control group exists.",
+          eligible_case_count: 4,
+          eligible_at_risk: [{ currency: "INR", amount: "9998.00", case_count: 4 }],
+          observed_recovered: [{ currency: "INR", amount: "4999.00", case_count: 1 }],
+          observed_not_recovered: [],
+          unresolved: [{ currency: "INR", amount: "4999.00", case_count: 3 }],
+          recovered_case_count: 1,
+          observed_recovery_rate: 0.25,
+          recovered_by_strategy: [],
+          recovered_by_disposition: [],
+        },
+      ],
+    });
+    render(await OverviewPage());
+
+    expect(screen.getByText(/observed recovered/i)).toBeInTheDocument();
+    expect(screen.getAllByText("4999.00 INR").length).toBeGreaterThanOrEqual(1);
+    expect(screen.getByText(/1 of 4 eligible case/i)).toBeInTheDocument();
+    expect(screen.getByText(/observed fact, not an/i)).toBeInTheDocument();
+    // Never claims causality/AI-generated revenue anywhere on the page.
+    expect(screen.queryByText(/ai generated/i)).not.toBeInTheDocument();
+    expect(screen.queryByText(/incremental/i)).not.toBeInTheDocument();
+  });
 });
 
 describe("RecoveryCaseDetailPage (BUG-004: invalid id vs backend down)", () => {

@@ -199,6 +199,20 @@ class NoExecutedActionError(DomainError):
         super().__init__(f"Recovery case {case_id!r} has no executed action to observe.")
 
 
+class CaseNotMeasurableError(DomainError):
+    """Raised when measuring a case is requested before it has any Phase 7
+    outcome observation to measure -- a measurement must be traceable to
+    an observed outcome (Phase 8).
+    """
+
+    def __init__(self, case_id: object) -> None:
+        self.case_id = case_id
+        super().__init__(
+            f"Recovery case {case_id!r} has no observed outcome yet; a measurement "
+            "can only be taken once an outcome has been observed."
+        )
+
+
 class TransitionPreconditionError(DomainError):
     """Raised when a transition is shape-legal but the artifact it depends
     on does not exist yet (e.g. moving to ``diagnosed`` with no persisted

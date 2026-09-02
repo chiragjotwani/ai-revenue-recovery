@@ -9,6 +9,7 @@ from app.core.errors import (
     CaseNotDecidableError,
     CaseNotDiagnosableError,
     CaseNotExecutableError,
+    CaseNotMeasurableError,
     CaseNotObservableError,
     CaseNotSchedulableError,
     DecisionNotApprovedError,
@@ -25,6 +26,7 @@ from app.core.errors import (
 from app.db.session import get_db_session
 from app.decision.actions import execute_action, get_action_for_case, schedule_action
 from app.decision.service import decide_case, get_decision_for_case
+from app.measurement.service import get_measurement_for_case, measure_case
 from app.models.recovery import RecoveryCaseState
 from app.outcome.service import get_outcome_for_case, observe_outcome
 from app.recovery import service
@@ -32,6 +34,7 @@ from app.schemas.recovery import (
     ActionOut,
     DecisionOut,
     DiagnosisOut,
+    MeasurementOut,
     OpenCaseRequest,
     OutcomeOut,
     RecoveryCaseDetail,
@@ -95,6 +98,7 @@ async def get_recovery_case(
     decision = await get_decision_for_case(session, case_id)
     action = await get_action_for_case(session, case_id)
     outcome = await get_outcome_for_case(session, case_id)
+    measurement = await get_measurement_for_case(session, case_id)
     return RecoveryCaseDetail.model_validate(
         {
             "id": case.id,
@@ -112,6 +116,9 @@ async def get_recovery_case(
             "decision": (DecisionOut.model_validate(decision) if decision is not None else None),
             "action": (ActionOut.model_validate(action) if action is not None else None),
             "outcome": (OutcomeOut.model_validate(outcome) if outcome is not None else None),
+            "measurement": (
+                MeasurementOut.model_validate(measurement) if measurement is not None else None
+            ),
         }
     )
 
@@ -332,3 +339,38 @@ async def observe_recovery_outcome(
         ) from exc
 
     return OutcomeOut.model_validate(row)
+
+
+@router.post("/cases/{case_id}/measure", response_model=MeasurementOut)
+async def measure_recovery_case(
+    case_id: UUID,
+    session: AsyncSession = Depends(get_db_session),
+) -> MeasurementOut:
+    """Measure a case's current, observed outcome (Phase 8). Accepts no
+    request body -- there is no field through which a caller could supply
+    an amount, currency, or status; every measured fact is read from the
+    case's own Phase 7 outcome observation and its ``Payment`` row.
+
+    Idempotent: a repeat call for a case whose outcome hasn't changed
+    returns the same persisted measurement rather than creating a second
+    one (``app.measurement.service.measure_case``'s own idempotency,
+    backed by a database unique constraint -- KI-008). A case whose
+    outcome later changes (new Phase 7 evidence) measures again into a
+    new, append-only row on the next call.
+
+    Never executes an action, never re-runs the Phase 5 policy engine,
+    and never re-classifies the Phase 7 outcome -- this endpoint only
+    records that a measurement was taken.
+
+    - ``404`` unknown case.
+    - ``409`` the case has no observed outcome yet (Phase 7's
+      ``POST .../observe-outcome`` must run first).
+    """
+    try:
+        row, _created = await measure_case(session, case_id)
+    except RecoveryCaseNotFoundError as exc:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(exc)) from exc
+    except CaseNotMeasurableError as exc:
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=str(exc)) from exc
+
+    return MeasurementOut.model_validate(row)

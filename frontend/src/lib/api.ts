@@ -138,12 +138,52 @@ export type Outcome = {
   created_at: string;
 };
 
+export type Measurement = {
+  id: string;
+  case_id: string;
+  payment_id: string;
+  outcome_observation_id: string;
+  status: ObservedOutcome;
+  measured_at: string;
+};
+
 export type RecoveryCaseDetail = RecoveryCase & {
   history: Transition[];
   diagnosis: Diagnosis | null;
   decision: Decision | null;
   action: Action | null;
   outcome: Outcome | null;
+  measurement: Measurement | null;
+};
+
+// ---- Phase 8: revenue measurement report ----
+
+export type CurrencyAmount = { currency: string; amount: string; case_count: number };
+export type BreakdownEntry = {
+  key: string;
+  currency: string;
+  amount: string;
+  case_count: number;
+};
+
+/** Every number here is OBSERVED (a later successful/failed payment exists
+ * as evidence), never a causal or incremental estimate --
+ * `counterfactual_available` is always `false` today: this system has no
+ * randomized control group or untreated cohort to compute one from.
+ */
+export type RevenueReport = {
+  measurement_basis: "observed_evidence";
+  counterfactual_available: false;
+  counterfactual_limitation: string;
+  eligible_case_count: number;
+  eligible_at_risk: CurrencyAmount[];
+  observed_recovered: CurrencyAmount[];
+  observed_not_recovered: CurrencyAmount[];
+  unresolved: CurrencyAmount[];
+  recovered_case_count: number;
+  observed_recovery_rate: number;
+  recovered_by_strategy: BreakdownEntry[];
+  recovered_by_disposition: BreakdownEntry[];
 };
 
 // ---- domain helpers ----
@@ -205,6 +245,15 @@ export function formatCurrencyMap(breakdown: Record<string, string>): string {
   const entries = Object.entries(breakdown);
   if (entries.length === 0) return "0";
   return entries.map(([cur, amt]) => `${amt} ${cur}`).join("  +  ");
+}
+
+/** Renders a list of per-currency amounts (Phase 8) exactly as returned --
+ * never summed together (KI-006: no FX/cross-currency conversion source
+ * exists). "0" for an empty list, never a fabricated combined total.
+ */
+export function formatCurrencyAmounts(amounts: CurrencyAmount[]): string {
+  if (amounts.length === 0) return "0";
+  return amounts.map((a) => `${a.amount} ${a.currency}`).join("  +  ");
 }
 
 export function fmtTimestamp(ts: string): string {

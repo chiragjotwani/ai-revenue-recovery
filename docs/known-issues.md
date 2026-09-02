@@ -6,6 +6,37 @@ must record what, why, and impact.
 
 ## Open
 
+### KI-010: No dedicated test database — `DATABASE_URL` defaults to the shared dev Postgres (Phase 7)
+
+- **What**: `app/core/config.py::Settings.database_url` defaults to the
+  same Postgres instance/database the Docker dev stack uses
+  (`localhost:5433/arr_db`), and `tests/conftest.py::_clean_database`
+  truncates every table before each test. Running the host pytest suite
+  with no `DATABASE_URL` override therefore wipes whatever dev/browser-QA
+  fixture data exists in `arr_db`.
+- **Discovered**: Phase 7 session (2026-09-01) — running the full backend
+  suite as part of routine phase-boundary verification silently destroyed
+  the Phase 5/6 browser-QA fixture case that had just been manually
+  verified, because the "run the full suite" step and the "don't touch
+  the dev DB" expectation were never reconciled in the project's own
+  tooling.
+- **Mitigation used since (Phase 7, Phase 8)**: a second database
+  (`arr_test_db`) was created ad hoc inside the same Postgres instance
+  each session, and all test runs since have been executed with
+  `DATABASE_URL` exported to point at it. This protects dev fixtures but
+  is a manual, session-local workaround — it is not committed anywhere
+  (`.env.test` does not exist), not documented in the README/CI, and
+  relies on whoever runs the suite remembering to set it.
+- **Impact**: any contributor (or future session) that runs `pytest`
+  without first exporting `DATABASE_URL` will still silently truncate the
+  shared dev database, including any manually-seeded demo/fixture data.
+- **Resolution plan**: add a committed `.env.test` (or an explicit
+  `TEST_DATABASE_URL` read by `conftest.py`) pointing at a dedicated test
+  database by default, so the safe behavior is automatic rather than
+  something every session must remember to opt into.
+- **Status**: Open. Not silently worked around — documented here and in
+  the Phase 7/8 session reports each time it was mitigated.
+
 ### KI-009: Provider fallback-to-mock is observable only after the call completes (Phase 4.1)
 
 - **What**: `app/ai/providers/factory.py::get_reasoning_model` silently
@@ -195,6 +226,14 @@ must record what, why, and impact.
   guessing one would be premature (Section 44/45 discipline).
 - **Status**: Documented limitation, not silently hidden. Not a bypass of
   a requirement -- Phase 2 has no multi-currency requirement.
+- **Phase 8 dependency (added 2026-09-02)**: `app.measurement` (the
+  revenue-measurement layer) inherits the same discipline deliberately --
+  `GET /measurement/report` never sums across currencies (every field is
+  a per-currency list: `eligible_at_risk`, `observed_recovered`,
+  `observed_not_recovered`, `unresolved`, `recovered_by_strategy`,
+  `recovered_by_disposition`). Resolving KI-006 remains a precondition
+  for any future single-number cross-currency total in this report, the
+  same way it already is for the Phase 5 high-value contract.
 
 ### KI-005: Postgres port collision with a native Windows Postgres service (Phase 1) — RESOLVED
 
