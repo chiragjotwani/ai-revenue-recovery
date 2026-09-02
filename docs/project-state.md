@@ -2,8 +2,8 @@
 
 ## Current Phase
 
-Phase 9 — Recovery Strategy Learning (scoped): implementation and
-verification complete, **frozen**. Phases 4.1, 5, 6, 7, and 8 are also
+Phase 10 — AI Model Routing & Reliability (scoped): implementation and
+verification complete, **frozen**. Phases 4.1, 5, 6, 7, 8, and 9 are also
 frozen. Phases 0–2 remain frozen (`docs/phase-0-2-freeze.md`).
 
 Owner decisions recorded:
@@ -54,10 +54,28 @@ Owner decisions recorded:
   (`ml_model_status: "not_implemented"` +
   `app/analytics/schema.py::ML_MODEL_LIMITATION`) rather than silently
   dropped or faked.
+- 2026-09-02: Phase 10 scoped by explicit owner decision (asked mid-session
+  via AskUserQuestion, given the same class of tension Phase 9 hit): the
+  master plan (`docs/master-loop-engineering-prompt.md`, Section 29) calls
+  for "model router," "confidence routing," "model comparison," "latency
+  monitoring," "model evaluation," and "advanced-model escalation."
+  Everything except confidence routing is implemented. Escalation
+  (`app/ai/providers/router.py::run_diagnosis_with_failover`) is driven
+  EXCLUSIVELY by an observable transport failure (`ReasoningModelError`),
+  never by the diagnosis's self-reported confidence -- this project has
+  twice already documented that confidence is model-reported and
+  uncalibrated (Phase 4.1's AI validation stage; ADR-006, which forbids
+  exactly this shape of thing at the policy layer) and declined to trust
+  it; extending that same discipline here. Config-time provider
+  substitution is now explicit and observable (`select_reasoning_model`,
+  logged, exposed via `GET /ai/providers`), closing KI-009. Runtime
+  escalation is durably recorded on the diagnosis row itself
+  (`Diagnosis.router_escalated` / `.router_escalation_reason`, migration
+  `9a3e7b5c1d24`) rather than only in a transient log line.
 
 ## Current Stage
 
-N/A — Phase 9 closed. No Phase 10 started.
+N/A — Phase 10 closed. No Phase 11 started.
 
 ## Completed Phases
 
@@ -73,6 +91,51 @@ N/A — Phase 9 closed. No Phase 10 started.
 - Phase 8 — Recovered Revenue Measurement (frozen)
 - Phase 9 — Recovery Strategy Learning (scoped: dataset + analytics only;
   frozen)
+- Phase 10 — AI Model Routing & Reliability (scoped: failure-based routing
+  only, no confidence routing; frozen)
+
+## Completed Stages (Phase 10)
+
+Model Router & Reliability (`app/ai/providers/factory.py::select_reasoning_model`,
+`app/ai/providers/router.py`, `app/ai/report.py`, migration
+`9a3e7b5c1d24`). Three parts:
+
+* **Explicit/observable provider selection** -- `select_reasoning_model`
+  performs identical resolution to the frozen `get_reasoning_model` (both
+  always agree) but returns a `ProviderSelection`
+  (`requested_provider`/`resolved_provider`/`substituted`/
+  `substitution_reason`) and logs a structured warning at the moment of
+  substitution, closing KI-009 (moved to Resolved).
+* **Failure-based escalation** (`run_diagnosis_with_failover`) -- on a
+  transport failure (`ReasoningModelError`) from the configured provider,
+  retries once against `MockProvider` (always available). Deliberately
+  NEVER escalates on the model's self-reported confidence (owner decision
+  this session, mirroring Phase 9's own ADR-006/KI-007 discipline) --
+  asserted structurally by a test that inspects the function's own
+  signature for a confidence/threshold/probability parameter and finds
+  none. `run_diagnosis` itself (the frozen Phase 4 contract several
+  existing tests depend on) is untouched; the router wraps it, it does
+  not replace it. `diagnose_case`'s existing `get_reasoning_model()` call
+  and its monkeypatch hook are unchanged, so all frozen diagnosis tests
+  (43) pass unmodified.
+* **Real usage reporting** (`GET /ai/providers`, `GET /ai/model-report`,
+  `scripts/benchmark_diagnosis.py --compare`) -- "model comparison" /
+  "latency monitoring" / "model evaluation" computed from actually
+  persisted `Diagnosis` rows only, never the synthetic evaluation set
+  (KI-007); an empty diagnosis table produces a genuinely empty report,
+  never a fabricated baseline. `Diagnosis.router_escalated` /
+  `.router_escalation_reason` (new, additive, default-`false` columns)
+  durably record a runtime escalation on the diagnosis row itself.
+  `--compare` in the offline benchmark script shows `requested_provider`
+  next to the actually-serving `provider` so a config-time substitution
+  is visible in the comparison table itself, not hidden.
+
+Frontend: the existing "AI diagnosis" panel (no new panel) gained a
+router-status line (resolved provider, substitution warning if any, real
+per-model diagnosis count/latency/escalation count) below its existing
+advisory-only copy. Tests: `test_ai_model_router.py` (11) +
+`test_ai_model_report.py` (4), all passing; zero regressions in the 43
+frozen Phase 4 AI tests.
 
 ## Completed Stages (Phase 9)
 
@@ -483,6 +546,12 @@ See `docs/known-issues.md`.
   above and `app/analytics/schema.py`) — not a defect, a scoped and
   disclosed omission, the same discipline KI-007 already establishes for
   the diagnosis/decision evaluation harnesses.
+- Phase 10: KI-009 RESOLVED (see `docs/known-issues.md`). No new known
+  issue introduced. "Confidence routing" from the master plan's Phase 10
+  definition is deliberately not implemented — see the 2026-09-02 owner
+  decision above and `app/ai/providers/router.py`'s module docstring —
+  not a defect, a scoped and disclosed omission extending ADR-006's own
+  discipline to the model-routing layer.
 
 ## Architecture Decisions
 
@@ -494,6 +563,31 @@ See `docs/known-issues.md`.
 - ADR-006: Model confidence is not a deterministic policy threshold (Phase 5)
 
 ## Last Successful Verification
+
+2026-09-02 Phase 10 (AI Model Routing & Reliability, scoped) complete
+(this session). Backend: full suite **665 passed, 8 skipped
+(pre-existing), 1 xfailed (KI-006), 0 failed**, run against the isolated
+`arr_test_db`, stable across 2 full runs; `test_ai_model_router.py` (11)
++ `test_ai_model_report.py` (4) all pass, zero regressions in the 43
+frozen Phase 4 AI tests (`test_ai_diagnosis.py`, `test_ai_providers.py`,
+`test_ai_failure_modes.py`, `test_diagnosis_api.py`). `ruff check`,
+`ruff format --check`, `mypy app` (71 files) all clean (mypy hit a
+transient environment failure mid-session -- `ImportError: DLL load
+failed ... blocked by an Application Control policy` -- resolved by a
+`pip install --force-reinstall mypy`; not a code issue, confirmed by full
+subsequent clean runs). Migration `9a3e7b5c1d24` (additive:
+`diagnoses.router_escalated`/`.router_escalation_reason`, default
+`false`/`NULL`) upgrade/downgrade/upgrade roundtrip clean on both the dev
+and isolated DB, `alembic check` clean, single head. Frontend: `vitest`
+62/62, `eslint` clean, `tsc --noEmit` clean, `next build` clean. Real
+end-to-end verification: monkeypatched a transport-unreachable primary
+provider through the real `POST /recovery/cases/{id}/diagnose` endpoint
+and confirmed automatic escalation to `mock` (`200`, not `502`,
+`router_escalated: true`); confirmed `GET /ai/model-report` reflected the
+escalation count; confirmed `scripts/benchmark_diagnosis.py --compare
+mock,qwen` honestly showed `requested_provider=qwen,
+provider=mock` (no `AI_QWEN_BASE_URL` configured) rather than hiding the
+substitution. No Phase 11 code was introduced.
 
 2026-09-02 Phase 9 (Recovery Strategy Learning, scoped) complete (this
 session). Backend: full suite **650 passed, 8 skipped (pre-existing), 1

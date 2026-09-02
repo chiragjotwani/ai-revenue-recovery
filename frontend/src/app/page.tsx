@@ -7,6 +7,7 @@ import {
   OPEN_STATES,
   riskSeverity,
   type Health,
+  type ModelReport,
   type RecoveryCase,
   type RevenueReport,
   type RiskAssessment,
@@ -24,13 +25,14 @@ import {
 } from "@/components/ui";
 
 export default async function OverviewPage() {
-  const [health, summary, payments, cases, revenue, strategy] = await Promise.all([
+  const [health, summary, payments, cases, revenue, strategy, modelReport] = await Promise.all([
     apiGet<Health>("/health"),
     apiGet<RiskSummary>("/risk/summary"),
     apiGet<RiskAssessment[]>("/risk/payments"),
     apiGet<RecoveryCase[]>("/recovery/cases"),
     apiGet<RevenueReport>("/measurement/report"),
     apiGet<StrategyAnalyticsReport>("/analytics/strategy-report"),
+    apiGet<ModelReport>("/ai/model-report"),
   ]);
 
   if (!summary.ok || !payments.ok || !cases.ok) {
@@ -245,6 +247,35 @@ export default async function OverviewPage() {
             The diagnosis is advisory. A deterministic policy engine (Phase 5) decides what
             happens.
           </p>
+          {modelReport.ok && (
+            <div className="mt-3 flex flex-col gap-1.5 border-t border-border/60 pt-3">
+              <div className="flex flex-wrap items-center gap-2">
+                <span className="font-mono text-[11px] uppercase tracking-widest text-text-dim">
+                  Model router
+                </span>
+                <StatusPill
+                  label={modelReport.data.router.resolved_provider}
+                  severity={modelReport.data.router.substituted ? "warn" : "neutral"}
+                />
+                {modelReport.data.router.substituted && (
+                  <span className="text-xs text-text-dim">
+                    requested {modelReport.data.router.requested_provider} --{" "}
+                    {modelReport.data.router.substitution_reason}
+                  </span>
+                )}
+              </div>
+              {modelReport.data.by_model.length > 0 && (
+                <p className="text-xs text-text-dim">
+                  {modelReport.data.by_model
+                    .map(
+                      (m) =>
+                        `${m.model_name}: ${m.diagnosis_count} diagnos${m.diagnosis_count === 1 ? "is" : "es"}, ${m.mean_latency_ms}ms avg${m.escalation_count > 0 ? `, ${m.escalation_count} escalated` : ""}`,
+                    )
+                    .join(" · ")}
+                </p>
+              )}
+            </div>
+          )}
         </Panel>
         <Panel title="System">
           <div className="flex flex-wrap items-center gap-3 text-sm">

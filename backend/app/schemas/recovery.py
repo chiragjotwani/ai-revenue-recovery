@@ -54,6 +54,8 @@ class DiagnosisOut(BaseModel):
     model_version: str
     prompt_version: str
     latency_ms: int
+    router_escalated: bool
+    router_escalation_reason: str | None
     created_at: datetime
 
 

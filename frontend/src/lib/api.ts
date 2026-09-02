@@ -213,6 +213,36 @@ export type StrategyAnalyticsReport = {
   ml_model_limitation: string;
 };
 
+// ---- Phase 10: model router / real model usage report ----
+
+/** What the model router requested vs. resolved -- a config-time
+ * substitution (e.g. AI_QWEN_BASE_URL unset) is explicit here, not
+ * discoverable only after a diagnosis completes (KI-009).
+ */
+export type ProviderStatus = {
+  requested_provider: string;
+  resolved_provider: string;
+  substituted: boolean;
+  substitution_reason: string | null;
+};
+
+/** Real, recorded usage for one model -- never synthetic evaluation data
+ * (KI-007). `escalation_count` is transport-failure fallbacks only,
+ * never confidence-based (this project does not trust that number).
+ */
+export type ModelReportEntry = {
+  model_name: string;
+  diagnosis_count: number;
+  mean_latency_ms: number;
+  mean_confidence: number;
+  escalation_count: number;
+};
+
+export type ModelReport = {
+  router: ProviderStatus;
+  by_model: ModelReportEntry[];
+};
+
 // ---- domain helpers ----
 
 export const TERMINAL_STATES = new Set(["recovered", "abandoned", "failed"]);

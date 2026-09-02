@@ -155,6 +155,45 @@ describe("OverviewPage (dashboard)", () => {
     expect(screen.getByText(/no ml recovery-probability model/i)).toBeInTheDocument();
     expect(screen.queryByText(/optimi[sz]ed strategy/i)).not.toBeInTheDocument();
   });
+
+  it("shows model router substitution honestly, from real recorded usage (Phase 10)", async () => {
+    stubRoutes({
+      "/health": [200, { status: "ok", environment: "development" }],
+      "/risk/summary": [200, SUMMARY],
+      "/risk/payments": [200, PAYMENTS],
+      "/recovery/cases": [200, CASES],
+      "/ai/model-report": [
+        200,
+        {
+          router: {
+            requested_provider: "qwen",
+            resolved_provider: "mock",
+            substituted: true,
+            substitution_reason: "AI_QWEN_BASE_URL is not configured",
+          },
+          by_model: [
+            {
+              model_name: "mock",
+              diagnosis_count: 3,
+              mean_latency_ms: 1.5,
+              mean_confidence: 0.8,
+              escalation_count: 1,
+            },
+          ],
+        },
+      ],
+    });
+    render(await OverviewPage());
+
+    expect(screen.getByText(/model router/i)).toBeInTheDocument();
+    expect(screen.getByText("mock")).toBeInTheDocument();
+    expect(screen.getByText(/requested qwen/i)).toBeInTheDocument();
+    expect(screen.getByText(/AI_QWEN_BASE_URL is not configured/i)).toBeInTheDocument();
+    expect(screen.getByText(/3 diagnoses/i)).toBeInTheDocument();
+    expect(screen.getByText(/1 escalated/i)).toBeInTheDocument();
+    // Never implies the substitution/escalation was confidence-based.
+    expect(screen.queryByText(/confidence.based/i)).not.toBeInTheDocument();
+  });
 });
 
 describe("RecoveryCaseDetailPage (BUG-004: invalid id vs backend down)", () => {

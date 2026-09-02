@@ -37,29 +37,6 @@ must record what, why, and impact.
 - **Status**: Open. Not silently worked around — documented here and in
   the Phase 7/8 session reports each time it was mitigated.
 
-### KI-009: Provider fallback-to-mock is observable only after the call completes (Phase 4.1)
-
-- **What**: `app/ai/providers/factory.py::get_reasoning_model` silently
-  substitutes `MockProvider` when `REASONING_PROVIDER` names a real
-  provider (`qwen`/`nemotron`) but that provider's base URL is unset —
-  there is no startup error, warning log, or distinct response signal at
-  the moment of substitution. The substitution *is* observable, but only
-  by inspecting the persisted diagnosis's `model_name` field after
-  diagnosis has already run (Rule 5 requires provider selection be
-  "explicit and observable").
-- **Impact**: an operator who misconfigures `AI_QWEN_BASE_URL` (typo,
-  forgot to set it) gets a real diagnosis-shaped response with no
-  indication anything is wrong unless they read `model_name` in the API
-  response or diagnosis row. Not a correctness bug — the response is
-  correctly labeled `"mock"` — but it is a weaker form of "explicit" than
-  the rule intends.
-- **Resolution plan**: consider a structured log warning at
-  `get_reasoning_model()` call time when a real provider was requested but
-  unavailable, or a response header, so the substitution is visible
-  without a follow-up query. Not implemented in Phase 4.1 — flagged for
-  owner decision since it touches the provider factory's public contract.
-- **Status**: Documented limitation, not silently hidden.
-
 ### KI-002: Self-hosted model infrastructure undecided (relevant from Phase 4)
 
 - **What**: The engineering prompt specifies self-hosted open-weight models
@@ -125,6 +102,33 @@ must record what, why, and impact.
   is bypassed.
 
 ## Resolved
+
+### KI-009: Provider fallback-to-mock is observable only after the call completes (Phase 4.1) — RESOLVED
+
+- **What (original finding)**: `app/ai/providers/factory.py::get_reasoning_model`
+  silently substitutes `MockProvider` when `REASONING_PROVIDER` names a
+  real provider (`qwen`/`nemotron`) but that provider's base URL is unset
+  — there was no startup error, warning log, or distinct response signal
+  at the moment of substitution, only the persisted diagnosis's
+  `model_name` field after the fact.
+- **Fix (Phase 10, 2026-09-02)**: `app/ai/providers/factory.py::select_reasoning_model`
+  performs the identical resolution logic (never diverges from
+  `get_reasoning_model` — both always agree on which provider a plain
+  call would get) but returns a `ProviderSelection`
+  (`requested_provider`/`resolved_provider`/`substituted`/
+  `substitution_reason`) and logs a structured warning at the moment a
+  substitution happens. `GET /ai/providers` exposes it live, and
+  `scripts/benchmark_diagnosis.py --compare` surfaces the same
+  requested-vs-actual distinction in its offline comparison table.
+  Additionally, `Diagnosis.router_escalated` /
+  `Diagnosis.router_escalation_reason` (migration `9a3e7b5c1d24`) durably
+  record a *runtime* substitution (the configured provider was
+  transport-unreachable, not merely unconfigured) on the diagnosis row
+  itself — the exact "response header, so the substitution is visible
+  without a follow-up query" style fix this entry's original resolution
+  plan proposed. `get_reasoning_model`/`resolved_provider_name` (the
+  frozen Phase 4 contract) are unchanged.
+- **Status**: RESOLVED.
 
 ### KI-008: Intermittent failure in concurrent-identical-ingestion race test (Phase 4.1) — RESOLVED
 
