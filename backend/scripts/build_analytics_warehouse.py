@@ -13,6 +13,7 @@ from __future__ import annotations
 import asyncio
 import logging
 
+from app.core.logging import configure_logging
 from app.db.session import AsyncSessionLocal
 from app.warehouse.etl import rebuild_warehouse
 
@@ -22,9 +23,9 @@ logger = logging.getLogger("app.warehouse.build")
 async def main() -> None:
     async with AsyncSessionLocal() as session:
         result = await rebuild_warehouse(session)
-    logger.info("analytics warehouse rebuilt: facts_written=%s", result.facts_written)
+    logger.info("analytics warehouse rebuilt", extra={"facts_written": result.facts_written})
 
 
 if __name__ == "__main__":
-    logging.basicConfig(level=logging.INFO)
+    configure_logging()
     asyncio.run(main())

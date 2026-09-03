@@ -18,7 +18,17 @@ from app.models import (  # noqa: F401  (registers models)
 config = context.config
 
 if config.config_file_name is not None:
-    fileConfig(config.config_file_name)
+    # disable_existing_loggers=False (Phase 14): the default (True) would
+    # silently disable every application logger not explicitly listed in
+    # alembic.ini's [loggers] section (only root/sqlalchemy/alembic are)
+    # -- including every app.* logger app.core.logging configures. Harmless
+    # in the production container (alembic runs as its own short-lived
+    # process, separate from the uvicorn process), but a real defect
+    # in-process: tests/test_migrations.py runs alembic commands directly
+    # inside the same pytest process as every other test, which was
+    # permanently silencing app.http's (and every other app logger's) log
+    # records for the rest of that test run once discovered.
+    fileConfig(config.config_file_name, disable_existing_loggers=False)
 
 target_metadata = Base.metadata
 

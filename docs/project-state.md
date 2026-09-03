@@ -2,9 +2,9 @@
 
 ## Current Phase
 
-Phase 13 — Analytics Data Platform (scoped): implementation and
-verification complete, **frozen**. Phases 4.1, 5, 6, 7, 8, 9, 10, 11, and
-12 are also frozen. Phases 0–2 remain frozen (`docs/phase-0-2-freeze.md`).
+Phase 14 — Production Observability: implementation and verification
+complete, **frozen**. Phases 4.1, 5, 6, 7, 8, 9, 10, 11, 12, and 13 are
+also frozen. Phases 0–2 remain frozen (`docs/phase-0-2-freeze.md`).
 
 Owner decisions recorded:
 - 2026-08-27: Phase 3 follows the frozen contract (Recovery Case
@@ -143,9 +143,36 @@ Owner decisions recorded:
   disclosed as `not_measurable` (`NATURAL_RECOVERY_LIMITATION`) rather
   than computed from a broadened, Phase-8-inconsistent definition.
 
+- 2026-09-03: Phase 14 (Production Observability) implemented in full --
+  no scope tension with any prior phase's frozen semantics, unlike
+  Phases 9–13 (structured logging, metrics, and health checks describe
+  the system, they do not compute new business facts). One real,
+  pre-existing defect was found and fixed while building it: Alembic's
+  `fileConfig()` (`migrations/env.py`) defaults to
+  `disable_existing_loggers=True`, which silently disabled every `app.*`
+  logger not explicitly listed in `alembic.ini` -- harmless in
+  production (alembic runs as its own short-lived process, separate from
+  the uvicorn process) but a real defect in-process, since
+  `tests/test_migrations.py` runs Alembic directly inside the same
+  pytest process as every other test, permanently silencing this
+  phase's new log lines for the remainder of any full-suite run after it
+  (reproduced: passed in isolation, failed only in the full 700+ test
+  suite; root-caused, not worked around -- fixed by passing
+  `disable_existing_loggers=False`, then reverified 719/719 green). A
+  second, smaller defect was also found and fixed: uvicorn installs its
+  own default logging configuration during server startup, which runs
+  AFTER this module is imported, silently overriding
+  `app.core.logging.configure_logging()` if that were only called at
+  import time -- fixed by also reapplying it from the FastAPI lifespan
+  startup handler (`app/main.py::_lifespan`), which runs last; confirmed
+  live in a rebuilt Docker container (structured JSON request/domain log
+  lines now actually appear in `docker compose logs backend`, where
+  before the fix only uvicorn's own plain-text access log did).
+
 ## Current Stage
 
-N/A — Phase 13 closed. No Phase 14 started.
+N/A — Phase 14 closed. Do NOT begin Phase 15 without explicit owner
+authorization.
 
 ## Completed Phases
 
@@ -172,6 +199,69 @@ N/A — Phase 13 closed. No Phase 14 started.
   incremental/experiment analytics, natural recovery disclosed as
   not-measurable rather than redefining Phase 8's outcome semantics;
   frozen)
+- Phase 14 — Production Observability (structured JSON logging, request/
+  domain correlation, operational + business metrics, liveness/readiness
+  health checks, worker heartbeats; frozen)
+
+## Completed Stages (Phase 14)
+
+Structured logging, correlation, metrics, and health (`app/core/logging.py`,
+`app/core/middleware.py`, `app/core/metrics.py`, `app/core/heartbeat.py`,
+`app/api/observability.py`, `app/api/health.py`). Four parts:
+
+1. **Structured logging** (`app/core/logging.py`) — every log record
+   through the root logger renders as one JSON object (timestamp, level,
+   logger, message, `request_id` when inside a request, plus any
+   `extra=` fields a caller passed). Domain services log the audit facts
+   Section 51/Phase 14 ask for at their existing choke points --
+   `app.services.diagnosis.diagnose_case` (case_id, diagnosis_id,
+   outcome, disposition, model_name/version, prompt_version,
+   schema_version, latency_ms, router_escalated),
+   `app.decision.service.decide_case` (case_id, decision_id,
+   diagnosis_id, decision_status, approved_strategy, recoverability),
+   `app.decision.actions.schedule_action`/`execute_action` (case_id,
+   action_id, action_type, execution_outcome), and
+   `app.outcome.service.observe_outcome` (case_id, action_id,
+   observation_id, outcome, is_terminal). Never logs customer email,
+   payment external_reference, or AI reasoning free text -- every field
+   is a bounded identifier or enum/numeric audit fact, the same boundary
+   `app.events.handlers.EventAuditProjector` (Phase 12) already
+   established.
+2. **Request/domain correlation** (`app.core.middleware.RequestContextMiddleware`)
+   — assigns/propagates `request_id` (`X-Request-Id` header in and out),
+   logs "request completed"/"request failed" per call, and records
+   operational HTTP metrics. Kept deliberately distinct from Phase 12's
+   `DomainEvent.correlation_id` (case-scoped, spans many requests over a
+   case's lifecycle) -- see `app.core.logging`'s module docstring for
+   why collapsing the two would lose the actual cross-request trace this
+   phase needs.
+3. **Metrics** (`app.core.metrics`, `GET /metrics`, standard Prometheus
+   text format) — operational: HTTP request count/latency by
+   route-template+status (never the raw id-containing path, to bound
+   cardinality), Phase 12 event pipeline counts
+   (consumed/relayed by outcome). Business: revenue at risk / observed
+   recovered revenue (per-currency gauges, KI-006-safe) / total recovery
+   attempts, refreshed from Phase 8/13's own report functions on every
+   scrape -- computes nothing new, just re-exposes those OBSERVED-only
+   numbers as gauges.
+4. **Health checks** (`app/api/health.py`) — liveness (`GET /health`,
+   pre-existing from an earlier phase) vs. readiness (`GET /health/ready`)
+   stay distinct; readiness now also probes Kafka but, per ADR-007,
+   Kafka being unreachable never flips overall readiness (only
+   PostgreSQL does) -- flipping it would be "readiness lying in the
+   other direction", the same principle this endpoint's own prior
+   docstring already established for Redis. The event relay/consumer
+   (`scripts/event_relay.py`/`event_consumer.py`) have no HTTP server to
+   probe, so `app/core/heartbeat.py` gives them a file-based liveness
+   heartbeat instead, wired into `docker-compose.yml`'s `HEALTHCHECK`
+   for both services (verified live: both report `(healthy)`).
+
+Two real, pre-existing defects were found and fixed while building this
+phase (not carried forward) -- see the 2026-09-03 owner-decisions entry
+above for the full root-cause writeup: Alembic's `fileConfig()` silently
+disabling every `app.*` logger in-process (`migrations/env.py`), and
+uvicorn's own logging config silently overriding this phase's JSON
+formatter in production (`app/main.py`'s lifespan startup handler).
 
 ## Completed Stages (Phase 13)
 
@@ -771,6 +861,13 @@ See `docs/known-issues.md`.
   docstring — not a defect, the same scoped-and-disclosed-omission
   discipline as Phase 9/10/11, extended to the analytics-warehouse layer.
   KI-010 remains open and applies equally to `tests/test_warehouse.py`.
+- Phase 14: no new known issue introduced. Two real defects discovered
+  while building this phase were fixed, not left open -- see the
+  2026-09-03 owner-decisions entry and Completed Stages (Phase 14) above
+  (Alembic's `disable_existing_loggers` default silencing app loggers
+  in-process; uvicorn's own logging config overriding this phase's JSON
+  formatter in production). KI-010 remains open and applies equally to
+  `tests/test_observability.py` / `tests/test_heartbeat.py`.
 
 ## Architecture Decisions
 
@@ -784,6 +881,30 @@ See `docs/known-issues.md`.
   audit/integration bus only, never a domain-logic trigger (Phase 12)
 
 ## Last Successful Verification
+
+2026-09-03 Phase 14 (Production Observability) complete (this session).
+Backend: full suite **719 passed, 8 skipped (pre-existing), 1 xfailed
+(KI-006), 0 failed** against the isolated `arr_test_db`, including 23
+new Phase 14 tests (request-id propagation/non-leakage, structured JSON
+formatting incl. no-PII-by-default, request-completion log correlation,
+`/metrics` exposition and non-mutation, readiness's Kafka-visible-but-
+non-blocking behavior, worker heartbeat freshness/staleness/missing/
+garbage-content). `ruff check`, `ruff format --check`, `mypy app scripts`
+(101 files) all clean. Docker: `backend`, `event-relay`, `event-consumer`
+images rebuilt; `event-relay`/`event-consumer` both report `(healthy)`
+via their new heartbeat `HEALTHCHECK`. Full live end-to-end verification
+(not just unit tests): `GET /health/ready` against the running container
+returned `{"database": "ok", "kafka": "ok"}` with overall `status:
+"ready"`; `GET /metrics` returned real Prometheus-format operational
+counters and business gauges (`arr_revenue_at_risk{currency="INR"}
+10699.0`, etc., matching the Phase 13 warehouse's own numbers); a real
+`POST .../diagnose` + `POST .../decide` call produced the exact expected
+structured JSON log lines (`app.services.diagnosis` "case diagnosed" and
+`app.decision.service` "case decided", each carrying `case_id` and the
+correlating `request_id`, with model metadata on the diagnosis line) as
+confirmed via `docker compose logs backend`, and no PII (customer email,
+external reference, AI reasoning text) appeared in any of them. No Phase
+15 code was introduced.
 
 2026-09-02 Phase 13 (Analytics Data Platform, scoped) complete (this
 session). Backend: full suite **704 passed, 8 skipped (pre-existing), 1
@@ -992,8 +1113,8 @@ The Phase 0–2 freeze gate detail remains in `docs/phase-0-2-freeze.md`.
 
 ## Last Git Commit
 
-`phase-13: implement analytics data platform` — see `git log`.
-(Preceded by `phase-12: implement scalable event architecture` and every
+`phase-14: implement production observability` — see `git log`.
+(Preceded by `phase-13: implement analytics data platform` and every
 phase back to `freeze: phases 0-2 verified`.)
 
 ## Process Note

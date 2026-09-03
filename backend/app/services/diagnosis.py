@@ -25,6 +25,7 @@ failure-only, never confidence-based) escalation rule.
 
 from __future__ import annotations
 
+import logging
 from decimal import Decimal
 from uuid import UUID
 
@@ -43,6 +44,8 @@ from app.recovery import service as recovery_service
 
 _DIAGNOSABLE_FROM = {RecoveryCaseState.DETECTED, RecoveryCaseState.DIAGNOSING}
 _ACTOR = "system:diagnose"
+
+logger = logging.getLogger("app.services.diagnosis")
 
 
 async def get_latest_diagnosis(session: AsyncSession, case_id: UUID) -> DiagnosisRow | None:
@@ -112,5 +115,20 @@ async def diagnose_case(
         RecoveryCaseState.DIAGNOSED,
         actor=_ACTOR,
         reason=f"diagnosed: {diagnosis.outcome.value} (confidence {diagnosis.confidence})",
+    )
+    logger.info(
+        "case diagnosed",
+        extra={
+            "case_id": str(case.id),
+            "diagnosis_id": str(row.id),
+            "outcome": diagnosis.outcome.value,
+            "disposition": diagnosis.disposition.value,
+            "model_name": raw.model_name,
+            "model_version": raw.model_version,
+            "prompt_version": raw.prompt_version,
+            "schema_version": diagnosis.schema_version,
+            "latency_ms": raw.latency_ms,
+            "router_escalated": result.escalated,
+        },
     )
     return case, row

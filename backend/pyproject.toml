@@ -20,6 +20,9 @@ dependencies = [
     # Pure Python (no librdkafka C-extension), fits the asyncio-everywhere
     # architecture already used throughout this backend.
     "aiokafka>=0.11,<0.12",
+    # Operational metrics exposition (Phase 14), standard /metrics text
+    # format. Pure Python, no compiled extension.
+    "prometheus-client>=0.21,<0.22",
 ]
 
 [project.optional-dependencies]

@@ -28,6 +28,9 @@ from datetime import UTC, datetime
 from sqlalchemy import select
 
 from app.core.config import get_settings
+from app.core.heartbeat import run_heartbeat_loop
+from app.core.logging import configure_logging
+from app.core.metrics import EVENTS_RELAYED_TOTAL
 from app.db.session import AsyncSessionLocal
 from app.events.kafka import kafka_producer, serialize
 from app.models.domain_event import DomainEventRow
@@ -83,19 +86,32 @@ async def run_relay_once() -> int:
                 key=str(row.aggregate_id).encode("utf-8"),
             )
             await _mark_published(row.id)
-            logger.info("relayed event_id=%s event_type=%s", row.id, row.event_type)
+            EVENTS_RELAYED_TOTAL.labels(event_type=row.event_type).inc()
+            logger.info(
+                "relayed event",
+                extra={
+                    "event_id": str(row.id),
+                    "event_type": row.event_type,
+                    "aggregate_id": str(row.aggregate_id),
+                    "correlation_id": str(row.correlation_id),
+                },
+            )
 
     return len(rows)
 
 
 async def run_relay_forever() -> None:
     logger.info("event relay starting")
-    while True:
-        sent = await run_relay_once()
-        if sent == 0:
-            await asyncio.sleep(POLL_INTERVAL_SECONDS)
+    heartbeat_task = asyncio.create_task(run_heartbeat_loop())
+    try:
+        while True:
+            sent = await run_relay_once()
+            if sent == 0:
+                await asyncio.sleep(POLL_INTERVAL_SECONDS)
+    finally:
+        heartbeat_task.cancel()
 
 
 if __name__ == "__main__":
-    logging.basicConfig(level=logging.INFO)
+    configure_logging()
     asyncio.run(run_relay_forever())

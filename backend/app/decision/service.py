@@ -26,6 +26,7 @@ Phase 4 already runs, called again for its two typed signals.
 
 from __future__ import annotations
 
+import logging
 from datetime import UTC, datetime
 from uuid import UUID
 
@@ -47,6 +48,8 @@ from app.services.diagnosis import get_latest_diagnosis
 
 _DECIDABLE_FROM = {RecoveryCaseState.DIAGNOSED}
 _ACTOR = "system:decide"
+
+logger = logging.getLogger("app.decision.service")
 
 # There is no action-execution history yet (Phase 6 owns that artifact --
 # see app/recovery/preconditions.py). Until it exists, every case is
@@ -233,4 +236,15 @@ async def decide_case(
         await session.rollback()
         raise
 
+    logger.info(
+        "case decided",
+        extra={
+            "case_id": str(updated_case.id),
+            "decision_id": str(row.id),
+            "diagnosis_id": str(diagnosis_id),
+            "decision_status": outcome.decision_status.value,
+            "approved_strategy": outcome.approved_strategy.value,
+            "recoverability": outcome.recoverability.value,
+        },
+    )
     return updated_case, row

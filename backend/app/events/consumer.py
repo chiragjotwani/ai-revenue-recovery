@@ -27,6 +27,7 @@ from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.metrics import EVENTS_CONSUMED_TOTAL
 from app.events.schema import DomainEvent
 from app.models.domain_event import DeadLetterEvent, ProcessedEvent
 
@@ -89,6 +90,9 @@ async def process_event(
     two consumer instances race on the same event.
     """
     if await _already_processed(session, event.event_id, handler.consumer_group):
+        EVENTS_CONSUMED_TOTAL.labels(
+            event_type=event.event_type, outcome=EventOutcome.DUPLICATE.value
+        ).inc()
         return ProcessResult(EventOutcome.DUPLICATE, attempts=0)
 
     last_error: Exception | None = None
@@ -118,9 +122,15 @@ async def process_event(
             # for this group -- same KI-008 recheck pattern as every
             # prior phase's service module.
             if await _already_processed(session, event.event_id, handler.consumer_group):
+                EVENTS_CONSUMED_TOTAL.labels(
+                    event_type=event.event_type, outcome=EventOutcome.DUPLICATE.value
+                ).inc()
                 return ProcessResult(EventOutcome.DUPLICATE, attempts=attempt)
             raise
         await session.commit()
+        EVENTS_CONSUMED_TOTAL.labels(
+            event_type=event.event_type, outcome=EventOutcome.HANDLED.value
+        ).inc()
         return ProcessResult(EventOutcome.HANDLED, attempts=attempt)
 
     # Every attempt failed -- dead-letter, never retry forever, never
@@ -136,4 +146,16 @@ async def process_event(
     )
     session.add(dlq_row)
     await session.commit()
+    logger.error(
+        "event dead-lettered",
+        extra={
+            "event_id": str(event.event_id),
+            "event_type": event.event_type,
+            "consumer_group": handler.consumer_group,
+            "attempts": max_attempts,
+        },
+    )
+    EVENTS_CONSUMED_TOTAL.labels(
+        event_type=event.event_type, outcome=EventOutcome.DEAD_LETTERED.value
+    ).inc()
     return ProcessResult(EventOutcome.DEAD_LETTERED, attempts=max_attempts)

@@ -38,6 +38,7 @@ re-reading it, never by trusting an earlier SELECT.
 
 from __future__ import annotations
 
+import logging
 from uuid import UUID
 
 from sqlalchemy import select
@@ -64,6 +65,8 @@ _EXECUTABLE_FROM = {RecoveryCaseState.ACTION_SCHEDULED}
 
 _SCHEDULE_ACTOR = "system:schedule_action"
 _EXECUTE_ACTOR = "system:execute_action"
+
+logger = logging.getLogger("app.decision.actions")
 
 # Approved strategies that carry no external side effect at all -- their
 # "execution" is the completion itself (already-paid, or a handoff to a
@@ -201,6 +204,15 @@ async def schedule_action(
         await session.rollback()
         raise
 
+    logger.info(
+        "action scheduled",
+        extra={
+            "case_id": str(updated_case.id),
+            "action_id": str(row.id),
+            "decision_id": str(decision_id),
+            "action_type": approved_strategy,
+        },
+    )
     return updated_case, row, True
 
 
@@ -322,6 +334,16 @@ async def execute_action(
         await session.rollback()
         raise
 
+    logger.info(
+        "action executed",
+        extra={
+            "case_id": str(updated_case.id),
+            "action_id": str(action_id),
+            "execution_id": str(execution.id),
+            "action_type": action_type,
+            "execution_outcome": outcome.value,
+        },
+    )
     return updated_case, action, execution, True
 
 

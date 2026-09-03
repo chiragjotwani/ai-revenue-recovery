@@ -26,6 +26,7 @@ window, or a monetary/confidence threshold.
 
 from __future__ import annotations
 
+import logging
 from uuid import UUID
 
 from sqlalchemy import select
@@ -44,6 +45,8 @@ from app.recovery import service as recovery_service
 
 _OBSERVABLE_FROM = {RecoveryCaseState.ACTION_EXECUTED, RecoveryCaseState.OBSERVING}
 _OBSERVE_ACTOR = "system:observe_outcome"
+
+logger = logging.getLogger("app.outcome.service")
 
 
 async def _get_action_for_case(session: AsyncSession, case_id: UUID) -> RecoveryAction | None:
@@ -255,4 +258,14 @@ async def observe_outcome(
         await session.rollback()
         raise
 
+    logger.info(
+        "outcome observed",
+        extra={
+            "case_id": str(updated_case.id),
+            "action_id": str(action_id),
+            "observation_id": str(row.id),
+            "outcome": classification.outcome.value,
+            "is_terminal": classification.is_terminal,
+        },
+    )
     return updated_case, row, True
