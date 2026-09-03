@@ -110,6 +110,61 @@ limitation (no FX conversion across currencies yet).
 Exposed via `GET /risk/payments` and `GET /risk/summary`, and a minimal
 dashboard at frontend route `/risk`.
 
+## Asynchronous Event Architecture (Phase 12)
+
+Kafka is an audit/integration bus only -- never a trigger for domain
+logic (ADR-007), which is what keeps this a modular monolith rather than
+a set of services communicating over Kafka. An outbox pattern
+(`domain_events` table, written in the same transaction as the case
+state change it describes, via `app.recovery.service.open_case`/
+`transition_case`) avoids an unsafe dual-write between Postgres and
+Kafka. Two separate long-running processes, not part of the
+request-serving backend, do the rest: `scripts/event_relay.py` drains
+unpublished outbox rows to Kafka, and `scripts/event_consumer.py`
+consumes them into `app.events.handlers.EventAuditProjector` via
+`app.events.consumer.process_event`, which is DB-authoritative
+idempotent (`processed_events`, unique on `(event_id, consumer_group)` --
+KI-008 discipline), bounded-retried, and dead-lettered
+(`dead_letter_events`) rather than retried forever or silently dropped.
+See `docs/decisions/ADR-007-asynchronous-event-architecture.md`.
+
+## Analytics Data Platform (Phase 13)
+
+`app/warehouse/` separates analytical reads from the operational tables
+they are derived from: `app/warehouse/etl.py` extracts from
+`RecoveryCase`/`Payment`/`Diagnosis`/`RecoveryAction`/outcome data (the
+same source tables and attribution rules Phase 8/9 already use) and
+upserts one denormalized `CaseAnalyticsFact` row per case, keyed by
+`case_id` -- idempotent, safe to rerun. `app/warehouse/service.py` reads
+only that materialization for `GET /analytics/warehouse/report`, not
+live joins. Deliberately does NOT compute "incremental recovery" or
+"experiment/control-treatment performance" (no counterfactual design
+exists in this system) or "natural recovery" (Phase 7's outcome
+observation is action-gated, so computing it from raw evidence would
+redefine Phase 8's own outcome semantics for the same case) -- both
+disclosed via typed limitation fields on `AnalyticsWarehouseReport`
+rather than fabricated.
+
+## Production Observability (Phase 14)
+
+Structured JSON logging (`app.core.logging`) for every log line, with a
+per-request `request_id` (`app.core.middleware.RequestContextMiddleware`,
+`X-Request-Id` header in and out) distinct from Phase 12's case-scoped
+`DomainEvent.correlation_id` -- the former traces one HTTP call, the
+latter traces a case's whole lifecycle across many calls over time.
+Domain services log their existing choke points (diagnose/decide/
+schedule/execute/observe) with case/decision/action/observation ids and
+model metadata, never customer PII or AI reasoning text.
+`GET /metrics` (Prometheus text format, `app.core.metrics`) exposes
+operational HTTP/event-pipeline counters and business gauges re-derived
+from Phase 8/13's own OBSERVED-only reports on each scrape.
+`GET /health` (liveness) and `GET /health/ready` (readiness) stay
+distinct; readiness also reports Kafka but never lets it flip overall
+readiness (ADR-007: a Kafka outage never blocks request-serving). The
+event relay/consumer have no HTTP server, so `app.core.heartbeat` gives
+them a file-based liveness heartbeat instead, wired into
+`docker-compose.yml`'s `HEALTHCHECK` for both.
+
 ## Phase Roadmap
 
 See `docs/project-state.md` for current phase/stage status. The full ordered

@@ -103,6 +103,38 @@ must record what, why, and impact.
 
 ## Resolved
 
+### KI-011: Logging configuration silently overridden in two places (Phase 14) — RESOLVED
+
+- **What (original finding, discovered while building Phase 14's
+  structured logging)**: two independent places silently discarded
+  `app.core.logging.configure_logging()`'s JSON formatter.
+  (1) `migrations/env.py` calls `logging.config.fileConfig()` with its
+  default `disable_existing_loggers=True`, which disables every logger
+  not explicitly listed in `alembic.ini`'s `[loggers]` section (only
+  root/sqlalchemy/alembic are) — including every `app.*` logger. Harmless
+  in production (Alembic runs as its own short-lived process, separate
+  from the uvicorn process), but a real defect in-process:
+  `tests/test_migrations.py` runs Alembic directly inside the same
+  pytest process as every other test, permanently silencing Phase 14's
+  new log lines for the remainder of any full-suite run after it — first
+  surfaced as a test that passed alone but failed only inside the
+  700+-test full suite. (2) uvicorn installs its own default logging
+  configuration during server startup, which runs *after* `app.main` is
+  imported but overrides whatever was configured at import time —
+  meaning the production container kept emitting uvicorn's plain-text
+  access log instead of this phase's JSON formatter, confirmed live via
+  `docker compose logs backend` before the fix.
+- **Fix (Phase 14, 2026-09-03)**: `migrations/env.py` now passes
+  `disable_existing_loggers=False` to `fileConfig()`.
+  `app/main.py`'s FastAPI `lifespan` startup handler reapplies
+  `configure_logging()` (idempotent, safe to call twice) after uvicorn's
+  own setup runs, so this app's formatter wins last. Reverified: 719/719
+  backend tests green in the full suite, and a rebuilt Docker container's
+  logs show real JSON request/domain log lines (confirmed via
+  `docker compose logs backend`) where before the fix only uvicorn's
+  own plain-text access log appeared.
+- **Status**: RESOLVED.
+
 ### KI-009: Provider fallback-to-mock is observable only after the call completes (Phase 4.1) — RESOLVED
 
 - **What (original finding)**: `app/ai/providers/factory.py::get_reasoning_model`
