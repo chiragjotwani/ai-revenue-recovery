@@ -83,6 +83,9 @@ describe("ActionPanel: scheduled state", () => {
               attempt_no: 1,
               idempotency_key: "arr:c-1:no_action:1",
               outcome: "no_side_effect_required",
+              detail: null,
+              simulated_reference: null,
+              resulting_payment_id: null,
               created_at: "2026-03-01T01:00:00Z",
             },
           ],
@@ -93,7 +96,7 @@ describe("ActionPanel: scheduled state", () => {
     expect(screen.queryByRole("button", { name: /execute action/i })).not.toBeInTheDocument();
   });
 
-  it("honestly labels a deferred retry, not a completed one", () => {
+  it("labels a simulated success clearly as simulated, not a real payment", () => {
     render(
       <ActionPanel
         caseId="c-1"
@@ -107,15 +110,47 @@ describe("ActionPanel: scheduled state", () => {
               id: "e-2",
               attempt_no: 1,
               idempotency_key: "arr:c-1:retry:1",
-              outcome: "deferred_no_integration",
+              outcome: "simulated_success",
+              detail: "simulated success on retry attempt 1",
+              simulated_reference: "sim:retry:a-1:1",
+              resulting_payment_id: "p-2",
               created_at: "2026-03-01T01:00:00Z",
             },
           ],
         })}
       />,
     );
-    expect(screen.getByText(/deferred no integration/i)).toBeInTheDocument();
-    expect(screen.getByText(/no payment-provider or customer-messaging integration/i)).toBeInTheDocument();
+    expect(screen.getByText(/simulated success/i)).toBeInTheDocument();
+    expect(screen.getByText(/no real payment gateway was contacted/i)).toBeInTheDocument();
+    expect(screen.getByText(/sim:retry:a-1:1/i)).toBeInTheDocument();
+  });
+
+  it("offers Execute action again after a temporary simulated failure", () => {
+    render(
+      <ActionPanel
+        caseId="c-1"
+        caseState="action_scheduled"
+        decisionStatus="approved"
+        initialAction={makeAction({
+          action_type: "retry",
+          status: "scheduled",
+          executions: [
+            {
+              id: "e-3",
+              attempt_no: 1,
+              idempotency_key: "arr:c-1:retry:1",
+              outcome: "simulated_temporary_failure",
+              detail: "simulated temporary_failure on retry attempt 1",
+              simulated_reference: "sim:retry:a-1:1",
+              resulting_payment_id: null,
+              created_at: "2026-03-01T01:00:00Z",
+            },
+          ],
+        })}
+      />,
+    );
+    expect(screen.getByText(/simulated temporary failure/i)).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /execute action/i })).toBeInTheDocument();
   });
 });
 

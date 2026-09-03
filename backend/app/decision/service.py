@@ -51,13 +51,17 @@ _ACTOR = "system:decide"
 
 logger = logging.getLogger("app.decision.service")
 
-# There is no action-execution history yet (Phase 6 owns that artifact --
-# see app/recovery/preconditions.py). Until it exists, every case is
-# necessarily on its first decision attempt, so the retry count a real
-# retry-cap check needs is always 0. This is a known, documented
-# limitation, not a fabricated value: once Phase 6 introduces executed-
-# action records, this must be replaced with a real count derived from
-# them, never left hardcoded.
+# This is the DECISION-level retry count (how many separate diagnose/decide
+# cycles this case has already been through) -- distinct from the
+# WITHIN-ACTION attempt count Phase 6's completion introduced
+# (app.decision.actions.execute_action's bounded attempt_no loop, capped
+# by the same RETRY_CAP). The state machine has no back-edge from
+# ACTION_EXECUTED/OBSERVING to DIAGNOSING (app/recovery/state_machine.py),
+# so a case can only ever be decided once -- there is no re-diagnosis loop
+# to drive this count above 0. Left hardcoded deliberately, not silently:
+# introducing a case-relaunch loop is a distinct piece of scope (a new
+# state-machine edge) this Phase 6 completion did not add. Replace this
+# once such a loop exists, never before.
 _RETRY_COUNT_PENDING_PHASE_6 = 0
 
 

@@ -263,17 +263,24 @@ async def execute_recovery_action(
     case_id: UUID,
     session: AsyncSession = Depends(get_db_session),
 ) -> ActionOut:
-    """Execute the scheduled action for a case's current decision (Phase
-    6). ``no_action``/``manual_review`` complete with no external side
-    effect; every other approved strategy is recorded as deferred -- no
-    payment-provider or messaging integration exists in this repository
-    (see ``app.decision.actions`` module docstring).
+    """Execute (or attempt the next retry of) the scheduled action for a
+    case's current decision (Phase 6). ``no_action``/``manual_review``
+    complete with no external side effect; every other approved strategy
+    runs against a deterministic, explicitly SIMULATED provider -- never a
+    real payment gateway or messaging system (see ``app.decision.actions``
+    / ``app.decision.providers`` module docstrings).
 
-    Advances the case ``action_scheduled -> action_executed``.
+    Advances the case ``action_scheduled -> action_executed`` once the
+    action reaches a terminal outcome (simulated success, permanent
+    failure, or the bounded retry cap is exhausted). While a temporary
+    simulated failure has occurred and attempts remain, the case stays
+    ``action_scheduled`` and calling this endpoint again attempts the next
+    attempt -- it is not only idempotent, it is also how a bounded retry
+    advances.
 
-    Idempotent on ``(action_id, attempt_no=1)``: a repeat call returns the
-    same persisted execution rather than creating a second attempt or a
-    second external effect.
+    Idempotent per attempt: a repeat call once the action is terminal
+    returns the same persisted final execution rather than creating a new
+    attempt or a second simulated effect.
 
     - ``404`` unknown case.
     - ``409`` the case is not in ``action_scheduled`` (and has no existing

@@ -26,6 +26,17 @@ Owner decisions recorded:
   integration exists or was invented; `retry`/`contact_customer`/
   `request_payment_method_update` executions are honestly recorded as
   `deferred_no_integration`, never fabricated as completed.
+- 2026-09-03: Phase 6 completed — a full repository audit identified this
+  as the single most consequential gap against the project's own phase
+  specification (the DETECT→ACT→OBSERVE loop was not genuinely closed: no
+  action this system took ever caused a recovery). Closed with a
+  deterministic, explicitly SIMULATED execution layer
+  (`app/decision/providers.py` / `app/decision/executors.py`) reached only
+  from the bounded action-executor layer (ADR-003 unaffected). Phase 7 and
+  Phase 8 were NOT modified — see KI-012 (resolved) and
+  `docs/recovery/action-idempotency.md` for what changed and what remains
+  deliberately out of scope (a real payment-gateway integration; a
+  case-level re-diagnosis loop).
 - 2026-09-01: Phase 7 (Outcome Observation) frozen — reuses the exact
   `already_paid`-style correlation already established in Phase 5/Phase 2,
   no new fuzzy matching; `action_executed` and `recovered` are kept

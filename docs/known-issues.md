@@ -103,6 +103,55 @@ must record what, why, and impact.
 
 ## Resolved
 
+### KI-012: Phase 6 action execution had no real or simulated external side effect (Phase 6) — RESOLVED
+
+- **What (original gap, present since the original Phase 6 commit,
+  2026-09-01)**: `app/decision/actions.py::execute_action` recorded every
+  approved strategy other than `no_action`/`manual_review` (i.e. `retry`,
+  `request_payment_method_update`, `contact_customer`) as
+  `ActionExecutionOutcome.DEFERRED_NO_INTEGRATION` and stopped there — no
+  payment-provider or customer-messaging integration, real or simulated,
+  existed anywhere in this repository. This was disclosed honestly in the
+  module's own docstring at the time, not hidden, but it meant the
+  DETECT→ACT→OBSERVE loop was not genuinely closed: Phase 7's
+  `observe_outcome` could only ever classify a case as `recovered` when an
+  unrelated, independently-ingested `payment.succeeded` event happened to
+  arrive for the same customer — never because this system's own action
+  caused anything. A full repository audit (2026-09-03, prior to this fix)
+  identified this as the single most consequential gap against the
+  project's own phase specification, ahead of the buildathon demo.
+- **Fix (2026-09-03)**: a deterministic, explicitly SIMULATED execution
+  layer — `app/decision/providers.py` (`SimulatedPaymentProvider`, a pure
+  function of `(failure_reason, attempt_no)`, no network call) and
+  `app/decision/executors.py` (`RetryExecutor` / `PaymentLinkExecutor` /
+  `NotificationExecutor`, one per real-side-effect strategy). Only
+  `app/decision/actions.py::execute_action` can reach these — ADR-003's
+  boundary (the LLM/policy engine can never invoke a provider) is
+  unaffected structurally, not just by convention. A bounded (`RETRY_CAP`,
+  the same constant `app.decision.policy` already defines) multi-attempt
+  loop lives entirely inside `execute_action`; a simulated success creates
+  a new `Payment` + `IngestionEvent` row (the identical shape any other
+  payment source produces) with an explicit causal link
+  (`RecoveryActionExecution.resulting_payment_id`) to what Phase 7 later
+  reads as evidence. Phase 7's `observe_outcome` and Phase 8's measurement
+  service were **not modified** — both already worked correctly against
+  real evidence; they simply had none to observe before this fix.
+- **Verified**: `tests/test_canonical_recovery_flow.py::test_canonical_recovery_flow_causes_revenue_recovery`
+  drives the full DETECT→DIAGNOSE→DECIDE→SCHEDULE→EXECUTE→SIMULATED
+  PROVIDER→OBSERVE→RECOVERED→MEASURE chain for the canonical ₹4,999
+  insufficient-funds scenario and asserts the causal link at every step
+  (the executed action's `resulting_payment_id` equals the observation's
+  `evidence_payment_id`) — not merely that a recovery eventually appears.
+  New coverage in `tests/test_action_executor.py` for a multi-attempt
+  success, a permanent failure, and retry-cap exhaustion.
+- **Still open, deliberately out of scope for this fix**: a real
+  payment-gateway or messaging integration (Phase 15+); a case-level
+  re-diagnosis loop after a fully failed action (no such loop exists in
+  the state machine, so `app.decision.service._RETRY_COUNT_PENDING_PHASE_6`
+  remains `0` — a distinct, decision-level retry count from the
+  within-action attempt count this fix introduced).
+- **Status**: RESOLVED.
+
 ### KI-011: Logging configuration silently overridden in two places (Phase 14) — RESOLVED
 
 - **What (original finding, discovered while building Phase 14's

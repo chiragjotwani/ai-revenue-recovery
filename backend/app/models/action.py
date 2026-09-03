@@ -37,6 +37,7 @@ from app.db.base import Base
 
 if TYPE_CHECKING:
     from app.models.decision import DecisionResult
+    from app.models.payment import Payment
     from app.models.recovery import RecoveryCase
 
 
@@ -53,27 +54,37 @@ class RecoveryActionStatus(str, enum.Enum):
 class ActionExecutionOutcome(str, enum.Enum):
     """What actually happened on one execution attempt.
 
-    No payment-provider or customer-messaging integration exists anywhere
-    in this repository, and Phase 6 must not invent one. This is not a gap
-    silently hidden: every execution row honestly records which of these
-    two happened, the same "explicit and observable substitution"
-    discipline Phase 4's provider factory uses for its own mock fallback
-    (KI-009).
+    No REAL payment-provider or customer-messaging integration exists
+    anywhere in this repository (Phase 6 completion still does not invent
+    one -- see ``app.decision.providers``). Every execution row honestly
+    records which of these happened, the same "explicit and observable
+    substitution" discipline Phase 4's provider factory uses for its own
+    mock fallback (KI-009).
 
     * ``NO_SIDE_EFFECT_REQUIRED`` -- the approved strategy (``no_action``,
       or ``manual_review``) never needed an external system call. This is
       a genuine, safe completion, not a deferral.
-    * ``DEFERRED_NO_INTEGRATION`` -- the approved strategy (``retry``,
-      ``request_payment_method_update``, ``contact_customer``) would
-      require a real external side effect (a payment-processor retry
-      call, a customer-messaging send) that this repository does not yet
-      implement. The mechanical step this system is responsible for
-      (recording an authorized, audited execution attempt) is complete;
-      there is no fabricated claim that money moved or a message was
-      sent.
+    * ``SIMULATED_SUCCESS`` -- the deterministic simulated provider
+      (``app.decision.providers.SimulatedPaymentProvider``) reported the
+      attempt succeeded. ``RecoveryActionExecution.resulting_payment_id``
+      is set to the new, simulated ``payment.succeeded`` evidence this
+      created -- never claimed as a real external payment.
+    * ``SIMULATED_TEMPORARY_FAILURE`` -- the simulated provider reported a
+      transient failure. If the bounded retry cap has not been reached,
+      the action remains ``scheduled`` and a further ``execute_action``
+      call attempts the next attempt; otherwise the cap is exhausted (see
+      ``RecoveryActionStatus.FAILED``).
+    * ``SIMULATED_PERMANENT_FAILURE`` -- the simulated provider reported a
+      non-retriable failure. No further attempts are made.
+    * ``DEFERRED_NO_INTEGRATION`` -- retained only for historical rows
+      created before this simulated layer existed (pre Phase-6-completion).
+      No code path in this repository produces this value going forward.
     """
 
     NO_SIDE_EFFECT_REQUIRED = "no_side_effect_required"
+    SIMULATED_SUCCESS = "simulated_success"
+    SIMULATED_TEMPORARY_FAILURE = "simulated_temporary_failure"
+    SIMULATED_PERMANENT_FAILURE = "simulated_permanent_failure"
     DEFERRED_NO_INTEGRATION = "deferred_no_integration"
 
 
@@ -141,8 +152,27 @@ class RecoveryActionExecution(Base):
     idempotency_key: Mapped[str] = mapped_column(String(200), nullable=False, unique=True)
     outcome: Mapped[str] = mapped_column(String(50), nullable=False)
 
+    #: A human-readable, always-clearly-simulated explanation of what the
+    #: simulated provider reported (see app.decision.providers). NULL for
+    #: NO_SIDE_EFFECT_REQUIRED executions, which have nothing to explain.
+    detail: Mapped[str | None] = mapped_column(String(300), nullable=True)
+    #: The deterministic simulated provider reference (always prefixed
+    #: ``sim:`` -- see app.decision.providers.SimulatedPaymentProvider).
+    #: Never formatted to resemble a real payment-gateway reference.
+    simulated_reference: Mapped[str | None] = mapped_column(String(200), nullable=True)
+    #: Set only on a SIMULATED_SUCCESS outcome: the id of the new,
+    #: simulated ``Payment`` row (status=succeeded) this execution
+    #: attempt caused -- the causal-correlation anchor Phase 7's
+    #: evidence-based observation and Phase 8's measurement both read
+    #: (via the ordinary later-successful-payment correlation rule, not a
+    #: new one). See docs/recovery/action-idempotency.md.
+    resulting_payment_id: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("payments.id"), nullable=True
+    )
+
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), nullable=False
     )
 
     action: Mapped[RecoveryAction] = relationship(back_populates="executions")
+    resulting_payment: Mapped[Payment | None] = relationship()

@@ -62,11 +62,25 @@ async def _executed_case(
     *,
     external_reference: str,
     customer_external_id: str,
-    failure_reason: str = "insufficient_funds",
+    failure_reason: str = "processing_error",
 ) -> tuple[uuid.UUID, datetime]:
     """A case carried all the way through diagnose -> decide -> schedule ->
     execute. Returns (case_id, failed_payment_occurred_at) so tests can
     ingest evidence relative to it.
+
+    Default failure_reason is deliberately ``processing_error``, not
+    ``insufficient_funds``: since Phase 6's completion, the retry executor
+    dispatches to a deterministic SIMULATED provider
+    (``app.decision.providers``) whose ``insufficient_funds`` profile
+    always succeeds on the first attempt -- which would create its own
+    ``payment.succeeded`` evidence and make every case "recovered" before
+    a test's own `_ingest_later` call ever runs. `processing_error`'s
+    simulated profile is a permanent failure (no payment created), so this
+    fixture still produces an "executed, no automatic evidence" starting
+    state -- exactly what Phase 7's own observation tests need to control
+    evidence independently. See tests/test_action_executor.py and
+    tests/test_canonical_recovery_flow.py for coverage of the simulated
+    success path itself.
     """
     for i in range(3):
         await _ingest_one(

@@ -112,6 +112,9 @@ export type ActionExecution = {
   attempt_no: number;
   idempotency_key: string;
   outcome: string;
+  detail: string | null;
+  simulated_reference: string | null;
+  resulting_payment_id: string | null;
   created_at: string;
 };
 

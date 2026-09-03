@@ -65,10 +65,20 @@ async def _executed_case(
     *,
     external_reference: str,
     customer_external_id: str,
-    failure_reason: str = "insufficient_funds",
+    failure_reason: str = "processing_error",
     amount: str = "4999.00",
     currency: str = "inr",
 ) -> tuple[uuid.UUID, datetime]:
+    # Default failure_reason is deliberately `processing_error`, not
+    # `insufficient_funds`: since Phase 6's completion, the retry executor
+    # dispatches to a deterministic SIMULATED provider whose
+    # `insufficient_funds` profile always succeeds on the first attempt --
+    # which would create its own payment.succeeded evidence and make every
+    # case "recovered" before a test's own evidence event is ingested.
+    # `processing_error`'s simulated profile is a permanent failure (no
+    # payment created), preserving this fixture's "executed, no automatic
+    # evidence" starting state. See test_canonical_recovery_flow.py for
+    # the simulated-success path's own coverage.
     for i in range(3):
         await _ingest_one(
             client,

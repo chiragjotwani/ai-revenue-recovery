@@ -82,6 +82,9 @@ class ActionExecutionOut(BaseModel):
     attempt_no: int
     idempotency_key: str
     outcome: str
+    detail: str | None = None
+    simulated_reference: str | None = None
+    resulting_payment_id: uuid.UUID | None = None
     created_at: datetime
 
 

@@ -141,6 +141,11 @@ async def _already_paid_case(
 
 
 async def test_schedule_then_execute_retry_action_happy_path(client: AsyncClient) -> None:
+    """insufficient_funds is the canonical scenario's profile: the
+    deterministic simulated provider succeeds on the very first attempt
+    (app/decision/providers.py). See test_canonical_recovery_flow.py for
+    the full DETECT..MEASURE walk this outcome feeds into.
+    """
     case_id = await _decided_case(client, external_reference="b1", customer_external_id="cust-b1")
 
     scheduled = await client.post(f"/recovery/cases/{case_id}/schedule-action")
@@ -155,12 +160,128 @@ async def test_schedule_then_execute_retry_action_happy_path(client: AsyncClient
     assert body["status"] == "executed"
     assert len(body["executions"]) == 1
     assert body["executions"][0]["attempt_no"] == 1
-    assert body["executions"][0]["outcome"] == "deferred_no_integration"
+    assert body["executions"][0]["outcome"] == "simulated_success"
     assert body["executions"][0]["idempotency_key"] == f"arr:{case_id}:retry:1"
+    assert body["executions"][0]["resulting_payment_id"] is not None
+    assert body["executions"][0]["simulated_reference"].startswith("sim:retry:")
 
     detail = (await client.get(f"/recovery/cases/{case_id}")).json()
     assert detail["state"] == "action_executed"
     assert detail["action"]["action_type"] == "retry"
+
+
+# --- E. Simulated execution: multi-attempt / permanent failure / cap -----------
+
+
+async def test_retry_succeeds_only_after_a_second_attempt(client: AsyncClient) -> None:
+    """do_not_honor's simulated profile is [temporary_failure, success]."""
+    case_id = await _decided_case(
+        client,
+        external_reference="b11",
+        customer_external_id="cust-b11",
+        failure_reason="do_not_honor",
+    )
+    await client.post(f"/recovery/cases/{case_id}/schedule-action")
+
+    first = await client.post(f"/recovery/cases/{case_id}/execute-action")
+    assert first.status_code == 200, first.text
+    first_body = first.json()
+    assert first_body["status"] == "scheduled"  # not yet terminal
+    assert len(first_body["executions"]) == 1
+    assert first_body["executions"][0]["outcome"] == "simulated_temporary_failure"
+    assert first_body["executions"][0]["resulting_payment_id"] is None
+
+    detail_mid = (await client.get(f"/recovery/cases/{case_id}")).json()
+    assert detail_mid["state"] == "action_scheduled"
+
+    second = await client.post(f"/recovery/cases/{case_id}/execute-action")
+    assert second.status_code == 200, second.text
+    second_body = second.json()
+    assert second_body["status"] == "executed"
+    assert len(second_body["executions"]) == 2
+    assert second_body["executions"][1]["attempt_no"] == 2
+    assert second_body["executions"][1]["outcome"] == "simulated_success"
+    assert second_body["executions"][1]["resulting_payment_id"] is not None
+
+    detail = (await client.get(f"/recovery/cases/{case_id}")).json()
+    assert detail["state"] == "action_executed"
+
+
+async def test_retry_permanent_failure_never_creates_payment_evidence(
+    client: AsyncClient,
+) -> None:
+    """processing_error's simulated profile is [permanent_failure]."""
+    case_id = await _decided_case(
+        client,
+        external_reference="b12",
+        customer_external_id="cust-b12",
+        failure_reason="processing_error",
+    )
+    await client.post(f"/recovery/cases/{case_id}/schedule-action")
+
+    executed = await client.post(f"/recovery/cases/{case_id}/execute-action")
+    assert executed.status_code == 200, executed.text
+    body = executed.json()
+    # RecoveryAction.status is "executed" (the execution PROCESS
+    # completed) regardless of success -- whether it succeeded is on the
+    # execution's own `outcome`, not the action's `status` (this is what
+    # keeps ACTION_EXECUTED -> OBSERVING's existing precondition,
+    # app.recovery.preconditions._requires_executed_action, satisfied
+    # without Phase 7 needing any change).
+    assert body["status"] == "executed"
+    assert len(body["executions"]) == 1
+    assert body["executions"][0]["outcome"] == "simulated_permanent_failure"
+    assert body["executions"][0]["resulting_payment_id"] is None
+
+    # The case still advances -- the execution *process* completed, even
+    # though it did not succeed. Phase 7 will separately observe no
+    # recovery evidence for it.
+    detail = (await client.get(f"/recovery/cases/{case_id}")).json()
+    assert detail["state"] == "action_executed"
+
+    # Idempotent replay: calling execute-action again on a terminal action
+    # must never attempt a new attempt.
+    replay = await client.post(f"/recovery/cases/{case_id}/execute-action")
+    assert replay.status_code == 200
+    assert len(replay.json()["executions"]) == 1
+
+
+async def test_retry_cap_is_never_exceeded(client: AsyncClient) -> None:
+    """card_not_supported has no defined simulated profile -- it always
+    reports a temporary failure (app/decision/providers.py's default
+    profile) -- so the bounded retry cap (RETRY_CAP=3) must stop it,
+    never retrying indefinitely, via the payment-link executor
+    (RecoveryStrategy.REQUEST_PAYMENT_METHOD_UPDATE).
+    """
+    case_id = await _decided_case(
+        client,
+        external_reference="b13",
+        customer_external_id="cust-b13",
+        failure_reason="card_not_supported",
+    )
+    scheduled = await client.post(f"/recovery/cases/{case_id}/schedule-action")
+    assert scheduled.json()["action_type"] == "request_payment_method_update"
+
+    for expected_attempts in (1, 2, 3):
+        r = await client.post(f"/recovery/cases/{case_id}/execute-action")
+        assert r.status_code == 200, r.text
+        body = r.json()
+        assert len(body["executions"]) == expected_attempts
+        assert body["executions"][-1]["outcome"] == "simulated_temporary_failure"
+        if expected_attempts < 3:
+            assert body["status"] == "scheduled"
+        else:
+            # Cap exhausted: RecoveryAction.status becomes "executed" (the
+            # process completed) even though every attempt failed -- see
+            # the "executed means completed, not succeeded" note above.
+            assert body["status"] == "executed"
+
+    # A 4th call must not create a 4th attempt -- the cap is exhausted,
+    # and this is an idempotent replay of the final state.
+    fourth = await client.post(f"/recovery/cases/{case_id}/execute-action")
+    assert fourth.status_code == 200
+    assert len(fourth.json()["executions"]) == 3
+    assert fourth.json()["status"] == "executed"
 
 
 async def test_no_action_strategy_is_a_safe_first_class_outcome(client: AsyncClient) -> None:

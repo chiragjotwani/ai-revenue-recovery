@@ -63,8 +63,17 @@ async def _decided_case(
     *,
     external_reference: str,
     customer_external_id: str,
-    failure_reason: str = "insufficient_funds",
+    failure_reason: str = "processing_error",
 ) -> tuple[uuid.UUID, datetime]:
+    # Default failure_reason is deliberately `processing_error`, not
+    # `insufficient_funds`: since Phase 6's completion, the retry executor
+    # dispatches to a deterministic SIMULATED provider whose
+    # `insufficient_funds` profile always succeeds on the first attempt --
+    # which would create its own payment.succeeded evidence and make every
+    # `_executed_case` "recovered" before this file's own `_ingest_later`
+    # calls run. `processing_error`'s simulated profile is a permanent
+    # failure (no payment created), preserving "executed, no automatic
+    # evidence" for these analytics tests to control evidence themselves.
     for i in range(3):
         await _ingest_one(
             client,

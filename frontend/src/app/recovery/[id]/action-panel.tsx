@@ -13,14 +13,19 @@ const initialState: ActionActionState = { status: "idle" };
  * for a case whose decision is actually approved and pending scheduling --
  * the "Schedule action" control that invokes the real executor
  * (`POST /recovery/cases/{id}/schedule-action`), followed by "Execute
- * action" (`POST .../execute-action`) once scheduled.
+ * action" (`POST .../execute-action`) once scheduled. A `retry` /
+ * `request_payment_method_update` / `contact_customer` action may need more
+ * than one "Execute action" click if a simulated attempt is a temporary
+ * failure and the retry cap has not been reached -- the panel keeps
+ * offering the control while `action.status === "scheduled"`.
  *
  * Never accepts a strategy from this UI: the action type shown is always
  * the decision's own `approved_strategy`, read back from the persisted
  * action -- an operator cannot choose what runs here (ADR-003). Executing
  * `no_action` / `manual_review` never claims money moved; every other
- * strategy is honestly labeled "no processor integration" rather than
- * implying a real retry happened (see app/decision/actions.py).
+ * strategy runs against a deterministic, explicitly SIMULATED provider (see
+ * app/decision/providers.py) -- never a real payment gateway or messaging
+ * system -- and every outcome shown here is labeled as simulated.
  */
 export function ActionPanel({
   caseId,
@@ -138,16 +143,39 @@ function ActionSummary({ action }: { action: Action }) {
             Execution outcome
           </p>
           <p className="mt-1 text-text">{latest.outcome.replace(/_/g, " ")}</p>
+          {latest.outcome === "simulated_success" && (
+            <p className="mt-1 text-xs text-text-dim">
+              A deterministic, simulated payment/recovery provider reported this attempt
+              succeeded -- no real payment gateway was contacted. The resulting simulated
+              payment evidence is what Phase 7&apos;s observation reads to mark this case recovered.
+            </p>
+          )}
+          {latest.outcome === "simulated_temporary_failure" && (
+            <p className="mt-1 text-xs text-text-dim">
+              The simulated provider reported a temporary failure on this attempt. If the retry
+              cap has not been reached, executing again attempts the next try.
+            </p>
+          )}
+          {latest.outcome === "simulated_permanent_failure" && (
+            <p className="mt-1 text-xs text-text-dim">
+              The simulated provider reported a non-retriable failure. No further attempts will
+              be made for this action.
+            </p>
+          )}
           {latest.outcome === "deferred_no_integration" && (
             <p className="mt-1 text-xs text-text-dim">
-              No payment-provider or customer-messaging integration exists yet -- this system has
-              no way to actually retry the charge or contact the customer. Recorded honestly as
-              deferred, not fabricated as a completed retry.
+              Recorded before the simulated execution layer existed -- no processor integration
+              existed at that time. Historical, not produced by current code.
             </p>
           )}
           <p className="mt-1 font-mono text-[11px] text-text-dim">
             attempt {latest.attempt_no} · {latest.idempotency_key} · {fmtTimestamp(latest.created_at)}
           </p>
+          {latest.simulated_reference && (
+            <p className="mt-1 font-mono text-[11px] text-text-dim">
+              simulated reference: {latest.simulated_reference}
+            </p>
+          )}
         </div>
       )}
     </div>

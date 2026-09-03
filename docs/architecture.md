@@ -87,6 +87,43 @@ See [ADR-005](decisions/ADR-005-diagnosis-schema-and-versioning.md),
 `docs/ai/diagnosis.md`, `docs/ai/local-model-setup.md`, and
 `backend/app/ai/`. Frontend: a diagnosis panel on `/recovery/[id]`.
 
+## Bounded Recovery Action Execution (Phase 6)
+
+`app/decision/actions.py::execute_action` executes ONLY an already
+policy-approved `DecisionResult` (Phase 5), never a strategy chosen by a
+caller. `no_action`/`manual_review` complete immediately with no side
+effect. Every other approved strategy (`retry`,
+`request_payment_method_update`, `contact_customer`) dispatches to a
+deterministic, explicitly SIMULATED execution layer -- no real payment
+gateway or messaging provider exists in this repository:
+
+```
+Action Executor -> app/decision/executors.py (RetryExecutor /
+PaymentLinkExecutor / NotificationExecutor) -> app/decision/providers.py
+(SimulatedPaymentProvider, a pure function of failure_reason + attempt_no)
+```
+
+Only this bounded executor layer may reach the simulated provider -- the
+diagnosis model and the policy engine cannot import it, so ADR-003's
+boundary is unaffected. A single action gets up to `RETRY_CAP` (the same
+constant `app.decision.policy` defines) attempts, tracked as one
+`RecoveryActionExecution` row per attempt; the loop lives entirely inside
+one `execute_action` call/API request, so no new recovery-case state was
+introduced. A simulated success creates a new `Payment` row (status
+`succeeded`) plus an `IngestionEvent` audit row -- the identical shape any
+other payment source produces -- and records the causal link explicitly
+(`RecoveryActionExecution.resulting_payment_id`). Phase 7's
+`observe_outcome` is unmodified and finds this evidence through its
+existing later-successful-payment correlation rule, so the DETECT -> ACT
+-> OBSERVE loop is now genuinely closed for the simulated path, never by
+an unrelated event happening to arrive.
+
+See `docs/recovery/action-idempotency.md` (design + what was actually
+built), `docs/known-issues.md` (KI-012), and
+`backend/tests/test_canonical_recovery_flow.py` for the full, causally
+traced DETECT..MEASURE walk. Frontend: the action panel on
+`/recovery/[id]` labels every outcome as simulated.
+
 ## Data Foundation (Phase 1)
 
 See `docs/database/schema.md` for the schema. Summary: `customers`,
