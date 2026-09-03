@@ -1,4 +1,18 @@
+import os
 from collections.abc import AsyncGenerator
+
+# KI-010 fix: a dedicated test database is the automatic default, not
+# something every session must remember to opt into. `setdefault` never
+# overrides an operator's own explicit `DATABASE_URL` (CI, a differently
+# named local test DB, etc.) -- it only fills the gap that previously let
+# a bare `pytest` run silently truncate the shared dev database
+# (`app.core.config.Settings.database_url`'s own default). This MUST run
+# before `app.db.session` is imported (directly or via `app.main` below),
+# since that module reads `get_settings().database_url` once at import
+# time to build the module-level `engine`.
+os.environ.setdefault(
+    "DATABASE_URL", "postgresql+psycopg://arr_user:arr_password@localhost:5433/arr_test_db"
+)
 
 import pytest_asyncio
 from httpx import ASGITransport, AsyncClient

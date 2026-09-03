@@ -6,6 +6,50 @@ Phase 14 — Production Observability: implementation and verification
 complete, **frozen**. Phases 4.1, 5, 6, 7, 8, 9, 10, 11, 12, and 13 are
 also frozen. Phases 0–2 remain frozen (`docs/phase-0-2-freeze.md`).
 
+## Buildathon finalization (2026-09-04)
+
+After Phase 6's completion (commit `618af45`), priority shifted from
+architectural completeness to a stable, convincing, buildathon-ready
+product. Every remaining gap was triaged rather than closed mechanically
+-- see the finalization session's own report for the full A-E
+classification. What was built:
+
+- **KI-010 resolved**: `tests/conftest.py` now defaults `DATABASE_URL` to
+  a dedicated test database automatically (`os.environ.setdefault`,
+  never overriding an explicit value) -- a bare `pytest` invocation can
+  no longer silently truncate the shared dev database. Regression-tested
+  in a genuinely clean subprocess (`test_safe_test_database_default.py`).
+- **Baseline-vs-AI comparison** (`app/measurement/baseline.py`,
+  `GET /measurement/baseline-comparison`): a "blind retry" baseline
+  policy's outcome, computed by calling the SAME deterministic simulated
+  provider the real pipeline uses (pure, no side effects, nothing
+  persisted), compared against the real, OBSERVED AI-gated recovery rate
+  over the same eligible case population. Explicitly NOT a randomized
+  control/treatment experiment and NOT a causal/incremental-lift claim --
+  see `BaselineComparisonReport.methodology`. Surfaced on the dashboard.
+- **Deterministic demo population** (`scripts/seed_demo_population.py`):
+  28 customers / ~148 events across six named behavioral profiles (not
+  random noise), driven through the real recovery pipeline via ordinary
+  HTTP calls -- no shortcuts, no direct DB writes. Kept entirely separate
+  from `scripts/seed_synthetic_data.py`'s single canonical fixture, which
+  existing tests/manual QA still depend on unchanged. Deliberately modest
+  in scale (not "thousands") -- large enough for meaningful dashboard
+  distributions, small enough to seed in well under a minute and stay
+  easy to reason about live in a demo.
+- **Two new scenario tests** (payment-link and notification simulated
+  success) filling out Phase 6's scenario coverage.
+- **Explicitly NOT built, and why**: a trained ML recovery-probability
+  model (Phase 9) -- the existing empirical-frequency strategy analytics
+  were kept and documented as the interim state; training, evaluating,
+  and versioning a real model within the remaining time carried more risk
+  of a half-finished subsystem than value for a demo, per the session's
+  own "quality > checkbox" instruction. A randomized control/treatment
+  experiment was also not attempted -- no real counterfactual population
+  exists, and fabricating one would violate this project's own
+  discipline (KI-006's frozen position). OpenTelemetry, Kubernetes, and
+  any Phase 15+ (real payment/messaging integration) work were out of
+  scope by explicit instruction.
+
 Owner decisions recorded:
 - 2026-08-27: Phase 3 follows the frozen contract (Recovery Case
   Management state machine), not the ML-training interpretation. AI stays

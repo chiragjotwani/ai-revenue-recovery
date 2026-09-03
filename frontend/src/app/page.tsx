@@ -6,6 +6,7 @@ import {
   formatCurrencyMap,
   OPEN_STATES,
   riskSeverity,
+  type BaselineComparisonReport,
   type Health,
   type ModelReport,
   type RecoveryCase,
@@ -25,15 +26,17 @@ import {
 } from "@/components/ui";
 
 export default async function OverviewPage() {
-  const [health, summary, payments, cases, revenue, strategy, modelReport] = await Promise.all([
-    apiGet<Health>("/health"),
-    apiGet<RiskSummary>("/risk/summary"),
-    apiGet<RiskAssessment[]>("/risk/payments"),
-    apiGet<RecoveryCase[]>("/recovery/cases"),
-    apiGet<RevenueReport>("/measurement/report"),
-    apiGet<StrategyAnalyticsReport>("/analytics/strategy-report"),
-    apiGet<ModelReport>("/ai/model-report"),
-  ]);
+  const [health, summary, payments, cases, revenue, strategy, modelReport, baseline] =
+    await Promise.all([
+      apiGet<Health>("/health"),
+      apiGet<RiskSummary>("/risk/summary"),
+      apiGet<RiskAssessment[]>("/risk/payments"),
+      apiGet<RecoveryCase[]>("/recovery/cases"),
+      apiGet<RevenueReport>("/measurement/report"),
+      apiGet<StrategyAnalyticsReport>("/analytics/strategy-report"),
+      apiGet<ModelReport>("/ai/model-report"),
+      apiGet<BaselineComparisonReport>("/measurement/baseline-comparison"),
+    ]);
 
   if (!summary.ok || !payments.ok || !cases.ok) {
     return <BackendUnavailable />;
@@ -124,6 +127,15 @@ export default async function OverviewPage() {
             value={cases.data.length - openCases.length}
           />
           <Readout label="RISK MIX" value={`${levels.high} high / ${levels.medium} med / ${levels.low} low`} />
+          {revenue.ok && (
+            <Readout
+              label="STOPPED / UNRECOVERED"
+              value={
+                revenue.data.observed_not_recovered.reduce((n, r) => n + r.case_count, 0) +
+                revenue.data.unresolved.reduce((n, r) => n + r.case_count, 0)
+              }
+            />
+          )}
         </div>
       </Panel>
 
@@ -231,6 +243,54 @@ export default async function OverviewPage() {
           <NotAvailableYet
             what="Strategy analytics"
             why="Needs Phase 9 strategy analytics (historical dataset + recovery-rate aggregation)."
+          />
+        )}
+      </Panel>
+
+      {/* Baseline vs AI-gated recovery (buildathon finalization) */}
+      <Panel title="Baseline vs. AI-gated recovery">
+        {baseline.ok ? (
+          <div className="flex flex-col gap-3">
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+              <div>
+                <span className="font-mono text-[11px] uppercase tracking-widest text-text-dim">
+                  Baseline (blind retry, simulated)
+                </span>
+                <p className="tabular text-xl font-semibold text-text">
+                  {formatCurrencyAmounts(baseline.data.baseline_simulated_recovered)}
+                </p>
+                <p className="text-xs text-text-dim">
+                  {(baseline.data.baseline_simulated_recovery_rate * 100).toFixed(0)}% simulated
+                  recovery rate
+                </p>
+              </div>
+              <div>
+                <span className="font-mono text-[11px] uppercase tracking-widest text-text-dim">
+                  AI-gated (observed)
+                </span>
+                <p className="tabular text-xl font-semibold text-good">
+                  {formatCurrencyAmounts(baseline.data.ai_gated_observed_recovered)}
+                </p>
+                <p className="text-xs text-text-dim">
+                  {(baseline.data.ai_gated_recovery_rate * 100).toFixed(0)}% observed recovery rate
+                </p>
+              </div>
+            </div>
+            <p className="text-xs text-text-dim">
+              <span className="font-mono text-text">
+                {baseline.data.cases_where_ai_gate_avoided_a_blind_retry}
+              </span>{" "}
+              case
+              {baseline.data.cases_where_ai_gate_avoided_a_blind_retry === 1 ? "" : "s"} escalated
+              to manual review by policy (fraud / sparse evidence / conflicting signals) -- a
+              blind-retry baseline has no such check and would have retried them anyway.
+            </p>
+            <p className="text-xs text-text-dim">{baseline.data.methodology}</p>
+          </div>
+        ) : (
+          <NotAvailableYet
+            what="Baseline comparison"
+            why="Needs at least one eligible (decided) case."
           />
         )}
       </Panel>

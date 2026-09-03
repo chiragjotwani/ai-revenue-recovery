@@ -101,3 +101,54 @@ class RevenueReport(BaseModel):
 
     recovered_by_strategy: list[BreakdownEntry]
     recovered_by_disposition: list[BreakdownEntry]
+
+
+#: Read by the API response and frontend, mirroring COUNTERFACTUAL_LIMITATION's
+#: role above -- this is what makes app.measurement.baseline's comparison
+#: an "observed vs. simulated-under-the-same-model" comparison, never a
+#: causal/RCT claim, wherever the report surfaces.
+BASELINE_METHODOLOGY = (
+    "Baseline = 'blind retry': attempt a retry once for every eligible case, "
+    "regardless of diagnosis, disposition, fraud signal, or evidence "
+    "sufficiency -- the simplest pre-AI approach a naive recovery system "
+    "might use. Its outcome is computed by calling the SAME deterministic "
+    "simulated provider (app.decision.providers) the real AI-gated pipeline "
+    "uses, as a pure, side-effect-free function of the case's own "
+    "failure_reason -- never a second execution, never persisted. "
+    "'AI-gated' recovered value is the real, already-OBSERVED Phase 7/8 "
+    "outcome for the SAME eligible case population. This is a same-population, "
+    "same-environment-model comparison of two decision policies, NOT a "
+    "randomized control/treatment experiment and NOT a causal or "
+    "incremental-lift estimate -- no counterfactual population exists (see "
+    "COUNTERFACTUAL_LIMITATION, unchanged)."
+)
+
+
+class BaselineComparisonReport(BaseModel):
+    """Baseline ('blind retry', simulated) vs. AI-gated (real, observed)
+    recovery, over the SAME eligible case population. See
+    ``BASELINE_METHODOLOGY`` -- every field here is named to keep the
+    same "observed vs. simulated-under-one-model" distinction
+    ``RevenueReport`` keeps for "observed vs. causal": nothing here is
+    called "lift", "improvement", or "impact".
+    """
+
+    model_config = {"extra": "forbid"}
+
+    methodology: str = BASELINE_METHODOLOGY
+    counterfactual_available: Literal[False] = False
+
+    eligible_case_count: int
+
+    ai_gated_observed_recovered: list[CurrencyAmount]
+    baseline_simulated_recovered: list[CurrencyAmount]
+
+    ai_gated_recovery_rate: float
+    baseline_simulated_recovery_rate: float
+
+    #: Cases where the AI-gated policy escalated to manual_review (fraud
+    #: suspected, sparse evidence, or conflicting signals) -- exactly the
+    #: cases a blind-retry baseline would have retried anyway, with no
+    #: safety check at all. A behavioral safety count, not a revenue
+    #: figure -- never inflated into a recovery-amount claim.
+    cases_where_ai_gate_avoided_a_blind_retry: int

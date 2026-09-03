@@ -207,6 +207,58 @@ async def test_retry_succeeds_only_after_a_second_attempt(client: AsyncClient) -
     assert detail["state"] == "action_executed"
 
 
+async def test_payment_link_executor_simulated_success(client: AsyncClient) -> None:
+    """card_expired -> CUSTOMER_ACTION_REQUIRED -> request_payment_method_update,
+    handled by PaymentLinkExecutor, profile [SUCCESS].
+    """
+    case_id = await _decided_case(
+        client,
+        external_reference="b14",
+        customer_external_id="cust-b14",
+        failure_reason="card_expired",
+    )
+    scheduled = await client.post(f"/recovery/cases/{case_id}/schedule-action")
+    assert scheduled.json()["action_type"] == "request_payment_method_update"
+
+    executed = await client.post(f"/recovery/cases/{case_id}/execute-action")
+    assert executed.status_code == 200, executed.text
+    body = executed.json()
+    assert body["status"] == "executed"
+    execution = body["executions"][0]
+    assert execution["outcome"] == "simulated_success"
+    assert execution["resulting_payment_id"] is not None
+    assert execution["simulated_reference"].startswith("sim:payment_link:")
+
+    outcome = await client.post(f"/recovery/cases/{case_id}/observe-outcome")
+    assert outcome.json()["outcome"] == "recovered"
+
+
+async def test_notification_executor_simulated_success(client: AsyncClient) -> None:
+    """authentication_required -> CUSTOMER_ACTION_REQUIRED -> contact_customer,
+    handled by NotificationExecutor, profile [SUCCESS].
+    """
+    case_id = await _decided_case(
+        client,
+        external_reference="b15",
+        customer_external_id="cust-b15",
+        failure_reason="authentication_required",
+    )
+    scheduled = await client.post(f"/recovery/cases/{case_id}/schedule-action")
+    assert scheduled.json()["action_type"] == "contact_customer"
+
+    executed = await client.post(f"/recovery/cases/{case_id}/execute-action")
+    assert executed.status_code == 200, executed.text
+    body = executed.json()
+    assert body["status"] == "executed"
+    execution = body["executions"][0]
+    assert execution["outcome"] == "simulated_success"
+    assert execution["resulting_payment_id"] is not None
+    assert execution["simulated_reference"].startswith("sim:notification:")
+
+    outcome = await client.post(f"/recovery/cases/{case_id}/observe-outcome")
+    assert outcome.json()["outcome"] == "recovered"
+
+
 async def test_retry_permanent_failure_never_creates_payment_evidence(
     client: AsyncClient,
 ) -> None:

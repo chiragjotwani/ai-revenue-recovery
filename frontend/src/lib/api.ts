@@ -204,6 +204,24 @@ export type RevenueReport = {
   recovered_by_disposition: BreakdownEntry[];
 };
 
+/** Baseline ('blind retry', simulated) vs. AI-gated (real, observed)
+ * recovery over the same eligible case population. `counterfactual_available`
+ * is always `false`: this is a same-population, same-environment-model
+ * comparison of two decision policies, NOT a randomized control/treatment
+ * experiment and NOT a causal or incremental-lift estimate -- see
+ * `methodology`.
+ */
+export type BaselineComparisonReport = {
+  methodology: string;
+  counterfactual_available: false;
+  eligible_case_count: number;
+  ai_gated_observed_recovered: CurrencyAmount[];
+  baseline_simulated_recovered: CurrencyAmount[];
+  ai_gated_recovery_rate: number;
+  baseline_simulated_recovery_rate: number;
+  cases_where_ai_gate_avoided_a_blind_retry: number;
+};
+
 // ---- Phase 9: strategy analytics (scoped -- no ML/probability/optimization) ----
 
 export type StrategyStat = {
