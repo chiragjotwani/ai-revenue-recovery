@@ -99,7 +99,7 @@ async def test_ai_gated_success_case_counts_as_ai_recovered_and_baseline_would_a
 
     r = await client.get("/measurement/baseline-comparison")
     body = r.json()
-    assert body["eligible_case_count"] >= 1
+    assert body["compared_case_count"] >= 1
     ai_inr = next(
         (row for row in body["ai_gated_observed_recovered"] if row["currency"] == "INR"), None
     )
@@ -107,6 +107,87 @@ async def test_ai_gated_success_case_counts_as_ai_recovered_and_baseline_would_a
         (row for row in body["baseline_simulated_recovered"] if row["currency"] == "INR"), None
     )
     assert ai_inr is not None and ai_inr["case_count"] >= 1
+    assert baseline_inr is not None and baseline_inr["case_count"] >= 1
+
+
+async def test_already_paid_case_is_excluded_from_the_comparison(client: AsyncClient) -> None:
+    """A case resolved via `no_action` (the already-paid short-circuit --
+    a later success existed for this customer before any decision ran)
+    must be excluded from BOTH populations: neither policy took, or
+    would take, any action for it. Regression test for the 2026-09-04
+    red-team audit finding: including these cases inflated the apparent
+    AI advantage by crediting AI with recoveries it never caused.
+    """
+    for i in range(3):
+        await _ingest_one(
+            client,
+            idempotency_key=f"bl3-s{i}",
+            external_reference=f"bl3-s{i}",
+            occurred_at=BASE - timedelta(days=30 - i),
+            event_type="payment.succeeded",
+            failure_reason=None,
+            customer_external_id="cust-bl3",
+        )
+    failed = await _ingest_one(
+        client,
+        idempotency_key="bl3-f",
+        external_reference="bl3-f",
+        occurred_at=BASE,
+        failure_reason="insufficient_funds",
+        customer_external_id="cust-bl3",
+    )
+    # A later success for the SAME customer, before the decision runs --
+    # triggers policy's already_paid short-circuit -> no_action, approved.
+    await _ingest_one(
+        client,
+        idempotency_key="bl3-later-success",
+        external_reference="bl3-later-success",
+        occurred_at=BASE + timedelta(hours=2),
+        event_type="payment.succeeded",
+        failure_reason=None,
+        customer_external_id="cust-bl3",
+    )
+    case = await client.post("/recovery/cases", json={"payment_id": failed["payment_id"]})
+    case_id = uuid.UUID(case.json()["id"])
+    assert (await client.post(f"/recovery/cases/{case_id}/diagnose")).status_code == 200
+    decided = await client.post(f"/recovery/cases/{case_id}/decide")
+    assert decided.json()["approved_strategy"] == "no_action"
+
+    before = (await client.get("/measurement/baseline-comparison")).json()
+
+    # This case IS counted in total_eligible_case_count (it has a
+    # DecisionResult) but must NOT inflate compared_case_count, and must
+    # not appear in either recovered bucket via this path.
+    assert before["already_resolved_excluded_count"] >= 1
+    assert before["total_eligible_case_count"] > before["compared_case_count"]
+
+
+async def test_baseline_gets_the_same_bounded_retry_budget_as_the_real_pipeline(
+    client: AsyncClient,
+) -> None:
+    """do_not_honor's simulated profile is [temporary_failure, success] --
+    the real AI-gated pipeline recovers it on a second execute-action
+    call. The baseline simulation must also be allowed a second attempt,
+    not be scored as a failure purely for needing one.
+    """
+    case_id = await _executed_case(
+        client,
+        external_reference="bl4",
+        customer_external_id="cust-bl4",
+        failure_reason="do_not_honor",
+    )
+    # First execute-action call only gets attempt 1 (temporary failure);
+    # call again to let the real pipeline's own bounded retry succeed.
+    await client.post(f"/recovery/cases/{case_id}/execute-action")
+    await client.post(f"/recovery/cases/{case_id}/observe-outcome")
+
+    r = await client.get("/measurement/baseline-comparison")
+    body = r.json()
+    baseline_inr = next(
+        (row for row in body["baseline_simulated_recovered"] if row["currency"] == "INR"), None
+    )
+    # Baseline must recover this via its own 2nd simulated attempt, same
+    # as the real pipeline did -- not be penalized for attempt count.
     assert baseline_inr is not None and baseline_inr["case_count"] >= 1
 
 

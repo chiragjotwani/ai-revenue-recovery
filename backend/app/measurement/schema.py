@@ -107,30 +107,55 @@ class RevenueReport(BaseModel):
 #: role above -- this is what makes app.measurement.baseline's comparison
 #: an "observed vs. simulated-under-the-same-model" comparison, never a
 #: causal/RCT claim, wherever the report surfaces.
+#:
+#: Two fairness fixes from the 2026-09-04 red-team audit are baked into
+#: this text because they change what the numbers below actually mean,
+#: not just how they are computed:
+#:
+#: 1. Cases resolved via `no_action` (app.decision.policy's already-paid
+#:    short-circuit -- the customer's payment already succeeded through
+#:    some independent, unrelated event before any decision ran) are
+#:    EXCLUDED from both the AI-gated and baseline populations entirely.
+#:    Neither policy took, or would have taken, any action for these --
+#:    including them would credit "AI" for a recovery neither policy
+#:    caused, which is exactly the kind of inflated number this audit
+#:    exists to catch.
+#: 2. The baseline gets the SAME bounded retry budget (RETRY_CAP attempts)
+#:    the real executor gives itself, not a single attempt -- otherwise a
+#:    temporary-failure-then-success profile would be scored as a
+#:    baseline failure purely because of attempt count, not decision
+#:    quality.
 BASELINE_METHODOLOGY = (
-    "Baseline = 'blind retry': attempt a retry once for every eligible case, "
-    "regardless of diagnosis, disposition, fraud signal, or evidence "
-    "sufficiency -- the simplest pre-AI approach a naive recovery system "
-    "might use. Its outcome is computed by calling the SAME deterministic "
+    "Baseline = 'blind retry': attempt a retry (up to the same RETRY_CAP "
+    "attempt budget the real executor uses) for every eligible case that "
+    "genuinely required a recovery decision, regardless of diagnosis, "
+    "disposition, fraud signal, or evidence sufficiency -- the simplest "
+    "pre-AI approach a naive recovery system might use. Cases resolved via "
+    "`no_action` (the customer's payment already succeeded independently, "
+    "before any decision ran) are excluded from BOTH populations: neither "
+    "policy took or would take any action for them, so including them would "
+    "credit either policy with a recovery it did not cause. Every remaining "
+    "eligible case's outcome is computed by calling the SAME deterministic "
     "simulated provider (app.decision.providers) the real AI-gated pipeline "
     "uses, as a pure, side-effect-free function of the case's own "
     "failure_reason -- never a second execution, never persisted. "
     "'AI-gated' recovered value is the real, already-OBSERVED Phase 7/8 "
-    "outcome for the SAME eligible case population. This is a same-population, "
-    "same-environment-model comparison of two decision policies, NOT a "
-    "randomized control/treatment experiment and NOT a causal or "
-    "incremental-lift estimate -- no counterfactual population exists (see "
-    "COUNTERFACTUAL_LIMITATION, unchanged)."
+    "outcome for this same filtered population. This is a same-population, "
+    "same-environment-model, same-attempt-budget comparison of two decision "
+    "policies, NOT a randomized control/treatment experiment and NOT a "
+    "causal or incremental-lift estimate -- no counterfactual population "
+    "exists (see COUNTERFACTUAL_LIMITATION, unchanged)."
 )
 
 
 class BaselineComparisonReport(BaseModel):
     """Baseline ('blind retry', simulated) vs. AI-gated (real, observed)
-    recovery, over the SAME eligible case population. See
-    ``BASELINE_METHODOLOGY`` -- every field here is named to keep the
-    same "observed vs. simulated-under-one-model" distinction
-    ``RevenueReport`` keeps for "observed vs. causal": nothing here is
-    called "lift", "improvement", or "impact".
+    recovery, over the SAME eligible case population, EXCLUDING cases
+    resolved before any decision ran (see ``BASELINE_METHODOLOGY``).
+    Every field here is named to keep the same "observed vs.
+    simulated-under-one-model" distinction ``RevenueReport`` keeps for
+    "observed vs. causal": nothing here is called "lift", "improvement",
+    or "impact".
     """
 
     model_config = {"extra": "forbid"}
@@ -138,7 +163,17 @@ class BaselineComparisonReport(BaseModel):
     methodology: str = BASELINE_METHODOLOGY
     counterfactual_available: Literal[False] = False
 
-    eligible_case_count: int
+    #: Total cases with a DecisionResult, before excluding already-resolved
+    #: (`no_action`) ones -- for comparison against
+    #: ``RevenueReport.eligible_case_count``, which this intentionally does
+    #: NOT match (see ``already_resolved_excluded_count``).
+    total_eligible_case_count: int
+    #: Cases excluded because they resolved via `no_action` before any
+    #: decision-driven action ran -- see ``BASELINE_METHODOLOGY``.
+    already_resolved_excluded_count: int
+    #: total_eligible_case_count - already_resolved_excluded_count -- the
+    #: actual denominator for both rates below.
+    compared_case_count: int
 
     ai_gated_observed_recovered: list[CurrencyAmount]
     baseline_simulated_recovered: list[CurrencyAmount]

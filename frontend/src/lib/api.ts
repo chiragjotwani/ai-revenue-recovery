@@ -214,7 +214,9 @@ export type RevenueReport = {
 export type BaselineComparisonReport = {
   methodology: string;
   counterfactual_available: false;
-  eligible_case_count: number;
+  total_eligible_case_count: number;
+  already_resolved_excluded_count: number;
+  compared_case_count: number;
   ai_gated_observed_recovered: CurrencyAmount[];
   baseline_simulated_recovered: CurrencyAmount[];
   ai_gated_recovery_rate: number;

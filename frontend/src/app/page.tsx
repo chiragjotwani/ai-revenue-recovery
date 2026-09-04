@@ -277,6 +277,15 @@ export default async function OverviewPage() {
               </div>
             </div>
             <p className="text-xs text-text-dim">
+              Compared over <span className="font-mono text-text">{baseline.data.compared_case_count}</span>{" "}
+              case{baseline.data.compared_case_count === 1 ? "" : "s"} that genuinely needed a
+              recovery decision --{" "}
+              <span className="font-mono text-text">{baseline.data.already_resolved_excluded_count}</span>{" "}
+              case{baseline.data.already_resolved_excluded_count === 1 ? "" : "s"} already resolved
+              independently (no action needed by either policy) were excluded from both sides, not
+              counted as a win for either.
+            </p>
+            <p className="text-xs text-text-dim">
               <span className="font-mono text-text">
                 {baseline.data.cases_where_ai_gate_avoided_a_blind_retry}
               </span>{" "}

@@ -139,6 +139,43 @@ cd backend
 python scripts/seed_synthetic_data.py
 ```
 
+For a fuller demo dataset (28 customers, ~148 events across six named
+behavioral profiles, driven through the real diagnose→decide→schedule→
+execute→observe→measure pipeline via ordinary HTTP calls -- no
+shortcuts), see `backend/scripts/seed_demo_population.py`'s own module
+docstring. Deterministic (fixed seed) and idempotent -- safe to re-run.
+
+### Clean demo reset
+
+To reproduce the dashboard from a genuinely clean environment (e.g.
+before a demo, or after ad hoc testing has left partial/stale rows --
+see `docs/known-issues.md` KI-012's audit note on this):
+
+```bash
+docker compose up -d --build          # build + start postgres/redis/backend/frontend/kafka
+# wait for backend health: curl http://localhost:8000/health
+
+# reset app data (NOT the schema -- alembic_version is untouched)
+docker compose exec postgres psql -U arr_user -d arr_db -c "
+TRUNCATE TABLE
+  case_analytics_facts, case_feature_vectors, dead_letter_events, decision_results,
+  diagnoses, domain_events, ingestion_events, processed_events,
+  recovery_action_executions, recovery_actions, recovery_case_transitions,
+  recovery_cases, recovery_outcome_observations, revenue_measurements,
+  payments, customers
+RESTART IDENTITY CASCADE;"
+
+cd backend
+python scripts/seed_synthetic_data.py     # canonical single-case fixture
+python scripts/seed_demo_population.py    # fuller demo population
+```
+
+Then open `http://localhost:3000` for the dashboard, or
+`http://localhost:8000/measurement/baseline-comparison` for the raw
+baseline-vs-AI comparison. Because the seed data and the simulated
+provider are both fully deterministic, this produces the same dashboard
+numbers every time from a clean database.
+
 ## Project Status
 
 This project is built phase by phase under a strict verify-before-advance

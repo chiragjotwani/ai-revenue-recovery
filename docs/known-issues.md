@@ -106,6 +106,62 @@ must record what, why, and impact.
   silently assumed.
 - **Status**: RESOLVED.
 
+### KI-013: Baseline-vs-AI comparison compared an unfair population/budget, and inflated its apparent AI advantage — RESOLVED
+
+- **What (original gap, present since the baseline comparison's first
+  commit, 2026-09-03)**: `app/measurement/baseline.py`'s first version
+  had two real fairness defects, found by a 2026-09-04 red-team audit
+  before submission: (1) it included cases resolved via `no_action` (the
+  already-paid short-circuit -- the customer's payment succeeded
+  independently, before any decision ran) in the "AI-gated recovered"
+  count, crediting AI with recoveries neither policy caused; (2) it
+  simulated the baseline with only a single attempt
+  (`attempt_no=1`), while the real AI-gated pipeline gets up to
+  `RETRY_CAP` (3) attempts -- scoring a `[temporary_failure, success]`
+  profile as a baseline failure purely because of attempt count, not
+  decision quality. Together these produced a live, demoable dashboard
+  claim of **87.5% AI-gated vs. 43.75% baseline** that did not survive
+  scrutiny.
+- **Fix (2026-09-04)**: cases resolved via `no_action` are now excluded
+  from BOTH populations (see `BaselineComparisonReport.already_resolved_excluded_count`,
+  disclosed on the dashboard); the baseline simulation now gets the same
+  `RETRY_CAP` attempt budget the real executor uses. `BASELINE_METHODOLOGY`
+  rewritten to state both rules explicitly.
+- **Result, disclosed honestly rather than re-tuned for a better number**:
+  after the fix, and after also discovering and clearing a stale test
+  artifact in the dev database (one case executed under a pre-Phase-6-completion
+  backend image, left un-observed -- see below), the corrected comparison
+  on a freshly reseeded demo population shows **exact parity: AI-gated
+  61.5% vs. baseline 61.5%** (8/13 both sides). This is expected, not a
+  bug: the simulated provider's outcome
+  (`app.decision.providers.SimulatedPaymentProvider`) is a function of
+  `failure_reason` and `attempt_no` only, never of which channel
+  (retry/payment-link/notification) called it -- so once attempt budgets
+  and populations are equalized, the simulation has no mechanism left to
+  favor AI-gated over blind-retry UNLESS a case reaches
+  `DecisionStatus.ESCALATED` (fraud / sparse evidence / conflicting
+  signals), which this specific demo population happens to have zero of
+  in the compared set (`cases_where_ai_gate_avoided_a_blind_retry: 0`).
+  The AI's real, defensible value in this system is safety-gating and
+  audit transparency, not a raw recovery-rate lift in this particular
+  simulated environment -- the dashboard and API were left showing this
+  honestly (parity) rather than re-engineered to manufacture a
+  difference.
+- **Separately found and fixed while investigating the above**: a stale
+  `RecoveryActionExecution` row (outcome `deferred_no_integration`,
+  never observed) left over from testing the backend image *before* the
+  Phase 6 completion rebuild was contaminating the dev database's
+  comparison by one case. Cleared via a one-time `TRUNCATE ... CASCADE`
+  on `arr_db` (explicit user approval obtained first, since this is a
+  destructive operation) followed by a fresh re-seed of both
+  `scripts/seed_synthetic_data.py` and `scripts/seed_demo_population.py`.
+  Not a product bug -- an artifact of iterative local testing across
+  several container rebuilds in one session -- but real enough to change
+  the reported numbers, so recorded here rather than silently
+  corrected. See the new "Clean demo reset" section in `README.md` for
+  the reproducible procedure this produced.
+- **Status**: RESOLVED.
+
 ### KI-012: Phase 6 action execution had no real or simulated external side effect (Phase 6) — RESOLVED
 
 - **What (original gap, present since the original Phase 6 commit,
