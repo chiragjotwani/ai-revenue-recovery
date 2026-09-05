@@ -3,9 +3,12 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.analytics.schema import StrategyAnalyticsReport, StrategyDatasetRow
 from app.analytics.service import get_strategy_analytics_report, get_strategy_dataset
+from app.core.auth import Role, require_role
 from app.db.session import get_db_session
 
-router = APIRouter(prefix="/analytics", tags=["analytics"])
+router = APIRouter(
+    prefix="/analytics", tags=["analytics"], dependencies=[require_role(Role.READONLY)]
+)
 
 
 @router.get("/strategy-dataset", response_model=list[StrategyDatasetRow])

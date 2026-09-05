@@ -6,6 +6,40 @@ must record what, why, and impact.
 
 ## Open
 
+### KI-014: Phase 17's PENDING_MANUAL_REVIEW fix is currently unreachable via the live HTTP pipeline (Phase 17)
+
+- **What**: `app.decision.actions.execute_action` correctly routes a case
+  whose approved decision strategy is `manual_review` into the new
+  `RecoveryCaseState.PENDING_MANUAL_REVIEW` (Phase 17) instead of
+  auto-completing it. However, the only policy rule
+  (`app/decision/policy.py`'s retry-cap-downgrade rule) that produces an
+  *approved* (rather than *escalated*) `manual_review` decision requires
+  `PolicyInput.retry_count >= RETRY_CAP`. `retry_count` is populated from
+  `app.decision.service._RETRY_COUNT_PENDING_PHASE_6`, a constant
+  hardcoded to `0` everywhere in the live system, because no case-level
+  re-diagnosis loop exists (a pre-existing gap, noted since Phase 6
+  completion in `docs/recovery/action-idempotency.md`). Every other path
+  to a `manual_review` candidate strategy resolves to `DecisionStatus.ESCALATED`,
+  which `schedule_action` already rejects with `409` before
+  `execute_action` is ever reached (see
+  `test_action_executor.py::test_escalated_decision_cannot_be_scheduled`).
+- **Impact**: the `PENDING_MANUAL_REVIEW` state and its resolution
+  endpoint (`POST /recovery/cases/{id}/resolve-manual-review`) are
+  correct and fully tested, but no real case can reach them today
+  through the ordinary HTTP diagnose/decide/schedule/execute flow.
+  `tests/test_manual_review.py` verifies the behavior by directly
+  updating a persisted `DecisionResult` row to the combination the
+  policy engine would itself produce once `retry_count` is live, rather
+  than by driving the real HTTP flow end-to-end (which cannot reach this
+  state today).
+- **Resolution plan**: this becomes load-bearing automatically the
+  moment a real case-level retry/re-diagnosis loop is built and
+  `_RETRY_COUNT_PENDING_PHASE_6` stops being hardcoded to `0` --
+  no further change to the Phase 17 code itself should be needed.
+- **Status**: Documented limitation, not a defect against Phase 17's own
+  scope (owner-confirmed via AskUserQuestion before implementation
+  proceeded) -- not silently worked around.
+
 ### KI-002: Self-hosted model infrastructure undecided (relevant from Phase 4)
 
 - **What**: The engineering prompt specifies self-hosted open-weight models

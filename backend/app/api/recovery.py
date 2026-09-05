@@ -5,15 +5,18 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.ai.diagnosis import DiagnosisValidationError
 from app.ai.providers.base import ReasoningModelError
+from app.core.auth import Role, require_role
 from app.core.errors import (
     CaseNotDecidableError,
     CaseNotDiagnosableError,
     CaseNotExecutableError,
     CaseNotMeasurableError,
     CaseNotObservableError,
+    CaseNotPendingManualReviewError,
     CaseNotSchedulableError,
     DecisionNotApprovedError,
     IllegalStateTransitionError,
+    ManualReviewAlreadyResolvedError,
     NoApprovedDecisionError,
     NoDiagnosisToDecideError,
     NoExecutedActionError,
@@ -30,17 +33,20 @@ from app.measurement.service import get_measurement_for_case, measure_case
 from app.models.recovery import RecoveryCaseState
 from app.outcome.service import get_outcome_for_case, observe_outcome
 from app.recovery import service
+from app.recovery.manual_review import get_manual_review_resolution, resolve_manual_review
 from app.retrieval.schema import SimilarCase
 from app.retrieval.service import NoFeaturesAvailableError, find_similar_cases
 from app.schemas.recovery import (
     ActionOut,
     DecisionOut,
     DiagnosisOut,
+    ManualReviewResolutionOut,
     MeasurementOut,
     OpenCaseRequest,
     OutcomeOut,
     RecoveryCaseDetail,
     RecoveryCaseOut,
+    ResolveManualReviewRequest,
     TransitionRequest,
 )
 from app.services.diagnosis import diagnose_case, get_latest_diagnosis
@@ -52,6 +58,7 @@ router = APIRouter(prefix="/recovery", tags=["recovery"])
     "/cases",
     response_model=RecoveryCaseOut,
     status_code=status.HTTP_201_CREATED,
+    dependencies=[require_role(Role.OPERATOR)],
 )
 async def open_recovery_case(
     body: OpenCaseRequest,
@@ -76,7 +83,9 @@ async def open_recovery_case(
     return RecoveryCaseOut.model_validate(case)
 
 
-@router.get("/cases", response_model=list[RecoveryCaseOut])
+@router.get(
+    "/cases", response_model=list[RecoveryCaseOut], dependencies=[require_role(Role.READONLY)]
+)
 async def list_recovery_cases(
     state: RecoveryCaseState | None = None,
     session: AsyncSession = Depends(get_db_session),
@@ -85,7 +94,11 @@ async def list_recovery_cases(
     return [RecoveryCaseOut.model_validate(c) for c in cases]
 
 
-@router.get("/cases/{case_id}", response_model=RecoveryCaseDetail)
+@router.get(
+    "/cases/{case_id}",
+    response_model=RecoveryCaseDetail,
+    dependencies=[require_role(Role.READONLY)],
+)
 async def get_recovery_case(
     case_id: UUID,
     session: AsyncSession = Depends(get_db_session),
@@ -101,6 +114,7 @@ async def get_recovery_case(
     action = await get_action_for_case(session, case_id)
     outcome = await get_outcome_for_case(session, case_id)
     measurement = await get_measurement_for_case(session, case_id)
+    manual_review_resolution = await get_manual_review_resolution(session, case_id)
     return RecoveryCaseDetail.model_validate(
         {
             "id": case.id,
@@ -121,11 +135,20 @@ async def get_recovery_case(
             "measurement": (
                 MeasurementOut.model_validate(measurement) if measurement is not None else None
             ),
+            "manual_review_resolution": (
+                ManualReviewResolutionOut.model_validate(manual_review_resolution)
+                if manual_review_resolution is not None
+                else None
+            ),
         }
     )
 
 
-@router.post("/cases/{case_id}/transitions", response_model=RecoveryCaseOut)
+@router.post(
+    "/cases/{case_id}/transitions",
+    response_model=RecoveryCaseOut,
+    dependencies=[require_role(Role.OPERATOR)],
+)
 async def transition_recovery_case(
     case_id: UUID,
     body: TransitionRequest,
@@ -143,7 +166,11 @@ async def transition_recovery_case(
     return RecoveryCaseOut.model_validate(case)
 
 
-@router.post("/cases/{case_id}/diagnose", response_model=DiagnosisOut)
+@router.post(
+    "/cases/{case_id}/diagnose",
+    response_model=DiagnosisOut,
+    dependencies=[require_role(Role.OPERATOR)],
+)
 async def diagnose_recovery_case(
     case_id: UUID,
     session: AsyncSession = Depends(get_db_session),
@@ -173,7 +200,11 @@ async def diagnose_recovery_case(
     return DiagnosisOut.model_validate(row)
 
 
-@router.post("/cases/{case_id}/decide", response_model=DecisionOut)
+@router.post(
+    "/cases/{case_id}/decide",
+    response_model=DecisionOut,
+    dependencies=[require_role(Role.OPERATOR)],
+)
 async def decide_recovery_case(
     case_id: UUID,
     session: AsyncSession = Depends(get_db_session),
@@ -218,7 +249,11 @@ async def decide_recovery_case(
     return DecisionOut.model_validate(row)
 
 
-@router.post("/cases/{case_id}/schedule-action", response_model=ActionOut)
+@router.post(
+    "/cases/{case_id}/schedule-action",
+    response_model=ActionOut,
+    dependencies=[require_role(Role.OPERATOR)],
+)
 async def schedule_recovery_action(
     case_id: UUID,
     session: AsyncSession = Depends(get_db_session),
@@ -258,25 +293,38 @@ async def schedule_recovery_action(
     return ActionOut.model_validate(row)
 
 
-@router.post("/cases/{case_id}/execute-action", response_model=ActionOut)
+@router.post(
+    "/cases/{case_id}/execute-action",
+    response_model=ActionOut,
+    dependencies=[require_role(Role.OPERATOR)],
+)
 async def execute_recovery_action(
     case_id: UUID,
     session: AsyncSession = Depends(get_db_session),
 ) -> ActionOut:
     """Execute (or attempt the next retry of) the scheduled action for a
-    case's current decision (Phase 6). ``no_action``/``manual_review``
-    complete with no external side effect; every other approved strategy
-    runs against a deterministic, explicitly SIMULATED provider -- never a
-    real payment gateway or messaging system (see ``app.decision.actions``
-    / ``app.decision.providers`` module docstrings).
+    case's current decision (Phase 6). ``no_action`` completes immediately
+    with no external side effect. ``manual_review`` also completes this
+    action immediately (its own execution process needs no external
+    system), but instead advances the CASE to
+    ``pending_manual_review`` rather than ``action_executed`` -- an
+    operator must resolve it via
+    ``POST /recovery/cases/{id}/resolve-manual-review`` (Phase 17) before
+    the case can close. Every other approved strategy runs against a
+    provider -- ``retry`` against a real Stripe TEST-mode gateway when
+    configured, otherwise (and always for
+    ``request_payment_method_update``/``contact_customer``) a
+    deterministic SIMULATED provider (see ``app.decision.actions`` /
+    ``app.decision.providers`` / ``app.decision.providers_stripe`` module
+    docstrings).
 
-    Advances the case ``action_scheduled -> action_executed`` once the
-    action reaches a terminal outcome (simulated success, permanent
-    failure, or the bounded retry cap is exhausted). While a temporary
-    simulated failure has occurred and attempts remain, the case stays
-    ``action_scheduled`` and calling this endpoint again attempts the next
-    attempt -- it is not only idempotent, it is also how a bounded retry
-    advances.
+    Advances the case ``action_scheduled -> action_executed`` (or, for
+    ``manual_review``, ``-> pending_manual_review``) once the action
+    reaches a terminal outcome (success, permanent failure, or the
+    bounded retry cap is exhausted). While a temporary failure has
+    occurred and attempts remain, the case stays ``action_scheduled`` and
+    calling this endpoint again attempts the next attempt -- it is not
+    only idempotent, it is also how a bounded retry advances.
 
     Idempotent per attempt: a repeat call once the action is terminal
     returns the same persisted final execution rather than creating a new
@@ -304,7 +352,60 @@ async def execute_recovery_action(
     return ActionOut.model_validate(action)
 
 
-@router.post("/cases/{case_id}/observe-outcome", response_model=OutcomeOut)
+@router.post(
+    "/cases/{case_id}/resolve-manual-review",
+    response_model=ManualReviewResolutionOut,
+    dependencies=[require_role(Role.OPERATOR)],
+)
+async def resolve_recovery_case_manual_review(
+    case_id: UUID,
+    body: ResolveManualReviewRequest,
+    session: AsyncSession = Depends(get_db_session),
+) -> ManualReviewResolutionOut:
+    """An operator resolves a case's manual-review escalation (Phase 17).
+
+    A case reaches ``pending_manual_review`` when the Phase 5 policy
+    engine escalates a decision to ``manual_review`` (fraud suspicion,
+    insufficient evidence, conflicting signals -- see
+    ``app.decision.policy``) and that action has executed
+    (``POST .../execute-action``). This is the only way such a case can
+    ever leave that state: there is no automated re-decision loop and no
+    automatic timeout.
+
+    ``resolution`` is either ``abandoned`` (stop pursuing this case) or
+    ``failed`` (the recovery attempt did not work) -- never ``recovered``:
+    no authoritative payment evidence exists merely because a human
+    looked at the case, and this endpoint never invokes Phase 7's
+    evidence-based outcome observation. ``note`` is required (1-1000
+    characters) -- an operator's reasoning is part of the permanent audit
+    trail, the same discipline every other decision point in this system
+    already records structurally.
+
+    NOT idempotent: a case can only leave ``pending_manual_review`` once.
+    A repeat call is a genuine conflict (``409``), never a replay.
+
+    - ``404`` unknown case.
+    - ``409`` the case is not in ``pending_manual_review``, or its manual
+      review was already resolved (including a concurrent resolution
+      that won a race against this one).
+    """
+    try:
+        _case, row = await resolve_manual_review(
+            session, case_id, resolution=body.resolution, note=body.note
+        )
+    except RecoveryCaseNotFoundError as exc:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(exc)) from exc
+    except (CaseNotPendingManualReviewError, ManualReviewAlreadyResolvedError) as exc:
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=str(exc)) from exc
+
+    return ManualReviewResolutionOut.model_validate(row)
+
+
+@router.post(
+    "/cases/{case_id}/observe-outcome",
+    response_model=OutcomeOut,
+    dependencies=[require_role(Role.OPERATOR)],
+)
 async def observe_recovery_outcome(
     case_id: UUID,
     session: AsyncSession = Depends(get_db_session),
@@ -350,7 +451,11 @@ async def observe_recovery_outcome(
     return OutcomeOut.model_validate(row)
 
 
-@router.post("/cases/{case_id}/measure", response_model=MeasurementOut)
+@router.post(
+    "/cases/{case_id}/measure",
+    response_model=MeasurementOut,
+    dependencies=[require_role(Role.OPERATOR)],
+)
 async def measure_recovery_case(
     case_id: UUID,
     session: AsyncSession = Depends(get_db_session),
@@ -385,7 +490,11 @@ async def measure_recovery_case(
     return MeasurementOut.model_validate(row)
 
 
-@router.get("/cases/{case_id}/similar-cases", response_model=list[SimilarCase])
+@router.get(
+    "/cases/{case_id}/similar-cases",
+    response_model=list[SimilarCase],
+    dependencies=[require_role(Role.READONLY)],
+)
 async def get_similar_recovery_cases(
     case_id: UUID,
     session: AsyncSession = Depends(get_db_session),

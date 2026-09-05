@@ -1,15 +1,15 @@
 """Action scheduling & execution (Phase 6: Action Executor, completed with a
-simulated execution layer).
+simulated execution layer; ``retry`` optionally real as of Phase 16).
 
 Scope boundary, mirroring ``app.decision.service``'s own docstring: this
 module never calls an AI provider, never invents a strategy the policy
-engine did not already approve, and never fabricates a REAL external side
+engine did not already approve, and never fabricates an external side
 effect that did not happen. It executes ONLY an already policy-approved
 ``DecisionResult`` (``app.decision.schema.DecisionStatus.APPROVED``), after
 validating recovery-state preconditions -- the boundary ADR-003 requires:
 
     Diagnosis -> Policy Engine -> Recovery State Validation
-    -> Idempotency Validation -> Action Executor -> Simulated Provider
+    -> Idempotency Validation -> Action Executor -> Provider
 
 Two entry points, matching the two forward transitions this phase drives:
 
@@ -27,14 +27,19 @@ Two entry points, matching the two forward transitions this phase drives:
   attempt. ``no_action``/``manual_review`` remain a single, immediate,
   side-effect-free completion exactly as before. Every other approved
   strategy (``retry``, ``request_payment_method_update``,
-  ``contact_customer``) now dispatches to a deterministic, explicitly
-  SIMULATED executor (``app.decision.executors`` /
-  ``app.decision.providers`` -- no real payment gateway or messaging
-  provider exists in this repository, and this completion does not add
-  one). Only the bounded action-execution layer here may invoke the
-  simulated provider; neither the diagnosis model nor the policy engine
-  can reach it -- see ``app.decision.providers``'s module docstring for
-  why that boundary holds structurally, not just by convention.
+  ``contact_customer``) dispatches to an ``app.decision.executors`` entry.
+  ``request_payment_method_update`` and ``contact_customer`` remain
+  deterministic, explicitly SIMULATED (``app.decision.providers`` -- no
+  real messaging/payment-link provider exists in this repository). As of
+  Phase 16, ``retry`` uses a real Stripe TEST-mode ``PaymentIntent``
+  confirm/retry (``app.decision.providers_stripe``) when
+  ``Settings.stripe_api_key`` is configured, falling back to the same
+  simulated provider otherwise -- see that module's docstring for the
+  full scope note. Only the bounded action-execution layer here may
+  invoke either provider; neither the diagnosis model nor the policy
+  engine can reach either -- see ``app.decision.providers``'s module
+  docstring for why that boundary holds structurally, not just by
+  convention.
 
   A single strategy may need more than one attempt (a temporary failure,
   then a success) up to :data:`RETRY_CAP` attempts (the same cap
@@ -116,16 +121,28 @@ _EXECUTE_ACTOR = "system:execute_action"
 logger = logging.getLogger("app.decision.actions")
 
 # Approved strategies that carry no external side effect at all -- their
-# "execution" is the completion itself (already-paid, or a handoff to a
-# human queue). Every other approved strategy (retry,
-# request_payment_method_update, contact_customer) dispatches to
-# app.decision.executors' simulated executors -- see the module docstring.
-_NO_SIDE_EFFECT_ACTION_TYPES = frozenset({"no_action", "manual_review"})
+# "execution" is the completion itself (already-paid). Every other
+# approved strategy (retry, request_payment_method_update,
+# contact_customer) dispatches to app.decision.executors' simulated
+# executors -- see the module docstring. ``manual_review`` is handled
+# separately below (Phase 17): unlike this set, it is NOT a completion --
+# it blocks in PENDING_MANUAL_REVIEW for a human, never auto-completes.
+_NO_SIDE_EFFECT_ACTION_TYPES = frozenset({"no_action"})
+_MANUAL_REVIEW_ACTION_TYPE = "manual_review"
 
-_OUTCOME_BY_SIMULATION = {
+_SIMULATED_OUTCOME_BY_RESULT = {
     SimulationOutcome.SUCCESS: ActionExecutionOutcome.SIMULATED_SUCCESS,
     SimulationOutcome.TEMPORARY_FAILURE: ActionExecutionOutcome.SIMULATED_TEMPORARY_FAILURE,
     SimulationOutcome.PERMANENT_FAILURE: ActionExecutionOutcome.SIMULATED_PERMANENT_FAILURE,
+}
+#: Phase 16: the same SimulationOutcome shape, but for a genuine Stripe
+#: TEST-mode call (ProviderAttemptResult.is_real=True) -- see
+#: app.decision.providers_stripe and ActionExecutionOutcome's docstring
+#: for why these must never share a value with the SIMULATED_* rows above.
+_REAL_OUTCOME_BY_RESULT = {
+    SimulationOutcome.SUCCESS: ActionExecutionOutcome.REAL_SUCCESS,
+    SimulationOutcome.TEMPORARY_FAILURE: ActionExecutionOutcome.REAL_TEMPORARY_FAILURE,
+    SimulationOutcome.PERMANENT_FAILURE: ActionExecutionOutcome.REAL_PERMANENT_FAILURE,
 }
 
 
@@ -475,6 +492,10 @@ async def execute_action(
     next_attempt_no = len(action.executions) + 1
 
     terminal_status: _Status | None
+    #: The case-transition target once this attempt is terminal --
+    #: ACTION_EXECUTED for every action type except manual_review (Phase
+    #: 17), which blocks in PENDING_MANUAL_REVIEW for a human instead.
+    terminal_case_state: RecoveryCaseState = RecoveryCaseState.ACTION_EXECUTED
     try:
         if action_type in _NO_SIDE_EFFECT_ACTION_TYPES:
             outcome_value = ActionExecutionOutcome.NO_SIDE_EFFECT_REQUIRED.value
@@ -485,16 +506,39 @@ async def execute_action(
                 outcome=outcome_value,
             )
             terminal_status = _Status.EXECUTED
+        elif action_type == _MANUAL_REVIEW_ACTION_TYPE:
+            # Deliberately NOT a completion (unlike no_action above): no
+            # external system and no human has acted yet. This attempt
+            # itself is still terminal (the action's own execution
+            # process is done -- there is nothing further for
+            # execute_action itself to do; a human resolves the case
+            # separately via
+            # app.recovery.manual_review.resolve_manual_review, which
+            # never calls this function again), but the CASE transitions
+            # into PENDING_MANUAL_REVIEW instead of ACTION_EXECUTED so a
+            # human is genuinely required before the case can close.
+            outcome_value = ActionExecutionOutcome.NO_SIDE_EFFECT_REQUIRED.value
+            execution = RecoveryActionExecution(
+                action_id=action_id,
+                attempt_no=next_attempt_no,
+                idempotency_key=f"arr:{case_id_value}:{action_type}:{next_attempt_no}",
+                outcome=outcome_value,
+            )
+            terminal_status = _Status.EXECUTED
+            terminal_case_state = RecoveryCaseState.PENDING_MANUAL_REVIEW
         else:
             executor = EXECUTORS_BY_ACTION_TYPE[action_type]
             payment = await session.get(Payment, case.payment_id)
             assert payment is not None
-            result = executor.attempt(
+            result = await executor.attempt(
                 failure_reason=payment.failure_reason,
                 attempt_no=next_attempt_no,
                 correlation_id=str(action_id),
             )
-            outcome_value = _OUTCOME_BY_SIMULATION[result.outcome].value
+            outcome_table = (
+                _REAL_OUTCOME_BY_RESULT if result.is_real else _SIMULATED_OUTCOME_BY_RESULT
+            )
+            outcome_value = outcome_table[result.outcome].value
 
             resulting_payment_id: UUID | None = None
             if result.outcome is SimulationOutcome.SUCCESS:
@@ -577,7 +621,7 @@ async def execute_action(
             updated_case = await recovery_service.transition_case(
                 session,
                 case_id,
-                RecoveryCaseState.ACTION_EXECUTED,
+                terminal_case_state,
                 actor=_EXECUTE_ACTOR,
                 reason=f"action executed: {action_type} ({outcome_value})",
                 enforce_preconditions=True,

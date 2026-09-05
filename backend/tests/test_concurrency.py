@@ -36,6 +36,7 @@ from app.main import app
 from app.models.event import IngestionEvent
 from app.models.payment import Payment
 from app.models.recovery import RecoveryCase
+from tests.conftest import TEST_OPERATOR_API_KEY
 
 
 def _new_client() -> AsyncClient:
@@ -44,7 +45,11 @@ def _new_client() -> AsyncClient:
             yield session
 
     app.dependency_overrides[get_db_session] = _override
-    return AsyncClient(transport=ASGITransport(app=app), base_url="http://test")
+    return AsyncClient(
+        transport=ASGITransport(app=app),
+        base_url="http://test",
+        headers={"X-API-Key": TEST_OPERATOR_API_KEY},
+    )
 
 
 def _event(key: str, ref: str, etype: str = "payment.failed") -> dict:

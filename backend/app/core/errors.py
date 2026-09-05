@@ -226,3 +226,28 @@ class TransitionPreconditionError(DomainError):
         self.to_state = to_state
         self.reason = reason
         super().__init__(f"Transition {from_state} -> {to_state} is not yet legitimate: {reason}.")
+
+
+class CaseNotPendingManualReviewError(DomainError):
+    """Raised when resolving a manual review is requested for a case that
+    is not in ``pending_manual_review`` (Phase 17).
+    """
+
+    def __init__(self, state: object) -> None:
+        self.state = state
+        super().__init__(
+            f"Recovery case is in state {state!r}; a manual review can only be "
+            "resolved from 'pending_manual_review'."
+        )
+
+
+class ManualReviewAlreadyResolvedError(DomainError):
+    """Raised when a case's manual review has already been resolved once
+    (``ManualReviewResolution.case_id`` is unique -- the state machine has
+    no edge back into ``pending_manual_review``, so a second resolution
+    attempt is a genuine conflict, never a legitimate replay).
+    """
+
+    def __init__(self, case_id: object) -> None:
+        self.case_id = case_id
+        super().__init__(f"Recovery case {case_id!r} has already had its manual review resolved.")

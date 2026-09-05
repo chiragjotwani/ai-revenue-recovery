@@ -10,6 +10,7 @@ from app.models.decision import DecisionResult
 from app.models.diagnosis import Diagnosis
 from app.models.domain_event import DeadLetterEvent, DomainEventRow, ProcessedEvent
 from app.models.event import IngestionEvent
+from app.models.manual_review import ManualReviewOutcome, ManualReviewResolution
 from app.models.measurement import RevenueMeasurement
 from app.models.outcome import RecoveryOutcomeObservation
 from app.models.payment import Payment, PaymentStatus
@@ -26,6 +27,8 @@ __all__ = [
     "Diagnosis",
     "DomainEventRow",
     "IngestionEvent",
+    "ManualReviewOutcome",
+    "ManualReviewResolution",
     "ProcessedEvent",
     "Payment",
     "PaymentStatus",

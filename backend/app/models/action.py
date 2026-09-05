@@ -54,12 +54,18 @@ class RecoveryActionStatus(str, enum.Enum):
 class ActionExecutionOutcome(str, enum.Enum):
     """What actually happened on one execution attempt.
 
-    No REAL payment-provider or customer-messaging integration exists
-    anywhere in this repository (Phase 6 completion still does not invent
-    one -- see ``app.decision.providers``). Every execution row honestly
-    records which of these happened, the same "explicit and observable
-    substitution" discipline Phase 4's provider factory uses for its own
-    mock fallback (KI-009).
+    No REAL customer-messaging or payment-link integration exists anywhere
+    in this repository -- ``request_payment_method_update`` and
+    ``contact_customer`` always produce a ``SIMULATED_*`` value. ``retry``
+    can produce either: ``SIMULATED_*`` when
+    ``app.decision.providers_stripe.select_retry_provider`` fell back to
+    the simulator (``Settings.stripe_api_key`` unset), or ``REAL_*`` when
+    a genuine Stripe TEST-mode ``PaymentIntent`` call was made (Phase 16).
+    Every execution row honestly records which of these happened, the same
+    "explicit and observable substitution" discipline Phase 4's provider
+    factory uses for its own mock fallback (KI-009) -- a caller can always
+    tell simulated apart from real by this field alone, never by
+    inspecting ``simulated_reference``'s string shape.
 
     * ``NO_SIDE_EFFECT_REQUIRED`` -- the approved strategy (``no_action``,
       or ``manual_review``) never needed an external system call. This is
@@ -76,8 +82,18 @@ class ActionExecutionOutcome(str, enum.Enum):
       ``RecoveryActionStatus.FAILED``).
     * ``SIMULATED_PERMANENT_FAILURE`` -- the simulated provider reported a
       non-retriable failure. No further attempts are made.
+    * ``REAL_SUCCESS`` -- a genuine Stripe TEST-mode ``PaymentIntent``
+      reached ``status="succeeded"``. Still TEST mode, never real money --
+      but a real Stripe-side object and API round trip, not this
+      repository's own deterministic simulation. Same
+      ``resulting_payment_id`` linkage as ``SIMULATED_SUCCESS``.
+    * ``REAL_TEMPORARY_FAILURE`` / ``REAL_PERMANENT_FAILURE`` -- the same
+      transient/non-retriable distinction as their ``SIMULATED_*``
+      counterparts, decided by Stripe's own TEST-mode decline code
+      (``app.decision.providers_stripe``), not by this repository's fixed
+      profile table.
     * ``DEFERRED_NO_INTEGRATION`` -- retained only for historical rows
-      created before this simulated layer existed (pre Phase-6-completion).
+      created before the simulated layer existed (pre Phase-6-completion).
       No code path in this repository produces this value going forward.
     """
 
@@ -85,6 +101,9 @@ class ActionExecutionOutcome(str, enum.Enum):
     SIMULATED_SUCCESS = "simulated_success"
     SIMULATED_TEMPORARY_FAILURE = "simulated_temporary_failure"
     SIMULATED_PERMANENT_FAILURE = "simulated_permanent_failure"
+    REAL_SUCCESS = "real_success"
+    REAL_TEMPORARY_FAILURE = "real_temporary_failure"
+    REAL_PERMANENT_FAILURE = "real_permanent_failure"
     DEFERRED_NO_INTEGRATION = "deferred_no_integration"
 
 

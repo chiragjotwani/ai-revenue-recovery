@@ -15,6 +15,7 @@ import { BackendUnavailable, Panel, ScoreMeter, StatusPill } from "@/components/
 import { DecidePanel } from "./decide-panel";
 import { ActionPanel } from "./action-panel";
 import { OutcomePanel } from "./outcome-panel";
+import { ManualReviewPanel } from "./manual-review-panel";
 
 export async function generateMetadata({ params }: PageProps<"/recovery/[id]">) {
   const { id } = await params;
@@ -282,6 +283,18 @@ export default async function RecoveryCaseDetailPage({ params }: PageProps<"/rec
           initialAction={c.action}
         />
       </Panel>
+
+      {/* HUMAN-IN-THE-LOOP MANUAL REVIEW (Phase 17) -- only relevant once
+          the policy engine has escalated this case; never shown otherwise */}
+      {(c.state === "pending_manual_review" || c.manual_review_resolution) && (
+        <Panel title="Manual review">
+          <ManualReviewPanel
+            caseId={c.id}
+            caseState={c.state}
+            initialResolution={c.manual_review_resolution}
+          />
+        </Panel>
+      )}
 
       {/* RECOVERY STATUS -> OUTCOME */}
       <div className="grid grid-cols-1 gap-4 md:grid-cols-2">

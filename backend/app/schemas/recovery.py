@@ -1,9 +1,10 @@
 import uuid
 from datetime import datetime
 
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, Field
 
 from app.decision.schema import DecisionRationaleEntry, DecisionStatus, Recoverability
+from app.models.manual_review import ManualReviewOutcome
 from app.models.recovery import RecoveryCaseState
 from app.outcome.schema import ObservedOutcome
 
@@ -124,6 +125,24 @@ class MeasurementOut(BaseModel):
     measured_at: datetime
 
 
+class ResolveManualReviewRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    resolution: ManualReviewOutcome
+    note: str = Field(min_length=1, max_length=1000)
+
+
+class ManualReviewResolutionOut(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: uuid.UUID
+    case_id: uuid.UUID
+    resolution: str
+    note: str
+    actor: str
+    created_at: datetime
+
+
 class RecoveryCaseDetail(RecoveryCaseOut):
     history: list[TransitionOut]
     diagnosis: DiagnosisOut | None = None
@@ -131,3 +150,4 @@ class RecoveryCaseDetail(RecoveryCaseOut):
     action: ActionOut | None = None
     outcome: OutcomeOut | None = None
     measurement: MeasurementOut | None = None
+    manual_review_resolution: ManualReviewResolutionOut | None = None

@@ -1,8 +1,10 @@
-"""Executor abstractions over the simulated provider (Phase 6 completion).
+"""Executor abstractions over the payment/recovery providers (Phase 6
+completion; ``RetryExecutor``'s provider selection updated in Phase 16).
 
-Three thin, strategy-specific wrappers over
-``app.decision.providers.simulated_payment_provider`` -- one per approved
-``RecoveryStrategy`` that carries a real (simulated) external side effect.
+Three thin, strategy-specific wrappers over an
+``app.decision.providers.PaymentProvider`` -- one per approved
+``RecoveryStrategy`` that carries a real (or, for two of the three,
+simulated) external side effect.
 ``app.decision.actions.execute_action`` is the only caller; the LLM and the
 policy engine never see, import, or can reach this module (ADR-003 is
 unaffected -- see ``app.decision.providers``'s module docstring for the
@@ -12,10 +14,14 @@ Each executor's ``attempt`` has the identical shape (same
 ``ProviderAttemptResult``) so ``execute_action`` can dispatch on
 ``action_type`` without a strategy-specific branch beyond the dispatch
 table itself. The three are kept separate (rather than one function with a
-``channel`` parameter) because Step 3 of the completion brief asks for
+``channel`` parameter) because Step 3 of the completion brief asked for
 distinct abstractions a later, real integration could replace one at a
-time -- e.g. a real payment gateway could replace ``RetryExecutor`` without
-touching ``NotificationExecutor``.
+time -- Phase 16 does exactly that: ``RetryExecutor`` resolves a real
+Stripe TEST-mode provider when configured
+(``app.decision.providers_stripe.select_retry_provider``), while
+``PaymentLinkExecutor`` / ``NotificationExecutor`` are unchanged, still
+always simulated (out of this phase's scope -- see
+``app.decision.providers_stripe``'s module docstring).
 """
 
 from __future__ import annotations
@@ -25,20 +31,26 @@ from app.decision.providers import (
     ProviderAttemptResult,
     simulated_payment_provider,
 )
+from app.decision.providers_stripe import select_retry_provider
 
 
 class RetryExecutor:
-    """Simulated retry of a failed payment (``RecoveryStrategy.RETRY``)."""
+    """Retry of a failed payment (``RecoveryStrategy.RETRY``) -- a real
+    Stripe TEST-mode ``PaymentIntent`` confirm/retry when
+    ``Settings.stripe_api_key`` is configured, otherwise the deterministic
+    simulated provider (Phase 6's original behavior, unchanged as the
+    fallback).
+    """
 
     channel = "retry"
 
-    def __init__(self, provider: PaymentProvider = simulated_payment_provider) -> None:
-        self._provider = provider
+    def __init__(self, provider: PaymentProvider | None = None) -> None:
+        self._provider = provider if provider is not None else select_retry_provider()
 
-    def attempt(
+    async def attempt(
         self, *, failure_reason: str | None, attempt_no: int, correlation_id: str
     ) -> ProviderAttemptResult:
-        return self._provider.attempt(
+        return await self._provider.attempt(
             channel=self.channel,
             failure_reason=failure_reason,
             attempt_no=attempt_no,
@@ -63,10 +75,10 @@ class PaymentLinkExecutor:
     def __init__(self, provider: PaymentProvider = simulated_payment_provider) -> None:
         self._provider = provider
 
-    def attempt(
+    async def attempt(
         self, *, failure_reason: str | None, attempt_no: int, correlation_id: str
     ) -> ProviderAttemptResult:
-        return self._provider.attempt(
+        return await self._provider.attempt(
             channel=self.channel,
             failure_reason=failure_reason,
             attempt_no=attempt_no,
@@ -92,10 +104,10 @@ class NotificationExecutor:
     def __init__(self, provider: PaymentProvider = simulated_payment_provider) -> None:
         self._provider = provider
 
-    def attempt(
+    async def attempt(
         self, *, failure_reason: str | None, attempt_no: int, correlation_id: str
     ) -> ProviderAttemptResult:
-        return self._provider.attempt(
+        return await self._provider.attempt(
             channel=self.channel,
             failure_reason=failure_reason,
             attempt_no=attempt_no,

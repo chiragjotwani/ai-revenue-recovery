@@ -1,6 +1,10 @@
 from functools import lru_cache
+from typing import TYPE_CHECKING
 
 from pydantic_settings import BaseSettings, SettingsConfigDict
+
+if TYPE_CHECKING:
+    from app.core.auth import Role
 
 
 class Settings(BaseSettings):
@@ -47,9 +51,48 @@ class Settings(BaseSettings):
     # table (ADR-007) -- not an infinite retry loop, not a silent drop.
     event_consumer_max_attempts: int = 5
 
+    # --- Security & fintech hardening (Phase 15) ---
+    # "key1:operator,key2:readonly" -- see app.core.auth.parse_api_keys.
+    # Empty by default; production refuses to start with no keys
+    # configured (app.main.create_app), development/test do not (every
+    # request is simply unauthenticated-401 until keys exist).
+    api_keys_raw: str = ""
+    # Comma-separated list of allowed browser origins for CORS. Empty by
+    # default (no cross-origin browser access permitted) -- the bundled
+    # frontend calls the backend server-to-server (API_BASE_URL, not
+    # NEXT_PUBLIC_*, per KI-001), so it does not need a CORS allowance at
+    # all; this exists for any future browser client calling the API
+    # directly from a different origin.
+    cors_allowed_origins_raw: str = ""
+    # Sustained request budget per API key (or per client IP for
+    # unauthenticated requests, which today means every request that
+    # will shortly be rejected 401 by app.core.auth) in a fixed window.
+    rate_limit_requests_per_minute: int = 120
+
+    # --- Real payment integration (Phase 16) ---
+    # A Stripe TEST-mode secret key (sk_test_...) -- see
+    # app.decision.providers_stripe. Unset by default: the retry channel
+    # falls back to the existing SimulatedPaymentProvider, the same
+    # "config-gated, fallback rather than fail" shape the Phase 4
+    # reasoning-model factory already uses. A live key (sk_live_...) is
+    # refused at the point of use (StripeConfigurationError), never
+    # silently accepted -- this platform does not process real payments.
+    stripe_api_key: str | None = None
+
     @property
     def is_production(self) -> bool:
         return self.environment.lower() == "production"
+
+    @property
+    def api_keys(self) -> dict[str, "Role"]:
+        from app.core.auth import parse_api_keys
+
+        return parse_api_keys(self.api_keys_raw)
+
+    @property
+    def cors_allowed_origins(self) -> list[str]:
+        origins = self.cors_allowed_origins_raw.split(",")
+        return [origin.strip() for origin in origins if origin.strip()]
 
 
 @lru_cache

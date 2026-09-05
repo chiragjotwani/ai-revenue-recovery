@@ -156,3 +156,51 @@ therefore still `0` — it counts decision-level retry cycles across
 multiple diagnoses, a different thing from this within-action attempt
 count, and no such re-diagnosis loop exists in the state machine to
 drive it).
+
+## What Phase 16 (Real Payment Integration) delivered
+
+Only the `retry` channel gained a real gateway — owner-scoped before
+implementation to avoid inventing a real payment-link or messaging
+integration this phase did not need: `app/decision/providers_stripe.py`
+adds `StripePaymentProvider`, which calls the real
+`https://api.stripe.com/v1/payment_intents` endpoint in **TEST mode
+only** (a live `sk_live_...` key is refused at construction —
+`StripeConfigurationError`). `select_retry_provider()` resolves it when
+`Settings.stripe_api_key` is configured, falling back to the unchanged
+`SimulatedPaymentProvider` otherwise — the same config-gated,
+fallback-not-fail shape `app/ai/providers/factory.py` already
+established for the reasoning-model layer.
+
+The idempotency key sent to Stripe (`Idempotency-Key` header,
+`f"arr-retry:{action_id}:{attempt_no}"`) reuses this action's own
+execution identity — Stripe's own request-level deduplication now backs
+the "processor-side idempotency key" the original design above called
+for and Phase 6 completion had explicitly deferred (no external system
+existed yet to send one to).
+
+**`ActionExecutionOutcome` gained three new values** rather than
+reusing the `SIMULATED_*` ones for a real Stripe result:
+`REAL_SUCCESS` / `REAL_TEMPORARY_FAILURE` / `REAL_PERMANENT_FAILURE`
+(`app/models/action.py`). This was a deliberate correction made during
+implementation: `ActionExecutionOutcome.SIMULATED_SUCCESS`'s own
+docstring already stated it means "the deterministic simulated provider
+... reported success" — persisting that same value for a genuine Stripe
+API round trip would have been exactly the kind of mislabeling this
+project's own discipline forbids. `ProviderAttemptResult.is_real` is
+the single explicit signal `app.decision.actions` uses to choose between
+the two outcome tables — never inferred from `simulated_reference`'s
+string shape (`sim:...` vs. `stripe:pi_...`), which stays informational
+only.
+
+`PaymentLinkExecutor` / `NotificationExecutor` are unchanged — still
+always simulated. The baseline-vs-AI comparison
+(`app.measurement.baseline`) also deliberately still calls
+`simulated_payment_provider` directly, never the resolved (possibly
+real Stripe) retry provider: the comparison's whole point is "what would
+blind retry have done under the same deterministic simulated
+environment", not a second live Stripe call per case.
+
+**Still not built**: `request_payment_method_update` (a real Stripe
+Payment Link object) and `contact_customer` (a real messaging send) —
+explicitly out of this phase's scope by owner decision. A case-level
+re-diagnosis loop remains unbuilt, unchanged from Phase 6 completion.

@@ -3,10 +3,11 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.ai.providers.factory import select_reasoning_model
 from app.ai.report import get_model_report
+from app.core.auth import Role, require_role
 from app.db.session import get_db_session
 from app.schemas.ai import ModelReportOut, ProviderStatusOut
 
-router = APIRouter(prefix="/ai", tags=["ai"])
+router = APIRouter(prefix="/ai", tags=["ai"], dependencies=[require_role(Role.READONLY)])
 
 
 @router.get("/providers", response_model=ProviderStatusOut)

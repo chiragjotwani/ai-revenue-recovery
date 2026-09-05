@@ -2,6 +2,7 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.exc import DataError
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.auth import Role, require_role
 from app.core.errors import PaymentReferenceConflictError
 from app.db.session import get_db_session
 from app.schemas.ingestion import IngestionResult, PaymentEventIn
@@ -10,7 +11,12 @@ from app.services.ingestion import ingest_payment_event
 router = APIRouter(prefix="/events", tags=["ingestion"])
 
 
-@router.post("", response_model=IngestionResult, status_code=status.HTTP_201_CREATED)
+@router.post(
+    "",
+    response_model=IngestionResult,
+    status_code=status.HTTP_201_CREATED,
+    dependencies=[require_role(Role.OPERATOR)],
+)
 async def post_payment_event(
     event_in: PaymentEventIn,
     session: AsyncSession = Depends(get_db_session),

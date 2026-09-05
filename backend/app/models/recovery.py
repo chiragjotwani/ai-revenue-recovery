@@ -35,6 +35,11 @@ class RecoveryCaseState(str, enum.Enum):
     RECOVERED = "recovered"
     ABANDONED = "abandoned"
     FAILED = "failed"
+    #: Phase 17: a scheduled ``manual_review`` action blocks here instead of
+    #: auto-completing through ACTION_EXECUTED with no human involvement --
+    #: see app.decision.actions.execute_action and
+    #: app.recovery.manual_review.
+    PENDING_MANUAL_REVIEW = "pending_manual_review"
 
 
 # One shared Enum type object, reused by every column below so the Postgres

@@ -1,12 +1,15 @@
 from fastapi import APIRouter, Depends
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.auth import Role, require_role
 from app.db.session import get_db_session
 from app.measurement.baseline import get_baseline_comparison_report
 from app.measurement.schema import BaselineComparisonReport, RevenueReport
 from app.measurement.service import get_revenue_report
 
-router = APIRouter(prefix="/measurement", tags=["measurement"])
+router = APIRouter(
+    prefix="/measurement", tags=["measurement"], dependencies=[require_role(Role.READONLY)]
+)
 
 
 @router.get("/report", response_model=RevenueReport)

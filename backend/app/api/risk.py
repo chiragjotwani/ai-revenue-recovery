@@ -1,11 +1,12 @@
 from fastapi import APIRouter, Depends
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.auth import Role, require_role
 from app.db.session import get_db_session
 from app.risk.service import get_risk_summary, list_risk_assessments
 from app.schemas.risk import RiskAssessment, RiskSummary
 
-router = APIRouter(prefix="/risk", tags=["risk"])
+router = APIRouter(prefix="/risk", tags=["risk"], dependencies=[require_role(Role.READONLY)])
 
 
 @router.get("/payments", response_model=list[RiskAssessment])

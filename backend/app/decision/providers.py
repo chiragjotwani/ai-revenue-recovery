@@ -1,12 +1,16 @@
-"""Simulated payment/recovery provider (Phase 6 completion).
+"""Simulated payment/recovery provider (Phase 6 completion; superseded for
+the ``retry`` channel by ``app.decision.providers_stripe`` in Phase 16 --
+see that module's docstring).
 
 This module provides the ``SimulatedPaymentProvider`` -- a deterministic,
 in-process stand-in for a real payment gateway / customer-messaging system.
-It makes NO network call and integrates with NO real Razorpay (or any
-other) payment provider. Every outcome is a pure function of
-``(failure_reason, attempt_no)``, so the same case replayed twice always
-produces the same sequence of outcomes -- required for repeatable tests and
-a repeatable buildathon demo alike.
+It makes NO network call and integrates with NO real payment provider.
+Every outcome is a pure function of ``(failure_reason, attempt_no)``, so
+the same case replayed twice always produces the same sequence of outcomes
+-- required for repeatable tests, and it remains the default/fallback
+provider for ``payment_link``/``notification`` (never given a real
+implementation in Phase 16 -- see that module's scope note) and for
+``retry`` itself whenever ``STRIPE_API_KEY`` is unset.
 
 Scope boundary (mirrors every prior phase's own docstring): this module has
 no database access, no session, and is never imported by ``app.ai`` or
@@ -17,11 +21,10 @@ anything upstream of the policy engine) could trigger a "payment" --
 ADR-003's boundary is unaffected by this module's existence.
 
 The interface (:class:`PaymentProvider`) is deliberately narrow so a real
-provider could implement it later without any change to
-``app.decision.executors`` or ``app.decision.actions`` -- swapping the
-module-level ``simulated_payment_provider`` singleton for a real
-implementation is the only change a future "real Razorpay integration"
-phase would need to make here.
+provider could implement it -- as ``app.decision.providers_stripe.
+StripePaymentProvider`` now does for the ``retry`` channel -- without any
+change to ``app.decision.executors`` or ``app.decision.actions`` beyond
+selecting which provider instance a given executor is constructed with.
 """
 
 from __future__ import annotations
@@ -41,24 +44,37 @@ class SimulationOutcome(str, enum.Enum):
 
 @dataclass(frozen=True)
 class ProviderAttemptResult:
-    """The result of one simulated attempt. Never claims a real external
-    effect occurred -- ``detail`` and ``simulated_reference`` are always
-    clearly synthetic (prefixed ``sim:``), never formatted to resemble a
-    real payment-gateway reference.
+    """The result of one provider attempt, simulated or real.
+
+    ``is_real`` is the single, explicit signal ``app.decision.actions``
+    uses to choose between ``ActionExecutionOutcome.SIMULATED_*`` and
+    ``REAL_*`` (Phase 16) -- never inferred from the shape of
+    ``simulated_reference``, which stays a plain string field name for
+    backward compatibility with existing persisted rows and the frozen
+    API schema, but is documented per-provider as to what it actually
+    contains (``sim:...`` here; ``stripe:pi_...`` for
+    ``app.decision.providers_stripe.StripePaymentProvider``).
+    :class:`SimulatedPaymentProvider` always sets ``is_real=False`` and
+    never claims a real external effect occurred -- ``detail`` and
+    ``simulated_reference`` are always clearly synthetic (prefixed
+    ``sim:``), never formatted to resemble a real payment-gateway
+    reference.
     """
 
     outcome: SimulationOutcome
     detail: str
     simulated_reference: str
+    is_real: bool = False
 
 
 class PaymentProvider(Protocol):
-    """The interface ``app.decision.executors`` depends on. A future real
-    provider (a Phase 15+ concern, explicitly out of scope here) implements
-    this same shape.
+    """The interface ``app.decision.executors`` depends on. ``async``
+    because a real provider (Phase 16's ``StripePaymentProvider``) makes a
+    genuine network call; ``SimulatedPaymentProvider`` below is a
+    trivial, immediately-returning implementation of the same contract.
     """
 
-    def attempt(
+    async def attempt(
         self, *, channel: str, failure_reason: str | None, attempt_no: int, correlation_id: str
     ) -> ProviderAttemptResult: ...
 
@@ -115,7 +131,7 @@ class SimulatedPaymentProvider:
     ``failure_reason`` and ``attempt_no`` alone.
     """
 
-    def attempt(
+    async def attempt(
         self, *, channel: str, failure_reason: str | None, attempt_no: int, correlation_id: str
     ) -> ProviderAttemptResult:
         outcome = _resolve_outcome(failure_reason, attempt_no)

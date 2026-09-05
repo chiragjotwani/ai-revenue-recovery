@@ -258,6 +258,11 @@ TRANSITION_PRECONDITIONS: dict[tuple[RecoveryCaseState, RecoveryCaseState], Prec
         provided_by_phase="Phase 6",
         checker=_requires_scheduled_action,
     ),
+    (_S.ACTION_SCHEDULED, _S.PENDING_MANUAL_REVIEW): Precondition(
+        artifact="an action/execution record for the scheduled manual_review action",
+        provided_by_phase="Phase 17",
+        checker=_requires_scheduled_action,
+    ),
     (_S.ACTION_EXECUTED, _S.OBSERVING): Precondition(
         artifact="the executed action has been recorded and is awaiting outcome",
         provided_by_phase="Phase 7",

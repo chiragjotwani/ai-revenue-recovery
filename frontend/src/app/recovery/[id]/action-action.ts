@@ -1,6 +1,7 @@
 "use server";
 
 import type { Action } from "@/lib/api";
+import { backendAuthHeaders } from "@/lib/backend-auth";
 
 /**
  * Result of a schedule/execute-action attempt, returned to the client
@@ -25,6 +26,7 @@ async function postAction(caseId: string, path: "schedule-action" | "execute-act
     const res = await fetch(`${BASE_URL}/recovery/cases/${caseId}/${path}`, {
       method: "POST",
       cache: "no-store",
+      headers: backendAuthHeaders(),
     });
 
     if (res.status === 404) {

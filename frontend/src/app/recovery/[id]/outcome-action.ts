@@ -1,6 +1,7 @@
 "use server";
 
 import type { Outcome } from "@/lib/api";
+import { backendAuthHeaders } from "@/lib/backend-auth";
 
 /**
  * Result of an observe-outcome attempt, returned to the client component
@@ -28,6 +29,7 @@ export async function observeOutcome(
     const res = await fetch(`${BASE_URL}/recovery/cases/${caseId}/observe-outcome`, {
       method: "POST",
       cache: "no-store",
+      headers: backendAuthHeaders(),
     });
 
     if (res.status === 404) {

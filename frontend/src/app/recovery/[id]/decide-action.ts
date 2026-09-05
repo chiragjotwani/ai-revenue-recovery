@@ -1,6 +1,7 @@
 "use server";
 
 import type { Decision } from "@/lib/api";
+import { backendAuthHeaders } from "@/lib/backend-auth";
 
 /**
  * Result of a decide attempt, returned to the client component rather than
@@ -31,6 +32,7 @@ export async function decideCase(
     const res = await fetch(`${BASE_URL}/recovery/cases/${caseId}/decide`, {
       method: "POST",
       cache: "no-store",
+      headers: backendAuthHeaders(),
     });
 
     if (res.status === 404) {

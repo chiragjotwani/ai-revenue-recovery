@@ -52,15 +52,22 @@ def _bucket(rows: list[tuple[str, Decimal]]) -> list[CurrencyAmount]:
     ]
 
 
-def _baseline_recovers(failure_reason: str | None, case_id_for_correlation: str) -> bool:
+async def _baseline_recovers(failure_reason: str | None, case_id_for_correlation: str) -> bool:
     """Simulate up to RETRY_CAP blind-retry attempts -- the SAME bounded
     budget the real executor gives itself (app.decision.actions), so a
     case is never scored as a baseline failure purely because it needed a
     second attempt. Stops early on a permanent failure (no further
     attempts would help, mirroring the real executor's own early-stop).
+
+    Always uses ``simulated_payment_provider`` directly, never the
+    resolved (possibly real Stripe, Phase 16) retry provider -- the whole
+    point of this comparison is "what would blind retry have done under
+    the SAME deterministic simulated environment the real pipeline's own
+    non-Stripe paths already use", not a second live Stripe call per
+    case. See the module docstring.
     """
     for attempt_no in range(1, RETRY_CAP + 1):
-        result = simulated_payment_provider.attempt(
+        result = await simulated_payment_provider.attempt(
             channel="retry",
             failure_reason=failure_reason,
             attempt_no=attempt_no,
@@ -118,7 +125,7 @@ async def get_baseline_comparison_report(session: AsyncSession) -> BaselineCompa
             ai_recovered_rows.append((currency, amount))
             ai_recovered_count += 1
 
-        if _baseline_recovers(payment.failure_reason, str(case.id)):
+        if await _baseline_recovers(payment.failure_reason, str(case.id)):
             baseline_recovered_rows.append((currency, amount))
             baseline_recovered_count += 1
 

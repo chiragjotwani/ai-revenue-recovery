@@ -13,11 +13,16 @@ export type ApiResult<T> =
   | { ok: false; kind: "not_found" }
   | { ok: false; kind: "unavailable" };
 
+import { backendAuthHeaders } from "@/lib/backend-auth";
+
 const BASE_URL = process.env.API_BASE_URL ?? "http://localhost:8000";
 
 export async function apiGet<T>(path: string): Promise<ApiResult<T>> {
   try {
-    const res = await fetch(`${BASE_URL}${path}`, { cache: "no-store" });
+    const res = await fetch(`${BASE_URL}${path}`, {
+      cache: "no-store",
+      headers: backendAuthHeaders(),
+    });
     if (res.status === 404 || res.status === 400 || res.status === 422) {
       return { ok: false, kind: "not_found" };
     }
@@ -165,6 +170,25 @@ export type SimilarCase = {
   observed_outcome: ObservedOutcome | null;
 };
 
+// ---- Phase 17: human-in-the-loop manual review resolution ----
+
+export type ManualReviewOutcomeValue = "abandoned" | "failed";
+
+/** An operator's resolution of a case escalated to manual_review
+ * (Phase 5 policy engine: fraud suspicion, insufficient evidence,
+ * conflicting signals). Never "recovered" -- no authoritative payment
+ * evidence exists merely because a human looked at the case; only
+ * Phase 7's evidence-based outcome observation can ever set that.
+ */
+export type ManualReviewResolution = {
+  id: string;
+  case_id: string;
+  resolution: string;
+  note: string;
+  actor: string;
+  created_at: string;
+};
+
 export type RecoveryCaseDetail = RecoveryCase & {
   history: Transition[];
   diagnosis: Diagnosis | null;
@@ -172,6 +196,7 @@ export type RecoveryCaseDetail = RecoveryCase & {
   action: Action | null;
   outcome: Outcome | null;
   measurement: Measurement | null;
+  manual_review_resolution: ManualReviewResolution | null;
 };
 
 // ---- Phase 8: revenue measurement report ----
@@ -292,6 +317,7 @@ export const OPEN_STATES = new Set([
   "action_scheduled",
   "action_executed",
   "observing",
+  "pending_manual_review",
 ]);
 
 export function riskSeverity(level: string): "good" | "warn" | "critical" {

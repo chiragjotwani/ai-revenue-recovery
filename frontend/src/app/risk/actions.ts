@@ -2,6 +2,8 @@
 
 import { redirect } from "next/navigation";
 
+import { backendAuthHeaders } from "@/lib/backend-auth";
+
 /**
  * Open (or find the existing) recovery case for an at-risk payment, then
  * go to it. `POST /recovery/cases` is idempotent on `payment_id` (201 for
@@ -17,7 +19,7 @@ export async function openRecoveryCase(formData: FormData): Promise<void> {
 
   const res = await fetch(`${baseUrl}/recovery/cases`, {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    headers: { "Content-Type": "application/json", ...backendAuthHeaders() },
     body: JSON.stringify({ payment_id: paymentId }),
     cache: "no-store",
   });

@@ -14,6 +14,23 @@ os.environ.setdefault(
     "DATABASE_URL", "postgresql+psycopg://arr_user:arr_password@localhost:5433/arr_test_db"
 )
 
+# Phase 15 (Security & Fintech Hardening): every mutating endpoint now
+# requires an API key (app.core.auth). Tests exercise real request/response
+# behavior through the ASGI app rather than mocking auth away, so a fixed
+# test operator key is configured the same way a real deployment would --
+# see the `client` fixture below, which attaches it by default. Individual
+# tests that specifically exercise auth/authz (missing key, readonly key,
+# wrong key) override the header explicitly rather than relying on this
+# default.
+os.environ.setdefault("API_KEYS_RAW", "test-operator-key:operator,test-readonly-key:readonly")
+
+# The full suite fires far more than 120 requests/minute against one test
+# API key -- a real production budget, not a bug. Raised here rather than
+# disabled outright, so the rate limiter's own dedicated tests
+# (test_rate_limiting.py) can still exercise a real, low limit by
+# overriding this env var themselves before importing app.main.
+os.environ.setdefault("RATE_LIMIT_REQUESTS_PER_MINUTE", "100000")
+
 import pytest_asyncio
 from httpx import ASGITransport, AsyncClient
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -24,6 +41,9 @@ from app.db.session import AsyncSessionLocal, engine, get_db_session
 # Importing app.main applies the Windows event-loop policy fix as a side
 # effect, which must happen before any async DB code runs in tests.
 from app.main import app
+
+TEST_OPERATOR_API_KEY = "test-operator-key"
+TEST_READONLY_API_KEY = "test-readonly-key"
 
 
 @pytest_asyncio.fixture(autouse=True)
@@ -76,6 +96,10 @@ async def client() -> AsyncGenerator[AsyncClient, None]:
 
     app.dependency_overrides[get_db_session] = _override_get_db_session
     transport = ASGITransport(app=app)
-    async with AsyncClient(transport=transport, base_url="http://test") as ac:
+    async with AsyncClient(
+        transport=transport,
+        base_url="http://test",
+        headers={"X-API-Key": TEST_OPERATOR_API_KEY},
+    ) as ac:
         yield ac
     app.dependency_overrides.clear()

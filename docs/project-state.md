@@ -2,9 +2,113 @@
 
 ## Current Phase
 
-Phase 14 — Production Observability: implementation and verification
-complete, **frozen**. Phases 4.1, 5, 6, 7, 8, 9, 10, 11, 12, and 13 are
-also frozen. Phases 0–2 remain frozen (`docs/phase-0-2-freeze.md`).
+Phase 17 — Advanced Autonomous Recovery: implementation and verification
+complete (2026-09-05), scoped by explicit owner decision to
+human-in-the-loop manual review resolution only (the one item on the
+master plan's Phase 17 wishlist this project could honestly build).
+Phase 16 (Real Payment Integration) is **frozen**. Phases 4.1, 5, 6, 7,
+8, 9, 10, 11, 12, 13, 14, and 15 are also frozen. Phases 0–2 remain
+frozen (`docs/phase-0-2-freeze.md`). This completes the full roadmap
+through Phase 17.
+
+## Phase 15 (2026-09-05)
+
+Owner instruction: verify Phase 14 first, then continue through the
+remaining roadmap phases (15 Security & Fintech Hardening, 16 Real
+Payment Integration, 17 Advanced Autonomous Recovery). Phase 14
+re-verified clean before starting (758 backend tests passing at the
+time -- 733 pre-Phase-15 plus the 25 new Phase 15 tests once added;
+ruff/mypy/eslint/tsc all clean; frontend 64/64 Vitest tests passing).
+Scope for Phase 15 itself was confirmed via AskUserQuestion given the
+real, non-trivial risk of adding auth/authz/rate-limiting to every
+endpoint including money-adjacent mutations: the "core hardening set"
+was chosen over a narrower auth-only slice or an audit-integrity-only
+alternative.
+
+Before this phase, `app/main.py` registered every router with zero
+authentication, authorization, rate limiting, or CORS policy --
+confirmed by grep, not assumed. What was built:
+
+- **`app/core/auth.py`**: `Role` (`operator`/`readonly`),
+  `parse_api_keys` (`"key:role,key:role"` -> `dict[str, Role]`,
+  `ValueError` on a malformed entry), `require_role(minimum)` (a FastAPI
+  dependency factory; `Security(APIKeyHeader(...))` reads `X-API-Key`,
+  constant-time-per-candidate comparison via `hmac.compare_digest` to
+  avoid a timing side channel). Missing/unknown key -> `401`; known key,
+  insufficient role -> `403`.
+- **Router wiring**: every `POST` under `/recovery/cases/...`,
+  `POST /events`, and `POST /analytics/warehouse/rebuild` requires
+  `Role.OPERATOR`; every `GET` (recovery, risk, measurement, analytics,
+  warehouse, ai-models) requires at least `Role.READONLY`.
+  `/health`, `/health/ready`, `/metrics` stay unauthenticated (infra
+  probes/scrapers, exempted the same way the rate limiter exempts them).
+- **`app/core/rate_limit.py::RateLimitMiddleware`**: Redis-backed fixed
+  window (`INCR`+`EXPIRE`, one round trip, `redis` was already a
+  declared dependency and unused until now), keyed by API key or client
+  IP, `429` with `Retry-After` over budget. Fails OPEN on a Redis error
+  (logged, not swallowed) -- an infra dependency that is not the system
+  of record must never block request-serving (ADR-007's own principle,
+  applied here).
+- **`app/core/security_headers.py::SecurityHeadersMiddleware`**:
+  `X-Content-Type-Options`, `X-Frame-Options`, `Referrer-Policy` always;
+  `Strict-Transport-Security` in production only (meaningless/wrong
+  outside real TLS, gated like `docs_url` already is).
+- **CORS**: off by default (`Settings.cors_allowed_origins` empty --
+  this bundled frontend calls the backend server-to-server, never from a
+  browser origin, KI-001); added via Starlette's `CORSMiddleware` only
+  when configured.
+- **Production startup guard**: `create_app()` raises `RuntimeError` if
+  `Settings.is_production` and no API keys are configured, rather than
+  silently serving every endpoint open. Development/test are exempt --
+  an empty key map there means every request gets a real `401`, which is
+  exactly what the test suite's dedicated auth tests exercise; there is
+  no separate "auth disabled" code path.
+- **Frontend**: `frontend/src/lib/backend-auth.ts` attaches a single
+  operator-role `BACKEND_API_KEY` (server-only env var, never
+  `NEXT_PUBLIC_*`) to every one of this app's five server-to-server
+  fetch call sites (`lib/api.ts`, `recovery/[id]/decide-action.ts`,
+  `action-action.ts`, `outcome-action.ts`, `risk/actions.ts`).
+- **Existing test suite migration**: `tests/conftest.py`'s shared
+  `client` fixture now attaches a fixed test operator API key by
+  default (`API_KEYS_RAW` env var set via `os.environ.setdefault`,
+  mirroring KI-010's own pattern) so the pre-existing 733 tests did not
+  need individual changes; the one test file that built its own
+  `AsyncClient` directly (`tests/test_concurrency.py`) was updated to do
+  the same. `RATE_LIMIT_REQUESTS_PER_MINUTE` is raised in tests (the
+  full suite legitimately exceeds a real per-minute budget against one
+  key) rather than the limiter being disabled outright, so
+  `tests/test_rate_limit.py` can still exercise a real, low limit by
+  overriding `app.core.rate_limit.get_settings` per-test.
+- **`docker-compose.yml` / `.env.example`**: `API_KEYS_RAW`,
+  `CORS_ALLOWED_ORIGINS_RAW`, `RATE_LIMIT_REQUESTS_PER_MINUTE` wired to
+  the backend service; `BACKEND_API_KEY` wired to the frontend service.
+  Verified live end-to-end via a real `docker compose up --build`: an
+  unauthenticated `GET /recovery/cases` returns `401`, the operator key
+  returns `200`, the readonly key gets `403` on a mutating endpoint,
+  `/health`/`/metrics` remain open with no key, security headers are
+  present on a live response, and the frontend's own `/risk` page
+  renders real data (not a "backend unavailable" fallback), proving its
+  `BACKEND_API_KEY` round-trip actually works end-to-end.
+
+Verified: backend full suite 758/758 passing (0 failures; 8 skipped, 1
+`xfail`, both pre-existing and unrelated) including 25 new Phase 15
+tests (`tests/test_auth.py`, `tests/test_rate_limit.py`,
+`tests/test_security_headers.py`); `ruff check` / `ruff format --check`
+/ `mypy app` all clean; frontend `eslint` / `tsc --noEmit` / Vitest
+(64/64) all clean; live Docker verification as above.
+
+Explicitly NOT built in this phase, and why: end-user login/session/
+OAuth (this is a service-to-service backend with no end-user-facing
+login flow anywhere in this codebase -- API-key auth is the correct
+shape for its actual callers, not a placeholder for a fuller scheme);
+tamper-evidence/hash-chaining of the existing audit trail (a real,
+separate hardening concern, deliberately deferred rather than bundled
+in without its own scoping pass); a secrets-manager integration (API
+keys are plain environment variables, the same mechanism every other
+credential in this system -- database password, Kafka config -- already
+uses; introducing a different mechanism for only this one credential
+class would be inconsistent, not more secure, without a real secrets
+backend already present in this deployment).
 
 ## Buildathon finalization (2026-09-04)
 
@@ -224,10 +328,215 @@ Owner decisions recorded:
   lines now actually appear in `docker compose logs backend`, where
   before the fix only uvicorn's own plain-text access log did).
 
+## Phase 16 (2026-09-05)
+
+Scope confirmed via AskUserQuestion before implementation, given the
+real risk of a real-money-adjacent integration: "Stripe TEST mode"
+(real SDK/API calls, no live money) over a narrower
+"pluggable-interface-only, no real call" alternative or skipping the
+phase. A second AskUserQuestion then confirmed the exact blast radius:
+only the `retry` channel gets a real gateway (`request_payment_method_update`
+/ `contact_customer` stay simulated -- no real payment-link or messaging
+integration was in scope), config-gated with a simulated fallback, and
+`PaymentProvider.attempt` becomes `async`.
+
+What was built:
+
+- **`app/decision/providers_stripe.py`**: `StripePaymentProvider` calls
+  the real `https://api.stripe.com/v1/payment_intents` endpoint via
+  `httpx.AsyncClient` (matching `app/ai/providers/openai_compatible.py`'s
+  existing pattern -- never the synchronous `stripe` SDK, which would
+  block this codebase's asyncio event loop; no new PyPI dependency was
+  added). `_require_test_key` refuses a live key
+  (`StripeConfigurationError`) at construction. Stripe's own published
+  TEST-mode payment-method tokens (`pm_card_visa`,
+  `pm_card_chargeDeclinedInsufficientFunds`, etc. --
+  https://docs.stripe.com/testing) are selected by the same
+  `failure_reason` the simulated provider's profile table already keys
+  off of, so a demo scenario behaves analogously regardless of which
+  provider is active. `select_retry_provider()` resolves
+  `StripePaymentProvider` when `Settings.stripe_api_key` is set,
+  otherwise the unchanged `SimulatedPaymentProvider`.
+- **`PaymentProvider.attempt` is now `async`** (`app/decision/providers.py`):
+  a real gateway call is genuine network I/O. `SimulatedPaymentProvider`,
+  `RetryExecutor`/`PaymentLinkExecutor`/`NotificationExecutor`
+  (`app/decision/executors.py`), `execute_action`
+  (`app/decision/actions.py`), and the Phase 8 baseline comparison's
+  `_baseline_recovers` (`app/measurement/baseline.py`, which deliberately
+  still calls `simulated_payment_provider` directly, never the resolved
+  retry provider -- the comparison's point is "what would blind retry
+  have done under the same simulated environment", not a second live
+  Stripe call per case) were all updated to `await` it. `mypy --strict`
+  caught both real call sites that needed the `await` added (`actions.py`,
+  `baseline.py`) as a byproduct of the signature change, not a
+  pre-existing bug.
+- **`ActionExecutionOutcome` gained `REAL_SUCCESS` /
+  `REAL_TEMPORARY_FAILURE` / `REAL_PERMANENT_FAILURE`**
+  (`app/models/action.py`, additive -- stored as strings per ADR-005, no
+  migration needed): a real bug caught by this session's own test suite
+  before it shipped -- reusing `SIMULATED_SUCCESS` for a genuine Stripe
+  result would have contradicted that value's own docstring ("the
+  deterministic simulated provider ... reported the attempt succeeded").
+  `ProviderAttemptResult` gained `is_real: bool = False`, the single
+  explicit signal `execute_action` uses to choose between the
+  `_SIMULATED_OUTCOME_BY_RESULT` / `_REAL_OUTCOME_BY_RESULT` tables --
+  never inferred from `simulated_reference`'s string shape.
+- **Frontend**: no code change needed -- `Action.executions[].outcome`
+  was already typed as a plain `string` and rendered generically
+  (`.replace(/_/g, " ")`), so `real_success` etc. display correctly with
+  zero special-casing.
+- **`.env.example` / `docker-compose.yml`**: `STRIPE_API_KEY` wired to
+  the backend service, unset by default (falls back to simulated).
+- **Real bug found and fixed by this session's own tests before it
+  shipped**: `StripePaymentProvider.attempt` originally called
+  `response.json()` unconditionally before checking
+  `response.status_code >= 500` -- a 5xx body is not guaranteed to be
+  JSON (a proxy error page, a truncated response), so this crashed with
+  `JSONDecodeError` instead of returning the intended
+  `REAL_TEMPORARY_FAILURE`. Caught by
+  `test_stripe_server_error_is_a_real_temporary_failure`
+  (`tests/test_providers_stripe.py`) failing on first run; fixed by
+  checking the status code first, and a `try/except ValueError` was
+  added around the still-possible 2xx-with-unparseable-body case too.
+
+Verified: `tests/test_providers_stripe.py` (14 new tests, using
+`httpx.MockTransport` -- no real Stripe account exists in this
+environment, so these verify the request/response contract and
+config/routing decisions, the parts entirely under this codebase's
+control, not a live-key smoke test) plus the full pre-existing backend
+suite, all passing; `ruff check` / `ruff format --check` / `mypy app`
+(strict) all clean.
+
+Explicitly NOT built in this phase, and why: a real
+`request_payment_method_update` (Stripe Payment Link object) or
+`contact_customer` (real email/SMS send) integration -- each is its own
+integration surface, not exercised by "retry a failed payment," and was
+out of scope by explicit owner confirmation; a live-key end-to-end smoke
+test against a real Stripe test account (none exists in this
+environment -- the request/response contract is verified via
+`MockTransport` instead, the same limitation `docs/ai/local-model-setup.md`
+already documents for the reasoning-model layer's own real-endpoint
+testing); Stripe webhooks (this integration is synchronous
+request/response only -- `execute_action` calls Stripe and reads the
+`PaymentIntent` status back in the same request, so no webhook receiver
+was needed or built).
+
+## Phase 17 (2026-09-05)
+
+Scope confirmed via AskUserQuestion before implementation: the master
+plan's Phase 17 wishlist (dynamic strategy optimization, advanced model
+routing, complex-case reasoning, human-in-the-loop, multimodal inputs,
+autonomous experimentation, advanced recovery optimization) was audited
+item by item. Six of seven require infrastructure this project has
+already deliberately declined to fabricate: dynamic strategy
+optimization / advanced recovery optimization need real ML training
+data (ruled out since Phase 9, KI-007); advanced model routing beyond
+Phase 10's failure-based routing would mean trusting model-reported
+confidence, which ADR-006 already forbids; autonomous experimentation
+needs a real A/B control group (ruled out since Phase 8/13,
+EXPERIMENT_LIMITATION); multimodal inputs have no data source in this
+system; complex-case reasoning risked crossing ADR-003 if it started
+making decisions rather than only reasoning. Human-in-the-loop was the
+one honestly buildable item, chosen over an "API-only, no UI" narrower
+alternative.
+
+A second AskUserQuestion, once implementation revealed the actual gap
+(see below), confirmed the exact resolution shape: an operator resolves
+a `pending_manual_review` case to `abandoned` or `failed` only, with a
+required note -- never a full re-decision loop back into
+`decision_pending` (would reopen decision/action identity questions)
+and never `recovered` (no real evidence would exist).
+
+**The real, pre-existing gap this phase closes**: `manual_review` was
+bundled with `no_action` in
+`app.decision.actions._NO_SIDE_EFFECT_ACTION_TYPES` -- both completed
+the action immediately with no external side effect. For `no_action`
+this is correct (the customer already paid, genuinely nothing further
+is needed). For `manual_review` this was silently wrong: the Phase 5
+policy engine's own escalation rules (fraud suspicion, insufficient
+evidence, conflicting signals, retry-cap exhaustion) exist specifically
+to route a case to a human, but no human was ever actually involved --
+the case sailed through to `action_executed` and then `observing`
+(almost always resolving `unresolved`, since no real attempt happened)
+with nobody notified and no way to act on it.
+
+What was built:
+
+- **`RecoveryCaseState.PENDING_MANUAL_REVIEW`** (new enum value, migration
+  `9fd7087e351e`, `ALTER TYPE ... ADD VALUE` -- the project's first enum
+  value addition; downgrade cannot remove a single Postgres enum value
+  without rebuilding the type, documented in the migration rather than
+  attempted, since no data can exist in this new state immediately after
+  a fresh upgrade in any normal migration sequence). New state-machine
+  edges: `ACTION_SCHEDULED -> PENDING_MANUAL_REVIEW` and
+  `PENDING_MANUAL_REVIEW -> {ABANDONED, FAILED}` only -- deliberately no
+  edge back into `DECISION_PENDING` or forward into `RECOVERED`.
+- **`app.decision.actions.execute_action`**: `manual_review` is now its
+  own branch (previously bundled with `no_action`) -- the action itself
+  still completes immediately with
+  `ActionExecutionOutcome.NO_SIDE_EFFECT_REQUIRED` (there is genuinely
+  nothing for the executor to do), but the CASE transitions to
+  `PENDING_MANUAL_REVIEW` instead of `ACTION_EXECUTED`.
+- **`app.models.manual_review.ManualReviewResolution`** (migration
+  `9fd7087e351e`): append-only, unique on `case_id` (a case can leave
+  `PENDING_MANUAL_REVIEW` at most once -- the state machine has no edge
+  back into it, so a second resolution attempt is a genuine conflict,
+  unlike every other write in this system's pipeline which expects
+  legitimate replays).
+- **`app.recovery.manual_review.resolve_manual_review`** /
+  `POST /recovery/cases/{id}/resolve-manual-review`: KI-008-safe
+  (flush -> `IntegrityError` -> recheck), verified under 20-way
+  concurrent identical requests (exactly one resolution, 19 `409`s).
+- **Frontend**: a new "Manual review" panel on the case-detail page
+  (`manual-review-panel.tsx` / `manual-review-action.ts`), shown only
+  once a case is escalated, offering exactly `abandoned`/`failed` with a
+  required note textarea -- never a `recovered` option.
+- **Real, honestly-disclosed reachability gap found during
+  implementation**: the only policy path producing an *approved* (not
+  escalated) `manual_review` decision requires
+  `retry_count >= RETRY_CAP`, but
+  `app.decision.service._RETRY_COUNT_PENDING_PHASE_6` is hardcoded to
+  `0` everywhere in the live system (no re-diagnosis loop exists yet --
+  a pre-existing, already-documented gap). Every other `manual_review`
+  path is `ESCALATED`, which `schedule_action` already rejects with
+  `409` before `execute_action` is ever reached. This means the
+  `PENDING_MANUAL_REVIEW` fix is structurally correct but currently
+  unreachable through the live HTTP pipeline -- confirmed with the
+  owner before proceeding rather than silently building around it. It
+  becomes load-bearing the moment `retry_count` is ever made live.
+  `tests/test_manual_review.py` documents this in its own module
+  docstring and reaches the state the same way any test of
+  currently-dead-but-correct code must: driving a case to a real
+  diagnosed+decided state via the live HTTP flow, then directly
+  updating that one persisted `DecisionResult` row to the exact
+  combination the policy engine's own retry-cap-downgrade rule would
+  itself produce.
+
+Verified: `tests/test_manual_review.py` (13 new tests, including the
+20-way concurrency case) plus the full pre-existing backend suite (785
+total passing, 0 failures), `ruff check` / `ruff format --check` /
+`mypy app` (strict) all clean; `alembic upgrade`/`check` clean (the one
+remaining `alembic check` finding, `ix_domain_events_unpublished`, is a
+pre-existing false positive on a partial index, confirmed present on
+`main` before this phase's changes, not introduced by this migration);
+frontend `eslint` / `tsc --noEmit` / `next build` / Vitest (73/73, +9
+new) all clean; live Docker verification (`docker compose up --build`):
+an unauthenticated/unknown-case resolve attempt returns `404` as
+expected, migration applies cleanly on container startup.
+
+Explicitly NOT built in this phase, and why: the other six Phase 17
+wishlist items (see the scope-confirmation note above for the specific
+reason each was excluded); a full re-decision loop
+(`pending_manual_review -> decision_pending`) or an automatic timeout
+for an unresolved manual review (both would be real, separate features
+needing their own scoping pass, not folded into this one silently).
+
 ## Current Stage
 
-N/A — Phase 14 closed. Do NOT begin Phase 15 without explicit owner
-authorization.
+N/A — Phase 17 closed (owner-authorized, 2026-09-05: "verify Phase 14,
+then complete all remaining phases"). This was the last phase on the
+roadmap (`docs/architecture.md`'s Phase Roadmap section, 0 through 17) --
+no further phase is defined without new owner direction.
 
 ## Completed Phases
 
@@ -257,6 +566,19 @@ authorization.
 - Phase 14 — Production Observability (structured JSON logging, request/
   domain correlation, operational + business metrics, liveness/readiness
   health checks, worker heartbeats; frozen)
+- Phase 15 — Security & Fintech Hardening (scoped: API-key auth +
+  role-based authorization, Redis-backed rate limiting, CORS policy,
+  security headers; no end-user auth/session, no audit-trail
+  tamper-evidence, no secrets-manager integration)
+- Phase 16 — Real Payment Integration (scoped: `retry` channel only,
+  Stripe TEST mode via `httpx`, config-gated with simulated fallback;
+  `request_payment_method_update`/`contact_customer` remain simulated,
+  no webhooks, no live-key smoke test)
+- Phase 17 — Advanced Autonomous Recovery (scoped: human-in-the-loop
+  manual review resolution only; new `pending_manual_review` state +
+  resolution API/UI; currently unreachable via the live HTTP pipeline
+  until `retry_count` is made live, disclosed rather than hidden; no
+  ML/experimentation/multimodal features)
 
 ## Completed Stages (Phase 14)
 
