@@ -3,7 +3,7 @@ from datetime import datetime
 from decimal import Decimal
 from typing import TYPE_CHECKING
 
-from sqlalchemy import DateTime, ForeignKey, Integer, Numeric, String, Text, func
+from sqlalchemy import Boolean, DateTime, ForeignKey, Integer, Numeric, String, Text, func
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
@@ -25,6 +25,17 @@ class Diagnosis(Base):
     The ``model_*`` / ``prompt_version`` / ``schema_version`` / ``latency_ms``
     columns are the audit fields Section 51 requires, so diagnoses from
     different model or prompt versions can be compared later.
+
+    ``router_escalated`` / ``router_escalation_reason`` (Phase 10, Section
+    29 of the master plan): durably records whether
+    ``app.ai.providers.router.run_diagnosis_with_failover`` had to fall
+    back to a different provider because the originally configured one was
+    transport-unreachable -- never because of the model's own reported
+    confidence (see that module's docstring). A structured log line alone
+    is not queryable/durable, so this is the actual observability record
+    KI-009 asked for. Defaults ``False``/``NULL`` for every diagnosis
+    persisted before this column existed -- correct, not a guess: no
+    escalation mechanism existed then, so none could have happened.
     """
 
     __tablename__ = "diagnoses"
@@ -46,6 +57,9 @@ class Diagnosis(Base):
     model_version: Mapped[str] = mapped_column(String(100), nullable=False)
     prompt_version: Mapped[str] = mapped_column(String(100), nullable=False)
     latency_ms: Mapped[int] = mapped_column(Integer, nullable=False)
+
+    router_escalated: Mapped[bool] = mapped_column(Boolean, nullable=False, server_default="false")
+    router_escalation_reason: Mapped[str | None] = mapped_column(String(255), nullable=True)
 
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), nullable=False

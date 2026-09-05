@@ -1,9 +1,12 @@
 import uuid
 from datetime import datetime
 
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, Field
 
+from app.decision.schema import DecisionRationaleEntry, DecisionStatus, Recoverability
+from app.models.manual_review import ManualReviewOutcome
 from app.models.recovery import RecoveryCaseState
+from app.outcome.schema import ObservedOutcome
 
 
 class OpenCaseRequest(BaseModel):
@@ -52,9 +55,99 @@ class DiagnosisOut(BaseModel):
     model_version: str
     prompt_version: str
     latency_ms: int
+    router_escalated: bool
+    router_escalation_reason: str | None
+    created_at: datetime
+
+
+class DecisionOut(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: uuid.UUID
+    case_id: uuid.UUID
+    diagnosis_id: uuid.UUID
+    recoverability: Recoverability
+    candidate_strategy: str
+    approved_strategy: str
+    decision_status: DecisionStatus
+    rationale: list[DecisionRationaleEntry]
+    scheduled_not_before: datetime | None
+    decision_engine_version: str
+    created_at: datetime
+
+
+class ActionExecutionOut(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: uuid.UUID
+    attempt_no: int
+    idempotency_key: str
+    outcome: str
+    detail: str | None = None
+    simulated_reference: str | None = None
+    resulting_payment_id: uuid.UUID | None = None
+    created_at: datetime
+
+
+class ActionOut(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: uuid.UUID
+    case_id: uuid.UUID
+    decision_result_id: uuid.UUID
+    action_type: str
+    status: str
+    created_at: datetime
+    executions: list[ActionExecutionOut] = []
+
+
+class OutcomeOut(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: uuid.UUID
+    case_id: uuid.UUID
+    action_id: uuid.UUID
+    attempt_no: int
+    outcome: ObservedOutcome
+    is_terminal: bool
+    evidence_payment_id: uuid.UUID | None
+    created_at: datetime
+
+
+class MeasurementOut(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: uuid.UUID
+    case_id: uuid.UUID
+    payment_id: uuid.UUID
+    outcome_observation_id: uuid.UUID
+    status: ObservedOutcome
+    measured_at: datetime
+
+
+class ResolveManualReviewRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    resolution: ManualReviewOutcome
+    note: str = Field(min_length=1, max_length=1000)
+
+
+class ManualReviewResolutionOut(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: uuid.UUID
+    case_id: uuid.UUID
+    resolution: str
+    note: str
+    actor: str
     created_at: datetime
 
 
 class RecoveryCaseDetail(RecoveryCaseOut):
     history: list[TransitionOut]
     diagnosis: DiagnosisOut | None = None
+    decision: DecisionOut | None = None
+    action: ActionOut | None = None
+    outcome: OutcomeOut | None = None
+    measurement: MeasurementOut | None = None
+    manual_review_resolution: ManualReviewResolutionOut | None = None

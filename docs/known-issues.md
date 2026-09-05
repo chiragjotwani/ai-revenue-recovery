@@ -6,6 +6,40 @@ must record what, why, and impact.
 
 ## Open
 
+### KI-014: Phase 17's PENDING_MANUAL_REVIEW fix is currently unreachable via the live HTTP pipeline (Phase 17)
+
+- **What**: `app.decision.actions.execute_action` correctly routes a case
+  whose approved decision strategy is `manual_review` into the new
+  `RecoveryCaseState.PENDING_MANUAL_REVIEW` (Phase 17) instead of
+  auto-completing it. However, the only policy rule
+  (`app/decision/policy.py`'s retry-cap-downgrade rule) that produces an
+  *approved* (rather than *escalated*) `manual_review` decision requires
+  `PolicyInput.retry_count >= RETRY_CAP`. `retry_count` is populated from
+  `app.decision.service._RETRY_COUNT_PENDING_PHASE_6`, a constant
+  hardcoded to `0` everywhere in the live system, because no case-level
+  re-diagnosis loop exists (a pre-existing gap, noted since Phase 6
+  completion in `docs/recovery/action-idempotency.md`). Every other path
+  to a `manual_review` candidate strategy resolves to `DecisionStatus.ESCALATED`,
+  which `schedule_action` already rejects with `409` before
+  `execute_action` is ever reached (see
+  `test_action_executor.py::test_escalated_decision_cannot_be_scheduled`).
+- **Impact**: the `PENDING_MANUAL_REVIEW` state and its resolution
+  endpoint (`POST /recovery/cases/{id}/resolve-manual-review`) are
+  correct and fully tested, but no real case can reach them today
+  through the ordinary HTTP diagnose/decide/schedule/execute flow.
+  `tests/test_manual_review.py` verifies the behavior by directly
+  updating a persisted `DecisionResult` row to the combination the
+  policy engine would itself produce once `retry_count` is live, rather
+  than by driving the real HTTP flow end-to-end (which cannot reach this
+  state today).
+- **Resolution plan**: this becomes load-bearing automatically the
+  moment a real case-level retry/re-diagnosis loop is built and
+  `_RETRY_COUNT_PENDING_PHASE_6` stops being hardcoded to `0` --
+  no further change to the Phase 17 code itself should be needed.
+- **Status**: Documented limitation, not a defect against Phase 17's own
+  scope (owner-confirmed via AskUserQuestion before implementation
+  proceeded) -- not silently worked around.
+
 ### KI-002: Self-hosted model infrastructure undecided (relevant from Phase 4)
 
 - **What**: The engineering prompt specifies self-hosted open-weight models
@@ -27,8 +61,22 @@ must record what, why, and impact.
 - **Resolution plan**: pick a hosting path before doing model selection.
   The provider code and the benchmark runner are ready; only
   `AI_QWEN_BASE_URL` / `AI_NEMOTRON_BASE_URL` need to point somewhere real.
-- **Status**: Not bypassed — Phase 4 does not depend on it; model
-  *selection* does.
+- **Update (2026-08-29, Phase 4.1)**: path (a) was exercised — a local
+  Ollama server running `qwen3:4b-instruct-2507-q8_0` (~4.3 GB) on the
+  6 GB card. `QwenProvider` was driven against it for real for all 8
+  Workstream B3 scenarios (`tests/test_ai_real_model.py`); 7/8 passed on
+  the first parametrized run, the 8th (`insufficient_funds`) failed on a
+  transient Ollama-side `500` and passed cleanly on isolated retry —
+  consistent with a cold-start/load hiccup in Ollama itself, not a defect
+  in the provider client. This validates the *integration contract*
+  (transport, schema validation, safeguards) against a real model; it is
+  still not a diagnostic-accuracy benchmark (that needs an independent
+  ground-truth set — see KI-007) and the 30B Qwen-vs-Nemotron comparison
+  the original engineering prompt asked for still needs the 24–80 GB
+  cloud-GPU path (c), not attempted.
+- **Status**: Partially resolved — a real model has been exercised in
+  development; the production hosting decision for the 30B-class
+  benchmark is still open.
 
 ### KI-007: The diagnosis evaluation set is synthetic; benchmark accuracy is not real-world (Phase 4)
 
@@ -46,10 +94,288 @@ must record what, why, and impact.
 - **Resolution plan**: real accuracy validation comes only with live
   recovery-outcome data (Phase 8+). Until then the evaluation set is
   **fixed** and must not be edited to move a score.
+- **Phase 5 extension (added 2026-08-31)**: the same discipline applies to
+  `backend/evaluation/decision_cases.json` /
+  `scripts/benchmark_decision_policy.py` (Phase 5H). That harness checks
+  the deterministic policy engine against its own hand-authored golden
+  cases — a specification check, not a real-accuracy or real-revenue
+  measurement. It must never be read as evidence of recovered revenue or
+  production conversion rates.
 - **Status**: Documented limitation, not a defect. No Phase 4 requirement
   is bypassed.
 
 ## Resolved
+
+### KI-010: No dedicated test database — `DATABASE_URL` defaults to the shared dev Postgres (Phase 7) — RESOLVED
+
+- **What (original)**: `app/core/config.py::Settings.database_url` defaults
+  to the same Postgres instance/database the Docker dev stack uses
+  (`localhost:5433/arr_db`), and `tests/conftest.py::_clean_database`
+  truncates every table before each test. Running the host pytest suite
+  with no `DATABASE_URL` override therefore wiped whatever dev/browser-QA
+  fixture data existed in `arr_db`. Discovered Phase 7 (2026-09-01) when a
+  routine full-suite run destroyed a just-verified browser-QA fixture; the
+  `arr_test_db` mitigation used since was manual and session-local, not
+  committed anywhere.
+- **Fix (2026-09-04)**: `tests/conftest.py` now calls
+  `os.environ.setdefault("DATABASE_URL", "...arr_test_db")` as the very
+  first thing it does, before any `app.*` module (and therefore before
+  `app.db.session`'s module-level `engine`) is imported. `setdefault`
+  means an operator's own explicit `DATABASE_URL` (CI, a differently
+  named test DB) is never overridden — only the previously-unhandled
+  "nothing was set at all" case is. A bare `pytest` invocation now
+  automatically resolves to the dedicated test database; the dev database
+  is never touched unless someone deliberately points `DATABASE_URL` at
+  it.
+- **Verified**: `tests/test_safe_test_database_default.py` — two
+  subprocess-based regression tests (a genuinely clean environment,
+  since this test's own process already has `DATABASE_URL` set by the
+  very fix under test): one confirms an unset `DATABASE_URL` resolves to
+  `arr_test_db`, never to `arr_db`; the other confirms an operator's own
+  explicit override is never clobbered.
+- **Remaining manual step**: `arr_test_db` itself must still exist in the
+  target Postgres instance (a one-time `CREATE DATABASE arr_test_db`, or
+  equivalent, on a fresh machine) — this fix makes pointing at it
+  automatic, not creating it automatic. Documented here rather than
+  silently assumed.
+- **Status**: RESOLVED.
+
+### KI-013: Baseline-vs-AI comparison compared an unfair population/budget, and inflated its apparent AI advantage — RESOLVED
+
+- **What (original gap, present since the baseline comparison's first
+  commit, 2026-09-03)**: `app/measurement/baseline.py`'s first version
+  had two real fairness defects, found by a 2026-09-04 red-team audit
+  before submission: (1) it included cases resolved via `no_action` (the
+  already-paid short-circuit -- the customer's payment succeeded
+  independently, before any decision ran) in the "AI-gated recovered"
+  count, crediting AI with recoveries neither policy caused; (2) it
+  simulated the baseline with only a single attempt
+  (`attempt_no=1`), while the real AI-gated pipeline gets up to
+  `RETRY_CAP` (3) attempts -- scoring a `[temporary_failure, success]`
+  profile as a baseline failure purely because of attempt count, not
+  decision quality. Together these produced a live, demoable dashboard
+  claim of **87.5% AI-gated vs. 43.75% baseline** that did not survive
+  scrutiny.
+- **Fix (2026-09-04)**: cases resolved via `no_action` are now excluded
+  from BOTH populations (see `BaselineComparisonReport.already_resolved_excluded_count`,
+  disclosed on the dashboard); the baseline simulation now gets the same
+  `RETRY_CAP` attempt budget the real executor uses. `BASELINE_METHODOLOGY`
+  rewritten to state both rules explicitly.
+- **Result, disclosed honestly rather than re-tuned for a better number**:
+  after the fix, and after also discovering and clearing a stale test
+  artifact in the dev database (one case executed under a pre-Phase-6-completion
+  backend image, left un-observed -- see below), the corrected comparison
+  on a freshly reseeded demo population shows **exact parity: AI-gated
+  61.5% vs. baseline 61.5%** (8/13 both sides). This is expected, not a
+  bug: the simulated provider's outcome
+  (`app.decision.providers.SimulatedPaymentProvider`) is a function of
+  `failure_reason` and `attempt_no` only, never of which channel
+  (retry/payment-link/notification) called it -- so once attempt budgets
+  and populations are equalized, the simulation has no mechanism left to
+  favor AI-gated over blind-retry UNLESS a case reaches
+  `DecisionStatus.ESCALATED` (fraud / sparse evidence / conflicting
+  signals), which this specific demo population happens to have zero of
+  in the compared set (`cases_where_ai_gate_avoided_a_blind_retry: 0`).
+  The AI's real, defensible value in this system is safety-gating and
+  audit transparency, not a raw recovery-rate lift in this particular
+  simulated environment -- the dashboard and API were left showing this
+  honestly (parity) rather than re-engineered to manufacture a
+  difference.
+- **Separately found and fixed while investigating the above**: a stale
+  `RecoveryActionExecution` row (outcome `deferred_no_integration`,
+  never observed) left over from testing the backend image *before* the
+  Phase 6 completion rebuild was contaminating the dev database's
+  comparison by one case. Cleared via a one-time `TRUNCATE ... CASCADE`
+  on `arr_db` (explicit user approval obtained first, since this is a
+  destructive operation) followed by a fresh re-seed of both
+  `scripts/seed_synthetic_data.py` and `scripts/seed_demo_population.py`.
+  Not a product bug -- an artifact of iterative local testing across
+  several container rebuilds in one session -- but real enough to change
+  the reported numbers, so recorded here rather than silently
+  corrected. See the new "Clean demo reset" section in `README.md` for
+  the reproducible procedure this produced.
+- **Status**: RESOLVED.
+
+### KI-012: Phase 6 action execution had no real or simulated external side effect (Phase 6) — RESOLVED
+
+- **What (original gap, present since the original Phase 6 commit,
+  2026-09-01)**: `app/decision/actions.py::execute_action` recorded every
+  approved strategy other than `no_action`/`manual_review` (i.e. `retry`,
+  `request_payment_method_update`, `contact_customer`) as
+  `ActionExecutionOutcome.DEFERRED_NO_INTEGRATION` and stopped there — no
+  payment-provider or customer-messaging integration, real or simulated,
+  existed anywhere in this repository. This was disclosed honestly in the
+  module's own docstring at the time, not hidden, but it meant the
+  DETECT→ACT→OBSERVE loop was not genuinely closed: Phase 7's
+  `observe_outcome` could only ever classify a case as `recovered` when an
+  unrelated, independently-ingested `payment.succeeded` event happened to
+  arrive for the same customer — never because this system's own action
+  caused anything. A full repository audit (2026-09-03, prior to this fix)
+  identified this as the single most consequential gap against the
+  project's own phase specification, ahead of the buildathon demo.
+- **Fix (2026-09-03)**: a deterministic, explicitly SIMULATED execution
+  layer — `app/decision/providers.py` (`SimulatedPaymentProvider`, a pure
+  function of `(failure_reason, attempt_no)`, no network call) and
+  `app/decision/executors.py` (`RetryExecutor` / `PaymentLinkExecutor` /
+  `NotificationExecutor`, one per real-side-effect strategy). Only
+  `app/decision/actions.py::execute_action` can reach these — ADR-003's
+  boundary (the LLM/policy engine can never invoke a provider) is
+  unaffected structurally, not just by convention. A bounded (`RETRY_CAP`,
+  the same constant `app.decision.policy` already defines) multi-attempt
+  loop lives entirely inside `execute_action`; a simulated success creates
+  a new `Payment` + `IngestionEvent` row (the identical shape any other
+  payment source produces) with an explicit causal link
+  (`RecoveryActionExecution.resulting_payment_id`) to what Phase 7 later
+  reads as evidence. Phase 7's `observe_outcome` and Phase 8's measurement
+  service were **not modified** — both already worked correctly against
+  real evidence; they simply had none to observe before this fix.
+- **Verified**: `tests/test_canonical_recovery_flow.py::test_canonical_recovery_flow_causes_revenue_recovery`
+  drives the full DETECT→DIAGNOSE→DECIDE→SCHEDULE→EXECUTE→SIMULATED
+  PROVIDER→OBSERVE→RECOVERED→MEASURE chain for the canonical ₹4,999
+  insufficient-funds scenario and asserts the causal link at every step
+  (the executed action's `resulting_payment_id` equals the observation's
+  `evidence_payment_id`) — not merely that a recovery eventually appears.
+  New coverage in `tests/test_action_executor.py` for a multi-attempt
+  success, a permanent failure, and retry-cap exhaustion.
+- **Still open, deliberately out of scope for this fix**: a real
+  payment-gateway or messaging integration (Phase 15+); a case-level
+  re-diagnosis loop after a fully failed action (no such loop exists in
+  the state machine, so `app.decision.service._RETRY_COUNT_PENDING_PHASE_6`
+  remains `0` — a distinct, decision-level retry count from the
+  within-action attempt count this fix introduced).
+- **Status**: RESOLVED.
+
+### KI-011: Logging configuration silently overridden in two places (Phase 14) — RESOLVED
+
+- **What (original finding, discovered while building Phase 14's
+  structured logging)**: two independent places silently discarded
+  `app.core.logging.configure_logging()`'s JSON formatter.
+  (1) `migrations/env.py` calls `logging.config.fileConfig()` with its
+  default `disable_existing_loggers=True`, which disables every logger
+  not explicitly listed in `alembic.ini`'s `[loggers]` section (only
+  root/sqlalchemy/alembic are) — including every `app.*` logger. Harmless
+  in production (Alembic runs as its own short-lived process, separate
+  from the uvicorn process), but a real defect in-process:
+  `tests/test_migrations.py` runs Alembic directly inside the same
+  pytest process as every other test, permanently silencing Phase 14's
+  new log lines for the remainder of any full-suite run after it — first
+  surfaced as a test that passed alone but failed only inside the
+  700+-test full suite. (2) uvicorn installs its own default logging
+  configuration during server startup, which runs *after* `app.main` is
+  imported but overrides whatever was configured at import time —
+  meaning the production container kept emitting uvicorn's plain-text
+  access log instead of this phase's JSON formatter, confirmed live via
+  `docker compose logs backend` before the fix.
+- **Fix (Phase 14, 2026-09-03)**: `migrations/env.py` now passes
+  `disable_existing_loggers=False` to `fileConfig()`.
+  `app/main.py`'s FastAPI `lifespan` startup handler reapplies
+  `configure_logging()` (idempotent, safe to call twice) after uvicorn's
+  own setup runs, so this app's formatter wins last. Reverified: 719/719
+  backend tests green in the full suite, and a rebuilt Docker container's
+  logs show real JSON request/domain log lines (confirmed via
+  `docker compose logs backend`) where before the fix only uvicorn's
+  own plain-text access log appeared.
+- **Status**: RESOLVED.
+
+### KI-009: Provider fallback-to-mock is observable only after the call completes (Phase 4.1) — RESOLVED
+
+- **What (original finding)**: `app/ai/providers/factory.py::get_reasoning_model`
+  silently substitutes `MockProvider` when `REASONING_PROVIDER` names a
+  real provider (`qwen`/`nemotron`) but that provider's base URL is unset
+  — there was no startup error, warning log, or distinct response signal
+  at the moment of substitution, only the persisted diagnosis's
+  `model_name` field after the fact.
+- **Fix (Phase 10, 2026-09-02)**: `app/ai/providers/factory.py::select_reasoning_model`
+  performs the identical resolution logic (never diverges from
+  `get_reasoning_model` — both always agree on which provider a plain
+  call would get) but returns a `ProviderSelection`
+  (`requested_provider`/`resolved_provider`/`substituted`/
+  `substitution_reason`) and logs a structured warning at the moment a
+  substitution happens. `GET /ai/providers` exposes it live, and
+  `scripts/benchmark_diagnosis.py --compare` surfaces the same
+  requested-vs-actual distinction in its offline comparison table.
+  Additionally, `Diagnosis.router_escalated` /
+  `Diagnosis.router_escalation_reason` (migration `9a3e7b5c1d24`) durably
+  record a *runtime* substitution (the configured provider was
+  transport-unreachable, not merely unconfigured) on the diagnosis row
+  itself — the exact "response header, so the substitution is visible
+  without a follow-up query" style fix this entry's original resolution
+  plan proposed. `get_reasoning_model`/`resolved_provider_name` (the
+  frozen Phase 4 contract) are unchanged.
+- **Status**: RESOLVED.
+
+### KI-008: Intermittent failure in concurrent-identical-ingestion race test (Phase 4.1) — RESOLVED
+
+- **What (original finding)**: `tests/test_concurrency.py::test_concurrent_identical_ingestion_creates_one_payment`
+  fires two identical `POST /events` requests concurrently and expects
+  both callers to see `201` (one fresh insert, one idempotent duplicate
+  hit). It failed once (`{201, 409}` instead of `{201, 201}`) across 7
+  full backend-suite runs in an earlier session. At that point it had not
+  been reproduced running alone, run 5x back-to-back alone, or in a
+  dedicated 15-iteration stress harness outside pytest, and was recorded
+  as UNVERIFIED per Rule 7 rather than silently ignored.
+- **Follow-up investigation**: a dedicated forensic pass (read-only, no
+  code changes) found the true failure rate was much higher than first
+  measured — 40% (12/30) across full-suite runs, 27–33% standalone — and
+  that it reproduces for a single isolated test invocation via pytest,
+  contradicting the original "full-suite only" theory. A tracing plugin
+  (loaded via `pytest -p`, monkeypatching in memory only) captured the
+  exact failing interleaving.
+- **Root cause (confirmed)**: `ingest_payment_event`
+  (`app/services/ingestion.py`) contained a standalone, unprotected
+  pre-check between the idempotency-key lookup and the protected
+  insert/`except IntegrityError` block:
+  ```python
+  existing_payment = await session.scalar(
+      select(Payment).where(Payment.external_reference == event_in.payment.external_reference)
+  )
+  if existing_payment is not None:
+      raise PaymentReferenceConflictError(event_in.payment.external_reference)
+  ```
+  This was a time-of-check-to-time-of-use race: when two requests sharing
+  the *same* idempotency key raced, the slower request's copy of this
+  check could run after the faster request's full transaction had already
+  committed, see the now-existing `Payment` row by `external_reference`,
+  and unconditionally treat it as a genuine conflict from a *different*
+  idempotency key — instead of recognising it as its own duplicate. The
+  captured trace showed the exception firing with no `_get_or_create_customer`
+  call ever made for the losing request, proving the failure came from
+  this pre-check, not from the `except IntegrityError` recovery block. The
+  investigation explicitly confirmed the `except IntegrityError`
+  rollback → recheck-by-idempotency-key pattern itself was **not** the
+  defect (verified separately via `open_case`, which uses that pattern
+  alone with no secondary pre-check, and never failed in 30 runs).
+- **Fix**: removed the standalone pre-check entirely. The
+  `external_reference` uniqueness decision is now made exclusively by the
+  database constraint plus the existing `except IntegrityError` recheck,
+  which was already correct and constraint-agnostic. No behavior changed
+  for any non-racing request; the only removed step was a redundant read
+  that was also the race window.
+- **Regression coverage added** (`tests/test_concurrency.py`):
+  KI008-01 (existing test, tightened intent via docstring) — concurrent
+  identical key+reference must both succeed; KI008-02
+  (`test_concurrent_same_reference_different_keys_is_a_genuine_conflict`,
+  tightened from `codes in ([201,201],[201,409])` to the only
+  architecturally-possible outcome `codes == [201, 409]`) — different keys,
+  same reference, must still conflict; KI008-03
+  (`test_sequential_replay_same_key_and_reference_is_idempotent`) —
+  sequential replay unaffected; KI008-04
+  (`test_concurrent_identical_ingestion_stress`) — the same race repeated
+  25 times in one test run, as a standing regression guard.
+- **Verification**: post-fix, `test_concurrent_identical_ingestion_creates_one_payment`
+  passed 60/60 standalone runs (vs. 27–40% failure pre-fix under the same
+  conditions), the full `test_concurrency.py` file passed 20/20 runs, and
+  the full backend suite (136 tests, now +2 from the new KI008-03/04 tests)
+  passed 30/30 full runs with zero failures. `ruff check`, `ruff format
+  --check`, and `mypy app` all clean. Phase 1 (`test_ingestion.py`,
+  `test_ingestion_amounts.py`), Phase 2 (`test_risk_scoring.py`,
+  `test_risk_api.py`), Phase 3 (`test_recovery_state_machine.py`,
+  `test_recovery_api.py`, `test_recovery_preconditions.py`,
+  `test_recovery_safety_contracts.py`), and Phase 4 (`test_ai_diagnosis.py`,
+  `test_ai_providers.py`, `test_diagnosis_api.py`, `test_ai_context_builder.py`,
+  `test_ai_failure_modes.py`, `test_ai_prompt_injection.py`) suites all
+  re-run and green.
+- **Status**: RESOLVED.
 
 ### KI-006: `revenue_at_risk` naively sums across currencies (Phase 2) — ACKNOWLEDGED, NOT A BUG
 
@@ -67,10 +393,25 @@ must record what, why, and impact.
   a single currency.
 - **Resolution plan**: revisit if/when multi-currency volume becomes real
   (introduce an FX rate source and convert to a reporting currency).
+- **Phase 5 dependency (added 2026-08-30)**: Phase 5's decision policy
+  engine has no high-value escalation rule for exactly this reason — a
+  "high-value" threshold needs a currency-normalized amount, which does
+  not safely exist until this issue is resolved (see ADR-006 and the
+  `xfail`ed `test_contract_high_value_escalates_to_manual_review` in
+  `backend/tests/test_recovery_safety_contracts.py`). Resolving KI-006
+  is now a precondition for that contract, not only for `revenue_at_risk`.
   Deliberately not solved now -- no exchange-rate source exists yet and
   guessing one would be premature (Section 44/45 discipline).
 - **Status**: Documented limitation, not silently hidden. Not a bypass of
   a requirement -- Phase 2 has no multi-currency requirement.
+- **Phase 8 dependency (added 2026-09-02)**: `app.measurement` (the
+  revenue-measurement layer) inherits the same discipline deliberately --
+  `GET /measurement/report` never sums across currencies (every field is
+  a per-currency list: `eligible_at_risk`, `observed_recovered`,
+  `observed_not_recovered`, `unresolved`, `recovered_by_strategy`,
+  `recovered_by_disposition`). Resolving KI-006 remains a precondition
+  for any future single-number cross-currency total in this report, the
+  same way it already is for the Phase 5 high-value contract.
 
 ### KI-005: Postgres port collision with a native Windows Postgres service (Phase 1) — RESOLVED
 

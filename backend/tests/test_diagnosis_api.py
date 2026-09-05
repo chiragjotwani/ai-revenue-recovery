@@ -11,6 +11,7 @@ from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.ai.context_builder import RecoveryContext
+from app.ai.prompts import DIAGNOSIS_PROMPT_VERSION
 from app.ai.providers.base import RawModelResponse, ReasoningModel
 from app.models.diagnosis import Diagnosis as DiagnosisRow
 
@@ -83,7 +84,7 @@ async def test_diagnose_advances_case_and_stores_diagnosis(
     assert body["disposition"] == "retriable_transient"
     assert body["recommended_strategy"] == "retry"
     assert body["recommended_delay_hours"] == 6
-    assert body["prompt_version"] == "diagnosis_prompt_v1"
+    assert body["prompt_version"] == DIAGNOSIS_PROMPT_VERSION
     assert body["model_name"] == "mock"
     assert 0.0 <= body["confidence"] <= 1.0
 

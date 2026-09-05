@@ -5,6 +5,7 @@ Usage:
     python scripts/benchmark_diagnosis.py --provider mock
     python scripts/benchmark_diagnosis.py --provider qwen      # needs AI_QWEN_BASE_URL
     python scripts/benchmark_diagnosis.py --provider nemotron
+    python scripts/benchmark_diagnosis.py --compare mock,qwen,nemotron  # Phase 10: side by side
 
 Measures, over ``evaluation/diagnosis_cases.json``:
   - outcome accuracy      (predicted outcome == expected label)
@@ -119,36 +120,88 @@ async def _run(provider: ReasoningModel, cases: list[dict[str, Any]]) -> dict[st
     }
 
 
+_SUMMARY_KEYS = [
+    "provider",
+    "n",
+    "outcome_accuracy",
+    "schema_compliance_rate",
+    "hallucination_rate",
+    "confidence_band_adherence",
+    "mean_latency_ms",
+    "p95_latency_ms",
+    "throughput_per_s",
+]
+
+
 def _print_summary(result: dict[str, Any]) -> None:
-    keys = [
-        "provider",
-        "n",
-        "outcome_accuracy",
-        "schema_compliance_rate",
-        "hallucination_rate",
-        "confidence_band_adherence",
-        "mean_latency_ms",
-        "p95_latency_ms",
-        "throughput_per_s",
-    ]
-    width = max(len(k) for k in keys)
+    width = max(len(k) for k in _SUMMARY_KEYS)
     print("\nDiagnosis benchmark")
     print("-" * (width + 20))
-    for k in keys:
+    for k in _SUMMARY_KEYS:
         print(f"{k.ljust(width)} : {result[k]}")
     print("-" * (width + 20))
+
+
+_COMPARE_KEYS = ["requested_provider", *_SUMMARY_KEYS]
+
+
+def _print_comparison(results: list[dict[str, Any]]) -> None:
+    """Side-by-side comparison across providers (Phase 10, Section 29 --
+    "model comparison"). A provider that errored on every case (e.g. not
+    configured, or its endpoint unreachable) still gets a row -- its
+    metrics are honestly 0.0/None, never omitted or backfilled, so a
+    missing/unreachable provider is visibly different from a working one
+    that happens to score low. ``requested_provider`` vs. ``provider``
+    makes a config-time substitution (e.g. --compare qwen with no
+    AI_QWEN_BASE_URL set) visible in the table itself, not hidden.
+    """
+    col = max(len(k) for k in _COMPARE_KEYS) + 2
+    print("\nModel comparison (Phase 10)")
+    header = "".join(k.ljust(col) for k in _COMPARE_KEYS)
+    print(header)
+    print("-" * len(header))
+    for result in results:
+        print("".join(str(result[k]).ljust(col) for k in _COMPARE_KEYS))
 
 
 async def _main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--provider", default=None, help="mock | qwen | nemotron")
+    parser.add_argument(
+        "--compare",
+        default=None,
+        help="comma-separated provider list to run and compare side by side, "
+        "e.g. --compare mock,qwen,nemotron. Overrides --provider.",
+    )
     parser.add_argument("--dataset", default=str(_DATASET))
     parser.add_argument("--out", default=None, help="path to write the full JSON result")
     args = parser.parse_args()
 
+    cases = json.loads(Path(args.dataset).read_text(encoding="utf-8"))
+
+    if args.compare:
+        provider_names = [p.strip() for p in args.compare.split(",") if p.strip()]
+        results = []
+        for name in provider_names:
+            provider = _build_provider(name)
+            result = await _run(provider, cases)
+            # `provider` in the result is the ACTUAL serving provider
+            # (._run sets it from provider.name) -- if it differs from
+            # `name`, that itself is the same observable substitution
+            # app.ai.providers.factory.select_reasoning_model reports
+            # (e.g. --compare qwen with no AI_QWEN_BASE_URL set actually
+            # ran against mock). Never overwritten to hide that.
+            result["requested_provider"] = name
+            results.append(result)
+        _print_comparison(results)
+        stamp = f"{datetime.now(UTC):%Y%m%dT%H%M%SZ}"
+        out = Path(args.out or f"benchmark_comparison_{'-'.join(provider_names)}_{stamp}.json")
+        out.write_text(json.dumps(results, indent=2) + "\n", encoding="utf-8")
+        print(f"\nfull result: {out}")
+        return
+
     provider_name = args.provider or get_settings().reasoning_provider
     provider = _build_provider(provider_name)
-    cases = json.loads(Path(args.dataset).read_text(encoding="utf-8"))
 
     result = await _run(provider, cases)
     _print_summary(result)

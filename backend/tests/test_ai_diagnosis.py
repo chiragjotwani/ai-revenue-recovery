@@ -19,6 +19,7 @@ from app.ai.context_builder import (
     RecoveryContext,
 )
 from app.ai.diagnosis import DiagnosisValidationError, _extract_json_object, run_diagnosis
+from app.ai.prompts import DIAGNOSIS_PROMPT_VERSION
 from app.ai.providers.base import RawModelResponse, ReasoningModel, ReasoningModelError
 from app.ai.providers.mock import MockProvider
 from app.ai.schema import (
@@ -29,7 +30,7 @@ from app.ai.schema import (
     disposition_for,
 )
 
-_PROMPT_V = "diagnosis_prompt_v1"
+_PROMPT_V = DIAGNOSIS_PROMPT_VERSION
 
 
 def _context(

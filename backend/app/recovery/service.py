@@ -20,9 +20,13 @@ from app.core.errors import (
     PaymentNotFoundError,
     PaymentNotRecoverableError,
     RecoveryCaseNotFoundError,
+    TransitionPreconditionError,
 )
+from app.events.publisher import outbox_publisher
+from app.events.schema import DomainEvent
 from app.models.payment import Payment, PaymentStatus
 from app.models.recovery import RecoveryCase, RecoveryCaseState, RecoveryCaseTransition
+from app.recovery import preconditions
 from app.recovery.state_machine import INITIAL_STATE, assert_transition_allowed, is_terminal
 
 
@@ -102,6 +106,20 @@ async def open_case(
                 actor=actor,
             )
         )
+        await outbox_publisher.publish(
+            session,
+            DomainEvent(
+                event_type="recovery_case.opened",
+                aggregate_id=case.id,
+                aggregate_type="recovery_case",
+                payload={
+                    "payment_id": str(payment.id),
+                    "customer_id": str(payment.customer_id),
+                    "state": INITIAL_STATE.value,
+                    "actor": actor,
+                },
+            ),
+        )
         await session.commit()
     except IntegrityError:
         await session.rollback()
@@ -122,6 +140,7 @@ async def transition_case(
     *,
     actor: str,
     reason: str | None = None,
+    enforce_preconditions: bool = False,
 ) -> RecoveryCase:
     """Move a case to ``to_state``, recording the change.
 
@@ -129,11 +148,22 @@ async def transition_case(
     :class:`IllegalStateTransitionError` if the state machine does not
     permit ``current_state -> to_state``. On the illegal path nothing is
     written.
+
+    ``enforce_preconditions`` (default ``False`` -- the Phase 3 shape-only
+    contract) additionally checks that the artifact a forward transition
+    depends on actually exists (see ``app/recovery/preconditions.py``) and
+    raises :class:`TransitionPreconditionError` if not. Phase 5+ turns this
+    on for the paths it drives.
     """
     case = await get_case(session, case_id)
     from_state = case.state
 
     assert_transition_allowed(from_state, to_state)
+
+    if enforce_preconditions:
+        unmet = await preconditions.check(session, case, to_state)
+        if unmet is not None:
+            raise TransitionPreconditionError(from_state.value, to_state.value, unmet)
 
     session.add(
         RecoveryCaseTransition(
@@ -147,6 +177,20 @@ async def transition_case(
     case.state = to_state
     if is_terminal(to_state):
         case.closed_at = datetime.now(UTC)
+    await outbox_publisher.publish(
+        session,
+        DomainEvent(
+            event_type="recovery_case.transitioned",
+            aggregate_id=case.id,
+            aggregate_type="recovery_case",
+            payload={
+                "from_state": from_state.value,
+                "to_state": to_state.value,
+                "reason": reason,
+                "actor": actor,
+            },
+        ),
+    )
     await session.commit()
     await session.refresh(case)
     return case

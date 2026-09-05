@@ -31,14 +31,27 @@ TERMINAL_STATES: frozenset[RecoveryCaseState] = frozenset({_S.RECOVERED, _S.ABAN
 #: Legal transitions: mapping of a state to the set of states it may move to.
 #: Kept linear (no retry back-edges) for Phase 3; a retry loop from
 #: OBSERVING is expected to be added when Phase 6/7 needs it.
+#:
+#: Phase 17 adds one branch: ACTION_SCHEDULED -> PENDING_MANUAL_REVIEW (a
+#: scheduled ``manual_review`` action blocks for a human instead of
+#: auto-completing through ACTION_EXECUTED -- see
+#: app.decision.actions.execute_action) and
+#: PENDING_MANUAL_REVIEW -> {ABANDONED, FAILED} (an operator's resolution --
+#: see app.recovery.manual_review.resolve_manual_review). Deliberately NOT
+#: reachable from PENDING_MANUAL_REVIEW: DECISION_PENDING/RECOVERED -- a
+#: full re-decision loop and a claim of recovery with no observed evidence
+#: were both out of this phase's scope by owner decision.
 LEGAL_TRANSITIONS: dict[RecoveryCaseState, frozenset[RecoveryCaseState]] = {
     _S.DETECTED: frozenset({_S.DIAGNOSING, _S.ABANDONED}),
     _S.DIAGNOSING: frozenset({_S.DIAGNOSED, _S.ABANDONED, _S.FAILED}),
     _S.DIAGNOSED: frozenset({_S.DECISION_PENDING, _S.ABANDONED}),
     _S.DECISION_PENDING: frozenset({_S.ACTION_SCHEDULED, _S.ABANDONED, _S.FAILED}),
-    _S.ACTION_SCHEDULED: frozenset({_S.ACTION_EXECUTED, _S.ABANDONED, _S.FAILED}),
+    _S.ACTION_SCHEDULED: frozenset(
+        {_S.ACTION_EXECUTED, _S.PENDING_MANUAL_REVIEW, _S.ABANDONED, _S.FAILED}
+    ),
     _S.ACTION_EXECUTED: frozenset({_S.OBSERVING, _S.FAILED}),
     _S.OBSERVING: frozenset({_S.RECOVERED, _S.FAILED}),
+    _S.PENDING_MANUAL_REVIEW: frozenset({_S.ABANDONED, _S.FAILED}),
     _S.RECOVERED: frozenset(),
     _S.ABANDONED: frozenset(),
     _S.FAILED: frozenset(),

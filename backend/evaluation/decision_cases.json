@@ -1,0 +1,322 @@
+[
+  {
+    "case_id": "01_retriable_transient",
+    "category": "retriable transient failure",
+    "input": {
+      "disposition": "retriable_transient",
+      "candidate_strategy": "retry",
+      "recommended_delay_hours": 6,
+      "evidence_sufficiency": "sufficient",
+      "signals_conflict": false,
+      "retry_count": 0,
+      "already_paid": false,
+      "now": "2026-03-01T00:00:00+00:00"
+    },
+    "expected": {
+      "approved_strategy": "retry",
+      "decision_status": "approved",
+      "recoverability": "likely_recoverable",
+      "deciding_rule": "retry_cap"
+    }
+  },
+  {
+    "case_id": "02_retry_cap_reached",
+    "category": "retry cap reached",
+    "input": {
+      "disposition": "retriable_transient",
+      "candidate_strategy": "retry",
+      "recommended_delay_hours": 6,
+      "evidence_sufficiency": "sufficient",
+      "signals_conflict": false,
+      "retry_count": 3,
+      "already_paid": false,
+      "now": "2026-03-01T00:00:00+00:00"
+    },
+    "expected": {
+      "approved_strategy": "manual_review",
+      "decision_status": "approved",
+      "recoverability": "likely_recoverable",
+      "deciding_rule": "retry_cap"
+    }
+  },
+  {
+    "case_id": "03_insufficient_evidence",
+    "category": "insufficient evidence",
+    "input": {
+      "disposition": "retriable_transient",
+      "candidate_strategy": "retry",
+      "recommended_delay_hours": 6,
+      "evidence_sufficiency": "sparse",
+      "signals_conflict": false,
+      "retry_count": 0,
+      "already_paid": false,
+      "now": "2026-03-01T00:00:00+00:00"
+    },
+    "expected": {
+      "approved_strategy": "manual_review",
+      "decision_status": "escalated",
+      "recoverability": "insufficient_evidence",
+      "deciding_rule": "insufficient_evidence"
+    }
+  },
+  {
+    "case_id": "04_conflicting_signals",
+    "category": "conflicting signals",
+    "input": {
+      "disposition": "retriable_transient",
+      "candidate_strategy": "retry",
+      "recommended_delay_hours": 6,
+      "evidence_sufficiency": "sufficient",
+      "signals_conflict": true,
+      "retry_count": 0,
+      "already_paid": false,
+      "now": "2026-03-01T00:00:00+00:00"
+    },
+    "expected": {
+      "approved_strategy": "manual_review",
+      "decision_status": "escalated",
+      "recoverability": "insufficient_evidence",
+      "deciding_rule": "insufficient_evidence"
+    }
+  },
+  {
+    "case_id": "05_customer_action_compatible",
+    "category": "customer action required + compatible strategy",
+    "input": {
+      "disposition": "customer_action_required",
+      "candidate_strategy": "request_payment_method_update",
+      "recommended_delay_hours": 24,
+      "evidence_sufficiency": "sufficient",
+      "signals_conflict": false,
+      "retry_count": 0,
+      "already_paid": false,
+      "now": "2026-03-01T00:00:00+00:00"
+    },
+    "expected": {
+      "approved_strategy": "request_payment_method_update",
+      "decision_status": "approved",
+      "recoverability": "conditionally_recoverable",
+      "deciding_rule": "customer_action_compatibility"
+    }
+  },
+  {
+    "case_id": "06_customer_action_incompatible",
+    "category": "customer action required + incompatible strategy",
+    "input": {
+      "disposition": "customer_action_required",
+      "candidate_strategy": "manual_review",
+      "recommended_delay_hours": null,
+      "evidence_sufficiency": "sufficient",
+      "signals_conflict": false,
+      "retry_count": 0,
+      "already_paid": false,
+      "now": "2026-03-01T00:00:00+00:00"
+    },
+    "expected": {
+      "approved_strategy": "manual_review",
+      "decision_status": "escalated",
+      "recoverability": "conditionally_recoverable",
+      "deciding_rule": "customer_action_compatibility"
+    }
+  },
+  {
+    "case_id": "07_suspected_fraud",
+    "category": "suspected fraud",
+    "input": {
+      "disposition": "suspected_fraud",
+      "candidate_strategy": "retry",
+      "recommended_delay_hours": 6,
+      "evidence_sufficiency": "sufficient",
+      "signals_conflict": false,
+      "retry_count": 0,
+      "already_paid": false,
+      "now": "2026-03-01T00:00:00+00:00"
+    },
+    "expected": {
+      "approved_strategy": "manual_review",
+      "decision_status": "escalated",
+      "recoverability": "not_recoverable_automatically",
+      "deciding_rule": "fraud_manual_review"
+    }
+  },
+  {
+    "case_id": "08_already_paid",
+    "category": "already paid",
+    "input": {
+      "disposition": "retriable_transient",
+      "candidate_strategy": "retry",
+      "recommended_delay_hours": 6,
+      "evidence_sufficiency": "sufficient",
+      "signals_conflict": false,
+      "retry_count": 0,
+      "already_paid": true,
+      "now": "2026-03-01T00:00:00+00:00"
+    },
+    "expected": {
+      "approved_strategy": "no_action",
+      "decision_status": "approved",
+      "recoverability": "likely_recoverable",
+      "deciding_rule": "already_paid"
+    }
+  },
+  {
+    "case_id": "09_manual_review_default",
+    "category": "manual review (default pass-through)",
+    "input": {
+      "disposition": "unknown",
+      "candidate_strategy": "manual_review",
+      "recommended_delay_hours": null,
+      "evidence_sufficiency": "sufficient",
+      "signals_conflict": false,
+      "retry_count": 0,
+      "already_paid": false,
+      "now": "2026-03-01T00:00:00+00:00"
+    },
+    "expected": {
+      "approved_strategy": "manual_review",
+      "decision_status": "escalated",
+      "recoverability": "insufficient_evidence",
+      "deciding_rule": "default_pass_through"
+    }
+  },
+  {
+    "case_id": "10_no_action_default",
+    "category": "no-action (default pass-through)",
+    "input": {
+      "disposition": "unknown",
+      "candidate_strategy": "no_action",
+      "recommended_delay_hours": null,
+      "evidence_sufficiency": "sufficient",
+      "signals_conflict": false,
+      "retry_count": 0,
+      "already_paid": false,
+      "now": "2026-03-01T00:00:00+00:00"
+    },
+    "expected": {
+      "approved_strategy": "no_action",
+      "decision_status": "approved",
+      "recoverability": "insufficient_evidence",
+      "deciding_rule": "default_pass_through"
+    }
+  },
+  {
+    "case_id": "11a_invalid_retry_disposition_mismatch",
+    "category": "invalid combination: retry proposed for a non-retriable disposition",
+    "input": {
+      "disposition": "customer_action_required",
+      "candidate_strategy": "retry",
+      "recommended_delay_hours": 6,
+      "evidence_sufficiency": "sufficient",
+      "signals_conflict": false,
+      "retry_count": 0,
+      "already_paid": false,
+      "now": "2026-03-01T00:00:00+00:00"
+    },
+    "expected": {
+      "approved_strategy": "manual_review",
+      "decision_status": "escalated",
+      "recoverability": "conditionally_recoverable",
+      "deciding_rule": "retry_disposition_mismatch"
+    }
+  },
+  {
+    "case_id": "11b_invalid_unhandled_combination",
+    "category": "invalid combination: no rule admits this candidate strategy",
+    "input": {
+      "disposition": "retriable_transient",
+      "candidate_strategy": "contact_customer",
+      "recommended_delay_hours": 12,
+      "evidence_sufficiency": "sufficient",
+      "signals_conflict": false,
+      "retry_count": 0,
+      "already_paid": false,
+      "now": "2026-03-01T00:00:00+00:00"
+    },
+    "expected": {
+      "approved_strategy": "manual_review",
+      "decision_status": "escalated",
+      "recoverability": "likely_recoverable",
+      "deciding_rule": "default_safe_fallback"
+    }
+  },
+  {
+    "case_id": "12a_boundary_delay_zero",
+    "category": "boundary timing: recommended_delay_hours = 0 (minimum)",
+    "input": {
+      "disposition": "retriable_transient",
+      "candidate_strategy": "retry",
+      "recommended_delay_hours": 0,
+      "evidence_sufficiency": "sufficient",
+      "signals_conflict": false,
+      "retry_count": 0,
+      "already_paid": false,
+      "now": "2026-03-01T00:00:00+00:00"
+    },
+    "expected": {
+      "approved_strategy": "retry",
+      "decision_status": "approved",
+      "recoverability": "likely_recoverable",
+      "deciding_rule": "retry_cap"
+    }
+  },
+  {
+    "case_id": "12b_boundary_delay_max",
+    "category": "boundary timing: recommended_delay_hours = 720 (maximum)",
+    "input": {
+      "disposition": "retriable_transient",
+      "candidate_strategy": "retry",
+      "recommended_delay_hours": 720,
+      "evidence_sufficiency": "sufficient",
+      "signals_conflict": false,
+      "retry_count": 0,
+      "already_paid": false,
+      "now": "2026-03-01T00:00:00+00:00"
+    },
+    "expected": {
+      "approved_strategy": "retry",
+      "decision_status": "approved",
+      "recoverability": "likely_recoverable",
+      "deciding_rule": "retry_cap"
+    }
+  },
+  {
+    "case_id": "12c_boundary_retry_count_just_under_cap",
+    "category": "boundary timing: retry_count = RETRY_CAP - 1 (still approved)",
+    "input": {
+      "disposition": "retriable_transient",
+      "candidate_strategy": "retry",
+      "recommended_delay_hours": 6,
+      "evidence_sufficiency": "sufficient",
+      "signals_conflict": false,
+      "retry_count": 2,
+      "already_paid": false,
+      "now": "2026-03-01T00:00:00+00:00"
+    },
+    "expected": {
+      "approved_strategy": "retry",
+      "decision_status": "approved",
+      "recoverability": "likely_recoverable",
+      "deciding_rule": "retry_cap"
+    }
+  },
+  {
+    "case_id": "12d_boundary_no_delay",
+    "category": "boundary timing: recommended_delay_hours = None (no schedule)",
+    "input": {
+      "disposition": "retriable_transient",
+      "candidate_strategy": "retry",
+      "recommended_delay_hours": null,
+      "evidence_sufficiency": "sufficient",
+      "signals_conflict": false,
+      "retry_count": 0,
+      "already_paid": false,
+      "now": "2026-03-01T00:00:00+00:00"
+    },
+    "expected": {
+      "approved_strategy": "retry",
+      "decision_status": "approved",
+      "recoverability": "likely_recoverable",
+      "deciding_rule": "retry_cap"
+    }
+  }
+]

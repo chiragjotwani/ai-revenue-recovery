@@ -101,7 +101,17 @@ class ModelDiagnosisJSON(BaseModel):
     model_config = {"extra": "forbid"}
 
     outcome: DiagnosisOutcome
-    confidence: float = Field(ge=0.0, le=1.0)
+    confidence: float = Field(
+        ge=0.0,
+        le=1.0,
+        description=(
+            "The model's OWN reported certainty in this diagnosis, 0-1. This is "
+            "not a calibrated probability of correctness -- real models tend to "
+            "report ~1.0 for any clear-looking reason code. Treat it as a coarse "
+            "self-assessment; the safeguards in app/ai/diagnosis.py and the "
+            "Phase 5 policy engine do not rely on it being well-calibrated."
+        ),
+    )
     reasoning: str = Field(min_length=1, max_length=2000)
     recommended_strategy: RecoveryStrategy
     recommended_delay_hours: int | None = Field(default=None, ge=0, le=720)
@@ -117,6 +127,12 @@ class ModelDiagnosisJSON(BaseModel):
 class Diagnosis(BaseModel):
     """A validated diagnosis, enriched with the derived disposition and the
     schema version. This is what gets persisted and served.
+
+    ``confidence`` is the model's self-reported certainty (see
+    ``ModelDiagnosisJSON.confidence``), not a calibrated probability. It is
+    surfaced to operators labelled as such and is only used by the
+    safeguards as a coarse threshold (e.g. cap at 0.5 on conflicting
+    signals), never as a statistical quantity.
     """
 
     outcome: DiagnosisOutcome
